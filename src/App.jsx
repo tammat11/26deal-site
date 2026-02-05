@@ -46,47 +46,47 @@ const Navbar = () => {
         borderStyle: 'solid',
         borderRadius: '100px',
         transition: 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
-        padding: scrolled ? '15px 45px' : '20px 50px',
+        padding: scrolled ? '18px 60px' : '24px 70px',
         boxShadow: scrolled ? '0 15px 40px rgba(0,0,0,0.6)' : 'none',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: scrolled ? '30px' : '45px',
+        gap: scrolled ? '40px' : '55px',
       }}>
         <img src="/logo_26_business_club_silver_invert.png" alt="26 Logo" style={{
-          height: scrolled ? '24px' : '32px',
+          height: scrolled ? '28px' : '38px',
           opacity: 0.9,
           flexShrink: 0,
           transition: 'all 0.6s ease'
         }} />
         <div className="nav-links" style={{
           display: 'flex',
-          gap: scrolled ? '25px' : '40px',
+          gap: scrolled ? '35px' : '50px',
           alignItems: 'center',
           transition: 'all 0.6s ease'
         }}>
-          <a href="#about" className="mobile-nav-link">Клуб</a>
-          <a href="#benefits" className="mobile-nav-link">Плюсы</a>
-          <a href="#members" className="mobile-nav-link">Лица</a>
-          <a href="#apply" className="mobile-nav-link">Вступить</a>
+          <a href="#about" className="mobile-nav-link" style={{ fontSize: scrolled ? '12px' : '13px' }}>Клуб</a>
+          <a href="#benefits" className="mobile-nav-link" style={{ fontSize: scrolled ? '12px' : '13px' }}>Плюсы</a>
+          <a href="#members" className="mobile-nav-link" style={{ fontSize: scrolled ? '12px' : '13px' }}>Лица</a>
+          <a href="#apply" className="mobile-nav-link" style={{ fontSize: scrolled ? '12px' : '13px' }}>Вступить</a>
         </div>
       </nav>
       <style>{`
         @media (max-width: 768px) {
           .navbar {
-            padding: ${scrolled ? '12px 25px' : '15px 25px'} !important;
-            gap: ${scrolled ? '15px' : '20px'} !important;
+            padding: ${scrolled ? '14px 35px' : '18px 40px'} !important;
+            gap: ${scrolled ? '25px' : '30px'} !important;
           }
           .nav-links {
-            gap: ${scrolled ? '12px' : '18px'} !important;
+            gap: ${scrolled ? '20px' : '25px'} !important;
           }
           .mobile-nav-link {
-            font-size: 11px !important;
+            font-size: 12px !important;
             letter-spacing: 0.05em !important;
             font-weight: 500;
           }
           .navbar img {
-            height: ${scrolled ? '18px' : '22px'} !important;
+            height: ${scrolled ? '22px' : '26px'} !important;
           }
         }
       `}</style>
