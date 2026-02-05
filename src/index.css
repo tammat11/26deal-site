@@ -271,6 +271,13 @@ h1.hero-title {
   /* iOS Style Rounding */
   overflow: hidden;
   cursor: pointer;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.6s ease;
+}
+
+.resident-card-portrait:hover {
+  transform: scale(1.05);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
+  z-index: 10;
 }
 
 /* Simulated Photo */

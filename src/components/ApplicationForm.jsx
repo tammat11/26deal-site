@@ -98,9 +98,12 @@ const ApplicationForm = () => {
     return (
         <section id="apply" className="section">
             <div className="container">
-                <div className="text-center reveal-hidden" style={{ marginBottom: '60px' }}>
-                    <h2 style={{ color: '#fff' }}>Вступить в <i>26 Business Club</i></h2>
-                    <p style={{ fontSize: '14px', marginTop: '20px', color: '#ddd' }}>
+                <div className="text-center reveal-hidden" style={{ marginBottom: '80px' }}>
+                    <h2 className="section-title" style={{ color: '#fff' }}>Вступить в <i>26 Business Club</i></h2>
+                    <p style={{ fontSize: '1.1rem', marginTop: '20px', color: '#fff', fontWeight: 500 }}>
+                        Мы свяжемся лично и расскажем формат участия
+                    </p>
+                    <p style={{ fontSize: '14px', marginTop: '10px', color: '#aaa' }}>
                         Заполните данные, чтобы оставить заявку на вступление в клуб
                     </p>
                 </div>
@@ -114,7 +117,7 @@ const ApplicationForm = () => {
                             onChange={handleChange}
                             placeholder="Имя"
                             required
-                            style={{ width: '100%', padding: '15px', marginBottom: '15px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.3)', color: 'white', borderRadius: '8px', outline: 'none' }}
+                            style={{ width: '100%', padding: '15px', marginBottom: '15px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '8px', outline: 'none' }}
                         />
                         <input
                             type="tel"
@@ -123,7 +126,7 @@ const ApplicationForm = () => {
                             onChange={handleChange}
                             placeholder="Телефон"
                             required
-                            style={{ width: '100%', padding: '15px', marginBottom: '15px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.3)', color: 'white', borderRadius: '8px', outline: 'none' }}
+                            style={{ width: '100%', padding: '15px', marginBottom: '15px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '8px', outline: 'none' }}
                         />
                         <input
                             type="email"
@@ -132,7 +135,7 @@ const ApplicationForm = () => {
                             onChange={handleChange}
                             placeholder="Email"
                             required
-                            style={{ width: '100%', padding: '15px', marginBottom: '15px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.3)', color: 'white', borderRadius: '8px', outline: 'none' }}
+                            style={{ width: '100%', padding: '15px', marginBottom: '15px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '8px', outline: 'none' }}
                         />
                         <input
                             type="text"
@@ -141,13 +144,16 @@ const ApplicationForm = () => {
                             onChange={handleChange}
                             placeholder="Компания"
                             required
-                            style={{ width: '100%', padding: '15px', marginBottom: '15px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.3)', color: 'white', borderRadius: '8px', outline: 'none' }}
+                            style={{ width: '100%', padding: '15px', marginBottom: '15px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '8px', outline: 'none' }}
                         />
 
                         <div className="text-center" style={{ marginTop: '40px' }}>
                             <button type="submit" className="btn" disabled={status === 'sending'}>
                                 {status === 'sending' ? 'ОТПРАВКА...' : 'ПОДАТЬ ЗАЯВКУ'}
                             </button>
+                            <p style={{ fontSize: '12px', color: '#fff', marginTop: '15px', opacity: 0.8, letterSpacing: '0.05em' }}>
+                                ⏱ Оставить заявку за 30 секунд
+                            </p>
                         </div>
 
                         <p style={{ fontSize: '11px', color: '#aaa', marginTop: '20px', textAlign: 'center' }}>

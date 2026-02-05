@@ -14,16 +14,34 @@ const StatsStrip = () => {
                         <div key={index} className="liquid-glass reveal-hidden" style={{
                             display: 'flex',
                             flexDirection: 'column',
-                            justifyContent: 'space-between',
-                            height: '220px',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            height: '280px',
                             padding: '30px',
+                            textAlign: 'center',
                             transitionDelay: `${index * 100}ms`
                         }}>
-                            <span style={{ fontFamily: 'Inter', fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#888' }}>
+                            <span style={{ fontFamily: 'Inter', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.15em', color: '#888', marginBottom: '15px' }}>
                                 {stat.label}
                             </span>
-                            <span style={{ fontFamily: 'Playfair Display', fontSize: '4.5rem', lineHeight: 1, color: 'white' }}>
+                            <span style={{
+                                fontFamily: 'Playfair Display',
+                                fontSize: '5.5rem',
+                                lineHeight: 1,
+                                color: 'white',
+                                textShadow: '0 0 40px rgba(255,255,255,0.3)',
+                                marginBottom: '15px'
+                            }}>
                                 {stat.value}
+                            </span>
+                            <span style={{
+                                fontFamily: 'Inter',
+                                fontSize: '0.85rem',
+                                color: '#aaa',
+                                maxWidth: '180px',
+                                lineHeight: '1.4'
+                            }}>
+                                {stat.subtext}
                             </span>
                         </div>
                     ))}

@@ -143,10 +143,10 @@ const Benefits = () => {
                 }
                 
                 .benefit-card:hover {
-                    background: rgba(255, 255, 255, 0.06);
+                    background: rgba(255, 255, 255, 0.08);
                     border-color: rgba(255, 255, 255, 0.4);
                     box-shadow: 0 40px 80px rgba(0,0,0,0.5), inset 0 0 30px rgba(255,255,255,0.05); /* Deep reflection */
-                    transform: translateY(-5px) scale(1.02);
+                    transform: translateY(-8px) scale(1.03);
                 }
 
                 .card-header {
@@ -196,11 +196,13 @@ const Benefits = () => {
                     text-shadow: 0 2px 10px rgba(0,0,0,0.5);
                 }
                 .card-body h3 {
-                    font-size: 1.2rem;
-                    margin-bottom: 15px;
+                    font-size: 1.35rem;
+                    margin-bottom: 20px;
                     color: white;
                     line-height: 1.4;
                     min-height: 3.4em;
+                    font-weight: 700;
+                    letter-spacing: 0.02em;
                 }
                 .card-body p {
                     color: #e0e0e0;

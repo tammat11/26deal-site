@@ -73,8 +73,11 @@ const ResidentsGrid = () => {
                             }}>
                                 PRESIDENT 2026
                             </div>
-                            <h2 style={{ fontSize: '3.5rem', marginBottom: '20px', lineHeight: '1.1', color: 'white' }}>{president.name}</h2>
-                            <p style={{ fontSize: '1.2rem', color: '#aaa', marginBottom: '30px', fontFamily: 'Trajan Pro 3, serif' }}>
+                            <h2 style={{ fontSize: '3.5rem', marginBottom: '10px', lineHeight: '1.1', color: 'white' }}>{president.name}</h2>
+                            <p style={{ fontSize: '1.2rem', color: '#fff', marginBottom: '10px', fontWeight: 600 }}>
+                                {president.niche}
+                            </p>
+                            <p style={{ fontSize: '1rem', color: '#aaa', marginBottom: '30px', fontFamily: 'Trajan Pro 3, serif' }}>
                                 Основатель <span style={{ color: 'white' }}>{president.company}</span>
                             </p>
                             <p style={{ fontFamily: 'Trajan Pro 3, serif', lineHeight: '1.6', color: '#ccc', maxWidth: '500px' }}>
@@ -103,7 +106,8 @@ const ResidentsGrid = () => {
                                 />
                                 <div className="card-overlay">
                                     <h3>{resident.name}</h3>
-                                    <p>{resident.company}</p>
+                                    <p style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 600, marginBottom: '4px' }}>{resident.niche}</p>
+                                    <p style={{ fontSize: '0.65rem', opacity: 0.8 }}>{resident.company}</p>
                                 </div>
                             </div>
                         );
