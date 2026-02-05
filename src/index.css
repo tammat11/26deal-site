@@ -516,16 +516,29 @@ h1.hero-title {
 
   /* Stats Item Compact */
   #stats .liquid-glass {
-    height: 140px !important;
-    padding: 15px !important;
+    height: 180px !important;
+    padding: 20px 10px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
   }
 
-  #stats .liquid-glass span:last-child {
-    font-size: 2.2rem !important;
+  /* Label */
+  #stats .liquid-glass span:nth-child(1) {
+    font-size: 0.55rem !important;
+    margin-bottom: 8px !important;
   }
 
-  #stats .liquid-glass span:first-child {
-    font-size: 0.6rem !important;
+  /* Value */
+  #stats .liquid-glass span:nth-child(2) {
+    font-size: 2rem !important;
+    margin-bottom: 8px !important;
+  }
+
+  /* Subtext */
+  #stats .liquid-glass span:nth-child(3) {
+    font-size: 0.65rem !important;
+    max-width: 100% !important;
   }
 
   /* Benefits Compact Grid */
@@ -557,6 +570,7 @@ h1.hero-title {
     font-size: 0.85rem !important;
     min-height: auto !important;
     margin-bottom: 8px !important;
+    font-weight: 700 !important;
   }
 
   .card-body p {
@@ -607,11 +621,39 @@ h1.hero-title {
   }
 
   .card-overlay h3 {
-    font-size: 0.75rem !important;
+    font-size: 0.8rem !important;
+    margin-bottom: 2px !important;
   }
 
   .card-overlay p {
-    font-size: 0.5rem !important;
+    font-size: 0.6rem !important;
+    line-height: 1.1 !important;
+    font-weight: 500 !important;
+  }
+
+  /* President Mobile Fixes */
+  #members .liquid-glass {
+    flex-direction: column !important;
+    padding: 20px !important;
+    gap: 20px !important;
+  }
+
+  #members .liquid-glass h2 {
+    font-size: 2rem !important;
+  }
+
+  #members .liquid-glass p:nth-of-type(1) {
+    font-size: 1rem !important;
+    margin-bottom: 10px !important;
+  }
+
+  #members .liquid-glass p:nth-of-type(2) {
+    font-size: 0.8rem !important;
+  }
+
+  #members .liquid-glass p:nth-of-type(3) {
+    display: none !important;
+    /* Hide long description on mobile */
   }
 
   /* Navbar Adjustments */
