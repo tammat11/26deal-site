@@ -196,11 +196,11 @@ function App() {
         <AdmissionSteps />
         <div className="section-divider" />
         <ApplicationForm />
-        <footer style={{ padding: '60px 0', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+        <footer style={{ padding: '30px 0', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
           <div className="container text-center">
-            <p style={{ color: '#666', fontSize: '12px' }}>© 2026 Business Club. All rights reserved.</p>
-            <div style={{ marginTop: '20px' }}>
-              <a href="/policy" style={{ color: '#444', fontSize: '10px', textDecoration: 'none' }}>Privacy Policy</a>
+            <p style={{ color: '#aaa', fontSize: '12px', letterSpacing: '0.05em' }}>© 2026 BUSINESS CLUB. ALL RIGHTS RESERVED.</p>
+            <div style={{ marginTop: '10px' }}>
+              <a href="/policy" style={{ color: '#888', fontSize: '11px', textDecoration: 'none', transition: 'color 0.3s' }}>PRIVACY POLICY</a>
             </div>
           </div>
         </footer>
