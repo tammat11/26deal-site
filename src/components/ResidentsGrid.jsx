@@ -71,7 +71,7 @@ const ResidentsGrid = () => {
                                 textTransform: 'uppercase',
                                 color: '#ccc'
                             }}>
-                                President
+                                PRESIDENT 2026
                             </div>
                             <h2 style={{ fontSize: '3.5rem', marginBottom: '20px', lineHeight: '1.1', color: 'white' }}>{president.name}</h2>
                             <p style={{ fontSize: '1.2rem', color: '#aaa', marginBottom: '30px', fontFamily: 'Trajan Pro 3, serif' }}>
