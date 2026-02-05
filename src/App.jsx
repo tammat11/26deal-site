@@ -27,45 +27,54 @@ const Navbar = () => {
   return (
     <div className="nav-wrapper" style={{
       position: 'fixed',
-      top: '25px',
+      top: '15px',
       left: '50%',
       transform: 'translateX(-50%)',
       zIndex: 1000,
-      width: '90%',
+      width: '95%',
       maxWidth: 'max-content',
       pointerEvents: 'none'
     }}>
       <nav className="navbar" style={{
         pointerEvents: 'auto',
-        background: scrolled ? 'rgba(15, 15, 15, 0.5)' : 'transparent',
-        backdropFilter: scrolled ? 'blur(25px) saturate(180%)' : 'none',
-        borderColor: scrolled ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
+        background: scrolled ? 'rgba(15, 15, 15, 0.8)' : 'rgba(255, 255, 255, 0.05)',
+        backdropFilter: 'blur(30px) saturate(180%)',
+        borderColor: scrolled ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.1)',
         borderWidth: '1px',
         borderStyle: 'solid',
         borderRadius: '100px',
         transition: 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
-        padding: scrolled ? '10px 35px' : '15px 0px',
-        boxShadow: scrolled ? '0 15px 40px rgba(0,0,0,0.4)' : 'none',
+        padding: '8px 15px',
+        boxShadow: scrolled ? '0 10px 30px rgba(0,0,0,0.5)' : 'none',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: '40px',
+        gap: '15px',
       }}>
         <img src="/logo_26_business_club_silver_invert.png" alt="26 Logo" style={{
-          height: scrolled ? '20px' : '26px',
+          height: '16px',
           opacity: 0.9,
-          transition: 'all 0.4s ease'
+          flexShrink: 0
         }} />
         <div className="nav-links" style={{
           display: 'flex',
-          gap: window.innerWidth < 768 ? '15px' : '30px'
+          gap: '12px',
+          alignItems: 'center'
         }}>
-          <a href="#about" style={{ fontSize: window.innerWidth < 768 ? '9px' : '11px' }}>О клубе</a>
-          <a href="#benefits" style={{ fontSize: window.innerWidth < 768 ? '9px' : '11px' }}>Преимущества</a>
-          <a href="#members" style={{ fontSize: window.innerWidth < 768 ? '9px' : '11px' }}>Резиденты</a>
-          <a href="#apply" style={{ fontSize: window.innerWidth < 768 ? '9px' : '11px' }}>Вступить</a>
+          <a href="#about" className="mobile-nav-link">Клуб</a>
+          <a href="#benefits" className="mobile-nav-link">Плюсы</a>
+          <a href="#members" className="mobile-nav-link">Лица</a>
+          <a href="#apply" className="mobile-nav-link">Вступить</a>
         </div>
       </nav>
+      <style>{`
+        @media (max-width: 768px) {
+          .mobile-nav-link {
+            font-size: 9px !important;
+            letter-spacing: 0.02em !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };
@@ -95,23 +104,22 @@ const Hero = () => (
       marginTop: '0px',
       maxWidth: '1000px',
       zIndex: 1,
-      padding: '0 30px',
+      padding: '0 20px',
       opacity: 0
     }}>
       <h1 className="hero-title" style={{
-        fontSize: 'clamp(1.5rem, 3.5vw, 2.5rem)',
+        fontSize: 'clamp(1.2rem, 5vw, 2.5rem)',
         letterSpacing: '0.01em',
         textTransform: 'none',
-        lineHeight: '1.1',
+        lineHeight: '1.2',
         background: 'linear-gradient(to right, #fff, #aaa)',
         WebkitBackgroundClip: 'text',
         WebkitTextFillColor: 'transparent',
-        marginBottom: '30px',
+        marginBottom: '20px',
         marginTop: '0'
       }}>
         Сообщество
-        <span style={{ fontFamily: 'Trajan Pro 3, serif', fontWeight: 400 }}> high-impact</span> предпринимателей и лидеров, создающих новую бизнес-культуру. <br />
-        и ролевых моделей
+        <span style={{ fontFamily: 'Trajan Pro 3, serif', fontWeight: 400 }}> high-impact</span> предпринимателей и лидеров, создающих новую бизнес-культуру.
       </h1>
 
       <a href="#apply" className="btn" style={{

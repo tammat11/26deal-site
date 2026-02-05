@@ -465,75 +465,76 @@ h1.hero-title {
     padding: 0 15px;
   }
 
-  /* Creative Mobile Layout for Benefits: Horizontal Snap Scroll */
-  #benefits .grid-3 {
-    display: flex !important;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    gap: 15px !important;
-    padding: 20px 0 40px;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-
-  #benefits .grid-3::-webkit-scrollbar {
-    display: none;
-  }
-
-  #benefits .liquid-glass {
-    min-width: 85vw;
-    scroll-snap-align: center;
-    margin-bottom: 0 !important;
-  }
-
-  /* Admission Steps: Staggered Layout */
-  #admission .grid-4 {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-  }
-
-  #admission .liquid-glass:nth-child(even) {
-    align-self: flex-end;
-    width: 90%;
-  }
-
-  #admission .liquid-glass:nth-child(odd) {
-    align-self: flex-start;
-    width: 90%;
-  }
-
-  /* Half-grid for residents to see more at once */
-  #members .container>div:last-of-type {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 10px !important;
-  }
-
+  /* Compact Hero */
   h1.hero-title {
-    font-size: 2.2rem !important;
+    font-size: 1.4rem !important;
+    line-height: 1.3 !important;
+    margin-bottom: 15px !important;
+  }
+
+  .hero-logo-container {
+    width: 65% !important;
+    margin-bottom: 10px !important;
+  }
+
+  /* Compact Sections */
+  .section {
+    padding: 35px 0 !important;
   }
 
   h2 {
-    font-size: 2rem !important;
+    font-size: 1.5rem !important;
+    margin-bottom: 15px !important;
+  }
+
+  /* Compact Cards (Benefits & Steps) */
+  #benefits .grid-3,
+  #admission .grid-4 {
+    display: flex !important;
+    flex-direction: column;
+    gap: 12px !important;
+  }
+
+  .liquid-glass {
+    padding: 20px !important;
+    min-height: auto !important;
+  }
+
+  .liquid-glass h3 {
+    font-size: 1.2rem !important;
+    margin-top: 15px !important;
+  }
+
+  /* Compact Residents */
+  #members .container>div:last-of-type {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .card-overlay h3 {
+    font-size: 0.85rem !important;
+  }
+
+  .card-overlay p {
+    font-size: 0.55rem !important;
+  }
+
+  /* Stats Strip Compact */
+  .stat-item span:first-child {
+    font-size: 1.8rem !important;
+  }
+
+  .stat-item span:last-child {
+    font-size: 0.6rem !important;
   }
 
   .navbar {
     width: 95% !important;
-    padding: 10px 15px !important;
-    gap: 15px !important;
-  }
-
-  .nav-links {
-    display: flex !important;
-    gap: 10px !important;
+    padding: 6px 12px !important;
   }
 
   .nav-links a {
-    font-size: 8px !important;
-  }
-
-  .section {
-    padding: 50px 0 !important;
+    font-size: 9px !important;
   }
 }
 
