@@ -27,16 +27,25 @@ const ResidentsGrid = () => {
 
                 {/* President Block */}
                 {president && (
-                    <div className="liquid-glass reveal-hidden" style={{
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        alignItems: 'center',
-                        gap: '40px',
-                        padding: '40px',
-                        marginBottom: '80px',
-                        borderRadius: '30px',
-                        border: '1px solid rgba(255,255,255,0.15)'
-                    }}>
+                    <a
+                        href={president.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="liquid-glass reveal-hidden"
+                        style={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            alignItems: 'center',
+                            gap: '40px',
+                            padding: '40px',
+                            marginBottom: '80px',
+                            borderRadius: '30px',
+                            border: '1px solid rgba(255,255,255,0.15)',
+                            textDecoration: 'none',
+                            cursor: president.website ? 'pointer' : 'default',
+                            transition: 'all 0.5s cubic-bezier(0.16, 1, 0.3, 1)'
+                        }}
+                    >
                         <div style={{ flex: '1 1 300px', maxWidth: '400px' }}>
                             <img
                                 src={president.photo}
@@ -64,7 +73,7 @@ const ResidentsGrid = () => {
                             }}>
                                 President
                             </div>
-                            <h2 style={{ fontSize: '3.5rem', marginBottom: '20px', lineHeight: '1.1' }}>{president.name}</h2>
+                            <h2 style={{ fontSize: '3.5rem', marginBottom: '20px', lineHeight: '1.1', color: 'white' }}>{president.name}</h2>
                             <p style={{ fontSize: '1.2rem', color: '#aaa', marginBottom: '30px', fontFamily: 'Trajan Pro 3, serif' }}>
                                 Основатель <span style={{ color: 'white' }}>{president.company}</span>
                             </p>
@@ -72,7 +81,7 @@ const ResidentsGrid = () => {
                                 Лидер сообщества, объединяющий сильных предпринимателей для создания масштабных изменений.
                             </p>
                         </div>
-                    </div>
+                    </a>
                 )}
 
                 <div style={{
@@ -80,23 +89,39 @@ const ResidentsGrid = () => {
                     gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
                     gap: '15px'
                 }}>
-                    {visibleResidents.map((resident, index) => (
-                        <div key={index} className="resident-card-portrait">
-                            <img
-                                src={resident.photo}
-                                alt={resident.name}
-                                className="resident-placeholder"
-                                style={{
-                                    objectFit: 'cover',
-                                    transition: 'transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)'
-                                }}
-                            />
-                            <div className="card-overlay">
-                                <h3>{resident.name}</h3>
-                                <p>{resident.company}</p>
+                    {visibleResidents.map((resident, index) => {
+                        const CardContent = (
+                            <div className="resident-card-portrait" style={{ cursor: resident.website ? 'pointer' : 'default' }}>
+                                <img
+                                    src={resident.photo}
+                                    alt={resident.name}
+                                    className="resident-placeholder"
+                                    style={{
+                                        objectFit: 'cover',
+                                        transition: 'transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)'
+                                    }}
+                                />
+                                <div className="card-overlay">
+                                    <h3>{resident.name}</h3>
+                                    <p>{resident.company}</p>
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+
+                        return resident.website ? (
+                            <a
+                                key={index}
+                                href={resident.website}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ textDecoration: 'none' }}
+                            >
+                                {CardContent}
+                            </a>
+                        ) : (
+                            <div key={index}>{CardContent}</div>
+                        );
+                    })}
                 </div>
 
                 {hasMore && (
