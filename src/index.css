@@ -526,9 +526,13 @@ h1.hero-title {
   }
 
   .stat-prefix {
-    top: 8px !important;
-    font-size: 0.4em !important;
-    opacity: 0.8 !important;
+    display: block !important;
+    font-size: 0.9rem !important;
+    margin-bottom: 5px !important;
+    margin-right: 0 !important;
+    opacity: 1 !important;
+    color: #fff !important;
+    letter-spacing: 0.2em !important;
   }
 
   .card-body h3 {

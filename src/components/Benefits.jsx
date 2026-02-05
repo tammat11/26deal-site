@@ -178,13 +178,14 @@ const Benefits = () => {
                     letter-spacing: -0.02em;
                 }
                 .stat-prefix {
-                    font-size: 0.35em;
-                    font-weight: 400;
-                    vertical-align: top;
-                    margin-right: 5px;
-                    opacity: 0.6;
-                    position: relative;
-                    top: 30px;
+                    font-size: 0.3em;
+                    font-weight: 500;
+                    vertical-align: middle;
+                    margin-right: 12px;
+                    opacity: 0.9;
+                    color: rgba(255,255,255,0.7);
+                    text-transform: uppercase;
+                    letter-spacing: 0.1em;
                 }
                 .stat-label {
                     font-size: 0.85rem;
