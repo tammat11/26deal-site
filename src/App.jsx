@@ -46,12 +46,12 @@ const Navbar = () => {
         borderStyle: 'solid',
         borderRadius: '100px',
         transition: 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
-        padding: scrolled ? '18px 60px' : '24px 70px',
+        padding: scrolled ? '18px 80px' : '26px 110px',
         boxShadow: scrolled ? '0 15px 40px rgba(0,0,0,0.6)' : 'none',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: scrolled ? '40px' : '55px',
+        gap: scrolled ? '60px' : '80px',
       }}>
         <img src="/logo_26_business_club_silver_invert.png" alt="26 Logo" style={{
           height: scrolled ? '28px' : '38px',
@@ -61,7 +61,7 @@ const Navbar = () => {
         }} />
         <div className="nav-links" style={{
           display: 'flex',
-          gap: scrolled ? '35px' : '50px',
+          gap: scrolled ? '45px' : '65px',
           alignItems: 'center',
           transition: 'all 0.6s ease'
         }}>
