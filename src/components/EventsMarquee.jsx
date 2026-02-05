@@ -3,7 +3,7 @@ import React from 'react';
 const EventsMarquee = () => {
     return (
         <section
-            className="marquee-container"
+            className="marquee-container reveal-hidden"
             style={{ position: 'relative', overflow: 'hidden', padding: '20px 0', minHeight: '60px', background: 'transparent' }}
         >
             <div className="marquee-content-wrapper">
@@ -53,7 +53,23 @@ const EventsMarquee = () => {
                     will-change: transform;
                 }
                 
-                /* Pause on hover if desired, but user complained about freezing, so maybe better to keep it moving or ensure smooth pause */
+                .marquee-container.reveal-visible {
+                    animation: unroll 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                }
+
+                @keyframes unroll {
+                    from { 
+                        opacity: 0; 
+                        transform: scaleX(0.8);
+                        letter-spacing: 0.5em;
+                    }
+                    to { 
+                        opacity: 1; 
+                        transform: scaleX(1);
+                        letter-spacing: 0.1em;
+                    }
+                }
+
                 .marquee-container:hover .marquee-track {
                     animation-play-state: paused; 
                 }
