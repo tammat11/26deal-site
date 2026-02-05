@@ -97,9 +97,7 @@ const EventsMarquee = () => {
                     will-change: transform;
                 }
                 
-                .marquee-container:hover .marquee-track {
-                    animation-play-state: paused; 
-                }
+
 
                 @keyframes infiniteScroll {
                     0% { transform: translate3d(0, 0, 0); }
