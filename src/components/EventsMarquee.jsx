@@ -44,6 +44,11 @@ const EventsMarquee = () => {
                     border-bottom: 1px solid rgba(255,255,255,0.05);
                 }
 
+                /* Override vertical reveal */
+                .marquee-container.reveal-hidden {
+                    transform: translateY(0) !important;
+                }
+
                 .marquee-scanner {
                     position: absolute;
                     top: 0;
