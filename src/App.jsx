@@ -132,26 +132,9 @@ const Hero = () => (
       </a>
     </div>
 
-    <div style={{
-      position: 'absolute',
-      bottom: '40px',
-      left: '50%',
-      transform: 'translateX(-50%)',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      opacity: 0.7,
-      animation: 'bounce 2s infinite'
-    }}>
-      <span style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '10px' }}>Scroll</span>
-      <div style={{ width: '1px', height: '40px', background: 'linear-gradient(to bottom, #fff, transparent)' }}></div>
-    </div>
+
     <style>{`
-            @keyframes bounce {
-                0%, 20%, 50%, 80%, 100% {transform: translateX(-50%) translateY(0);}
-                40% {transform: translateX(-50%) translateY(-10px);}
-                60% {transform: translateX(-50%) translateY(-5px);}
-            }
+
             @keyframes heroFadeInUp {
                 from { opacity: 0; transform: translateY(40px) scale(0.95); }
                 to { opacity: 1; transform: translateY(0) scale(1); }
