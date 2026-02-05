@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+
 @font-face {
   font-family: 'Trajan Pro 3';
   src: url('/fonts/TrajanPro3-Regular.otf') format('opentype');
@@ -26,7 +28,7 @@
   --color-text-muted: #888888;
   /* Subtle Platinum Border */
   --font-serif: 'Trajan Pro 3', serif;
-  --font-sans: 'Trajan Pro 3', sans-serif;
+  --font-sans: 'Inter', sans-serif;
   --spacing-section: 80px;
 }
 
@@ -433,7 +435,7 @@ h1.hero-title {
   color: white;
   outline: none;
   margin-bottom: 40px;
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   font-size: 1.5rem;
 }
 
