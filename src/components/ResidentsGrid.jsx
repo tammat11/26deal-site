@@ -84,7 +84,7 @@ const ResidentsGrid = () => {
                     </a>
                 )}
 
-                <div style={{
+                <div className="residents-grid" style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
                     gap: '15px'

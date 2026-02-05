@@ -490,7 +490,7 @@ h1.hero-title {
   /* Grid Fixes: Stats, Benefits, Residents -> 2 Columns */
   #stats .grid-4,
   .benefits-grid,
-  #members .container>div:last-of-type {
+  .residents-grid {
     display: grid !important;
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 10px !important;
