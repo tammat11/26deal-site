@@ -165,18 +165,7 @@ const Hero = () => (
 );
 
 function App() {
-  const [scrollProgress, setScrollProgress] = useState(0);
-
   useEffect(() => {
-    const handleScroll = () => {
-      const totalScroll = document.documentElement.scrollHeight - window.innerHeight;
-      const progress = totalScroll > 0 ? window.scrollY / totalScroll : 0;
-      setScrollProgress(progress);
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-
-    // Entries observer
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
@@ -187,65 +176,11 @@ function App() {
 
     document.querySelectorAll('.reveal-hidden').forEach((el) => observer.observe(el));
 
-    // Dynamic scale/shift for cards as they scroll
-    const updateCards = () => {
-      const cards = document.querySelectorAll('.liquid-glass');
-      cards.forEach(card => {
-        const rect = card.getBoundingClientRect();
-        const viewportCenter = window.innerHeight / 2;
-        const cardCenter = rect.top + rect.height / 2;
-        const distanceFromCenter = cardCenter - viewportCenter;
-        const normalizedDistance = distanceFromCenter / viewportCenter;
-
-        // Only apply if card is entry-visible
-        if (rect.top < window.innerHeight && rect.bottom > 0) {
-          // Subtle shift and scale based on center position
-          const scale = 1 - Math.abs(normalizedDistance) * 0.05;
-          const translate = normalizedDistance * 20;
-          card.style.transform = `translateY(${translate}px) scale(${scale})`;
-          card.style.opacity = Math.min(1, 1.2 - Math.abs(normalizedDistance));
-        }
-      });
-      requestAnimationFrame(updateCards);
-    };
-
-    const animationId = requestAnimationFrame(updateCards);
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      observer.disconnect();
-      cancelAnimationFrame(animationId);
-    };
+    return () => observer.disconnect();
   }, []);
 
   return (
-    <div className="app" style={{ position: 'relative', minHeight: '100vh', overflow: 'hidden' }}>
-      {/* Background Parallax Glows */}
-      <div className="scroll-glow-1" style={{
-        position: 'fixed',
-        width: '60vw',
-        height: '60vw',
-        top: '-10%',
-        left: '-10%',
-        background: 'radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%)',
-        transform: `translate(${scrollProgress * 50}px, ${scrollProgress * 100}px)`,
-        pointerEvents: 'none',
-        zIndex: 0,
-        filter: 'blur(100px)'
-      }} />
-      <div className="scroll-glow-2" style={{
-        position: 'fixed',
-        width: '50vw',
-        height: '50vw',
-        bottom: '10%',
-        right: '-5%',
-        background: 'radial-gradient(circle, rgba(255,255,255,0.03) 0%, transparent 70%)',
-        transform: `translate(${-scrollProgress * 80}px, ${-scrollProgress * 120}px)`,
-        pointerEvents: 'none',
-        zIndex: 0,
-        filter: 'blur(80px)'
-      }} />
-
+    <div className="app" style={{ position: 'relative', minHeight: '100vh' }}>
       <Navbar />
       <Hero />
       <AboutClub />
