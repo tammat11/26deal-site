@@ -31,32 +31,39 @@ const Navbar = () => {
       left: '50%',
       transform: 'translateX(-50%)',
       zIndex: 1000,
-      width: 'max-content',
+      width: '90%',
+      maxWidth: 'max-content',
       pointerEvents: 'none'
     }}>
       <nav className="navbar" style={{
         pointerEvents: 'auto',
-        background: scrolled ? 'rgba(15, 15, 15, 0.5)' : 'rgba(255, 255, 255, 0.03)',
-        backdropFilter: 'blur(25px) saturate(180%)',
-        borderColor: scrolled ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.08)',
+        background: scrolled ? 'rgba(15, 15, 15, 0.5)' : 'transparent',
+        backdropFilter: scrolled ? 'blur(25px) saturate(180%)' : 'none',
+        borderColor: scrolled ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
         borderWidth: '1px',
         borderStyle: 'solid',
         borderRadius: '100px',
         transition: 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
-        padding: '10px 35px',
-        boxShadow: scrolled ? '0 15px 40px rgba(0,0,0,0.4)' : '0 5px 20px rgba(0,0,0,0.2)',
+        padding: scrolled ? '10px 35px' : '15px 0px',
+        boxShadow: scrolled ? '0 15px 40px rgba(0,0,0,0.4)' : 'none',
         display: 'flex',
         alignItems: 'center',
+        justifyContent: 'center',
         gap: '40px',
-        scale: scrolled ? '1' : '1.05'
       }}>
-        <img src="/logo_26_business_club_silver_invert.png" alt="26 Logo" style={{ height: '24px', opacity: 0.9 }} />
-        <span style={{ fontSize: '8px', opacity: 0.3, color: '#fff', marginLeft: '-30px', marginRight: '10px' }}>v.1.0.7</span>
-        <div className="nav-links">
-          <a href="#about">О клубе</a>
-          <a href="#benefits">Преимущества</a>
-          <a href="#members">Резиденты</a>
-          <a href="#apply">Вступить</a>
+        <img src="/logo_26_business_club_silver_invert.png" alt="26 Logo" style={{
+          height: scrolled ? '20px' : '26px',
+          opacity: 0.9,
+          transition: 'all 0.4s ease'
+        }} />
+        <div className="nav-links" style={{
+          display: 'flex',
+          gap: window.innerWidth < 768 ? '15px' : '30px'
+        }}>
+          <a href="#about" style={{ fontSize: window.innerWidth < 768 ? '9px' : '11px' }}>О клубе</a>
+          <a href="#benefits" style={{ fontSize: window.innerWidth < 768 ? '9px' : '11px' }}>Преимущества</a>
+          <a href="#members" style={{ fontSize: window.innerWidth < 768 ? '9px' : '11px' }}>Резиденты</a>
+          <a href="#apply" style={{ fontSize: window.innerWidth < 768 ? '9px' : '11px' }}>Вступить</a>
         </div>
       </nav>
     </div>

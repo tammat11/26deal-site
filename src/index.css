@@ -461,28 +461,67 @@ h1.hero-title {
 }
 
 @media (max-width: 768px) {
+  .container {
+    padding: 0 20px;
+  }
 
   .grid-3,
-  .grid-4 {
+  .grid-4,
+  .grid-6 {
     grid-template-columns: 1fr;
-    gap: 20px;
+    gap: 30px;
+  }
+
+  /* Half-grid for residents to see more at once */
+  #members .container>div:last-of-type {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
   }
 
   h1.hero-title {
-    font-size: 3.5rem;
+    font-size: 2.2rem !important;
+    line-height: 1.2 !important;
+  }
+
+  h2 {
+    font-size: 2.2rem !important;
+  }
+
+  .hero-logo-container {
+    width: 80% !important;
   }
 
   .manifesto-text {
-    font-size: 2rem;
+    font-size: 1.8rem;
   }
 
   .navbar {
-    width: 90%;
-    justify-content: space-between;
+    width: 95% !important;
+    padding: 10px 15px !important;
+    gap: 15px !important;
   }
 
   .nav-links {
-    display: none;
+    display: flex !important;
+    /* Force visible as requested */
+    gap: 10px !important;
+  }
+
+  .nav-links a {
+    font-size: 8px !important;
+    letter-spacing: 0.05em !important;
+  }
+
+  .stat-item span:first-child {
+    font-size: 2.5rem !important;
+  }
+
+  .liquid-glass {
+    padding: 30px 20px !important;
+  }
+
+  .section {
+    padding: 60px 0 !important;
   }
 }
 
