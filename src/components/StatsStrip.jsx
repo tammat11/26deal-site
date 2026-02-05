@@ -22,7 +22,7 @@ const StatsStrip = () => {
                             <span style={{ fontFamily: 'Inter', fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#888' }}>
                                 {stat.label}
                             </span>
-                            <span style={{ fontFamily: 'Playfair Display', fontSize: '3.5rem', lineHeight: 1, color: 'white' }}>
+                            <span style={{ fontFamily: 'Playfair Display', fontSize: '4.5rem', lineHeight: 1, color: 'white' }}>
                                 {stat.value}
                             </span>
                         </div>

@@ -57,7 +57,7 @@ const Benefits = () => {
                     <div ref={card1Ref} className="benefit-wrapper reveal-hidden reveal-3d" style={{ willChange: 'transform' }}>
                         <div className="benefit-card">
                             <div className="card-header">
-                                <div className="stat-value"><span className="stat-prefix">от</span> 100</div>
+                                <div className="stat-value"><span className="stat-prefix">ОТ</span> 100</div>
                                 <div className="stat-label">МЛН ТГ ОБОРОТ</div>
                             </div>
                             <div className="card-body">
@@ -72,7 +72,7 @@ const Benefits = () => {
                     <div ref={card2Ref} className="benefit-wrapper reveal-hidden reveal-3d" style={{ willChange: 'transform' }}>
                         <div className="benefit-card" style={{ transitionDelay: '150ms' }}>
                             <div className="card-header">
-                                <div className="stat-value"><span className="stat-prefix">от</span> 3</div>
+                                <div className="stat-value"><span className="stat-prefix">ОТ</span> 3</div>
                                 <div className="stat-label">ЛЕТ В БИЗНЕСЕ</div>
                             </div>
                             <div className="card-body">
@@ -87,7 +87,7 @@ const Benefits = () => {
                     <div ref={card3Ref} className="benefit-wrapper reveal-hidden reveal-3d" style={{ willChange: 'transform' }}>
                         <div className="benefit-card" style={{ transitionDelay: '300ms' }}>
                             <div className="card-header">
-                                <div className="stat-value"><span className="stat-prefix">от</span> 10</div>
+                                <div className="stat-value"><span className="stat-prefix">ОТ</span> 10</div>
                                 <div className="stat-label">ЧЕЛОВЕК В КОМАНДЕ</div>
                             </div>
                             <div className="card-body">
