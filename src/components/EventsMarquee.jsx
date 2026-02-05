@@ -18,22 +18,24 @@ const EventsMarquee = () => {
             <div className="marquee-content-wrapper">
                 <div className="marquee-track">
                     {/* First copy */}
-                    <div className="marquee-item">Private <span>Dinners</span></div>
-                    <div className="marquee-item">Business <span>Breakfasts</span></div>
-                    <div className="marquee-item">Global <span>Retreats</span></div>
-                    <div className="marquee-item">Investment <span>Forums</span></div>
-                    <div className="marquee-item">Exclusive <span>Workshops</span></div>
-                    <div className="marquee-item">Family <span>Events</span></div>
-                    <div className="marquee-item">Sports <span>Activities</span></div>
+                    <div className="marquee-item">Совет <span>директоров</span></div>
+                    <div className="marquee-item">Бизнес <span>Форум</span></div>
+                    <div className="marquee-item">Семейные <span>дни</span></div>
+                    <div className="marquee-item"><span>Обучение</span></div>
+                    <div className="marquee-item">Совет <span>директоров</span></div>
+                    <div className="marquee-item">Бизнес <span>Форум</span></div>
+                    <div className="marquee-item">Семейные <span>дни</span></div>
+                    <div className="marquee-item"><span>Обучение</span></div>
 
                     {/* Duplicate copy for loop */}
-                    <div className="marquee-item">Private <span>Dinners</span></div>
-                    <div className="marquee-item">Business <span>Breakfasts</span></div>
-                    <div className="marquee-item">Global <span>Retreats</span></div>
-                    <div className="marquee-item">Investment <span>Forums</span></div>
-                    <div className="marquee-item">Exclusive <span>Workshops</span></div>
-                    <div className="marquee-item">Family <span>Events</span></div>
-                    <div className="marquee-item">Sports <span>Activities</span></div>
+                    <div className="marquee-item">Совет <span>директоров</span></div>
+                    <div className="marquee-item">Бизнес <span>Форум</span></div>
+                    <div className="marquee-item">Семейные <span>дни</span></div>
+                    <div className="marquee-item"><span>Обучение</span></div>
+                    <div className="marquee-item">Совет <span>директоров</span></div>
+                    <div className="marquee-item">Бизнес <span>Форум</span></div>
+                    <div className="marquee-item">Семейные <span>дни</span></div>
+                    <div className="marquee-item"><span>Обучение</span></div>
                 </div>
             </div>
             <style>{`
