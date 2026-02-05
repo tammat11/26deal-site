@@ -487,12 +487,26 @@ h1.hero-title {
     margin-bottom: 15px !important;
   }
 
-  /* Compact Cards (Benefits & Steps) */
+  /* Creative ZigZag Layout for Benefits & Steps */
   #benefits .grid-3,
   #admission .grid-4 {
     display: flex !important;
     flex-direction: column;
-    gap: 12px !important;
+    gap: 15px !important;
+  }
+
+  /* Stagger cards: Odd left, Even right */
+  #benefits .liquid-glass:nth-child(odd),
+  #admission .liquid-glass:nth-child(odd) {
+    align-self: flex-start;
+    width: 92%;
+  }
+
+  #benefits .liquid-glass:nth-child(even),
+  #admission .liquid-glass:nth-child(even) {
+    align-self: flex-end;
+    width: 92%;
+    text-align: right;
   }
 
   .liquid-glass {
@@ -502,21 +516,38 @@ h1.hero-title {
 
   .liquid-glass h3 {
     font-size: 1.2rem !important;
-    margin-top: 15px !important;
+    margin-top: 10px !important;
   }
 
-  /* Compact Residents */
+  /* Extreme Compact Residents */
   #members .container>div:last-of-type {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 8px !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    /* 3 columns for density */
+    gap: 6px !important;
+  }
+
+  .resident-card-portrait {
+    aspect-ratio: 1/1.2 !important;
+    /* Shorter cards */
+    border-radius: 8px !important;
+  }
+
+  .card-overlay {
+    padding: 6px !important;
   }
 
   .card-overlay h3 {
-    font-size: 0.85rem !important;
+    font-size: 0.65rem !important;
+    margin-bottom: 2px !important;
   }
 
   .card-overlay p {
-    font-size: 0.55rem !important;
+    font-size: 0.45rem !important;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   /* Stats Strip Compact */
