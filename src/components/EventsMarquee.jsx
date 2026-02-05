@@ -4,7 +4,15 @@ const EventsMarquee = () => {
     return (
         <section
             className="marquee-container reveal-hidden"
-            style={{ position: 'relative', overflow: 'hidden', padding: '20px 0', minHeight: '60px', background: 'transparent' }}
+            style={{
+                position: 'relative',
+                overflow: 'hidden',
+                padding: '25px 0',
+                minHeight: '80px',
+                background: 'transparent',
+                borderTop: '1px solid rgba(255,255,255,0.1)',
+                borderBottom: '1px solid rgba(255,255,255,0.1)'
+            }}
         >
             <div className="marquee-content-wrapper">
                 <div className="marquee-track">
@@ -54,19 +62,24 @@ const EventsMarquee = () => {
                 }
                 
                 .marquee-container.reveal-visible {
-                    animation: unroll 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                    animation: cinematicUnroll 1.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
                 }
 
-                @keyframes unroll {
-                    from { 
+                @keyframes cinematicUnroll {
+                    0% { 
                         opacity: 0; 
-                        transform: scaleX(0.8);
-                        letter-spacing: 0.5em;
+                        clip-path: inset(0 50% 0 50%);
+                        letter-spacing: 1em;
+                        transform: scale(0.95);
                     }
-                    to { 
+                    40% {
+                        opacity: 1;
+                    }
+                    100% { 
                         opacity: 1; 
-                        transform: scaleX(1);
+                        clip-path: inset(0 0% 0 0%);
                         letter-spacing: 0.1em;
+                        transform: scale(1);
                     }
                 }
 
