@@ -7,13 +7,14 @@ const EventsMarquee = () => {
             style={{
                 position: 'relative',
                 overflow: 'hidden',
-                padding: '25px 0',
+                padding: '30px 0',
                 minHeight: '80px',
-                background: 'transparent',
-                borderTop: '1px solid rgba(255,255,255,0.1)',
-                borderBottom: '1px solid rgba(255,255,255,0.1)'
+                background: 'transparent'
             }}
         >
+            {/* The Scanner Line */}
+            <div className="marquee-scanner"></div>
+
             <div className="marquee-content-wrapper">
                 <div className="marquee-track">
                     {/* First copy */}
@@ -33,78 +34,91 @@ const EventsMarquee = () => {
                     <div className="marquee-item">Exclusive <span>Workshops</span></div>
                     <div className="marquee-item">Family <span>Events</span></div>
                     <div className="marquee-item">Sports <span>Activities</span></div>
-
-                    {/* Triplicate copy for safety on wide screens */}
-                    <div className="marquee-item">Private <span>Dinners</span></div>
-                    <div className="marquee-item">Business <span>Breakfasts</span></div>
-                    <div className="marquee-item">Global <span>Retreats</span></div>
-                    <div className="marquee-item">Investment <span>Forums</span></div>
-                    <div className="marquee-item">Exclusive <span>Workshops</span></div>
-                    <div className="marquee-item">Family <span>Events</span></div>
-                    <div className="marquee-item">Sports <span>Activities</span></div>
                 </div>
             </div>
             <style>{`
+                .marquee-container {
+                    border-top: 1px solid rgba(255,255,255,0.05);
+                    border-bottom: 1px solid rgba(255,255,255,0.05);
+                }
+
+                .marquee-scanner {
+                    position: absolute;
+                    top: 0;
+                    bottom: 0;
+                    left: -100px;
+                    width: 2px;
+                    background: white;
+                    box-shadow: 0 0 20px 2px white, 0 0 40px 4px rgba(255,255,255,0.5);
+                    z-index: 10;
+                    opacity: 0;
+                    pointer-events: none;
+                }
+
+                .marquee-container.reveal-visible .marquee-scanner {
+                    animation: scanLine 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                }
+
+                .marquee-container.reveal-visible .marquee-content-wrapper {
+                    animation: wipeContent 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                }
+
+                @keyframes scanLine {
+                    0% { left: 0%; opacity: 0; }
+                    10% { opacity: 1; }
+                    90% { opacity: 1; }
+                    100% { left: 100%; opacity: 0; }
+                }
+
+                @keyframes wipeContent {
+                    0% { 
+                        opacity: 0;
+                        clip-path: inset(0 100% 0 0);
+                    }
+                    100% { 
+                        opacity: 1;
+                        clip-path: inset(0 0% 0 0);
+                    }
+                }
+
                 .marquee-content-wrapper {
                     display: flex;
                     overflow: hidden;
                     width: 100%;
-                    mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
-                    -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+                    mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+                    -webkit-mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
                 }
 
                 .marquee-track {
                     display: flex;
-                    gap: 60px;
+                    gap: 80px;
                     width: max-content;
                     animation: infiniteScroll 40s linear infinite;
                     will-change: transform;
                 }
                 
-                .marquee-container.reveal-visible {
-                    animation: cinematicUnroll 1.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-                }
-
-                @keyframes cinematicUnroll {
-                    0% { 
-                        opacity: 0; 
-                        clip-path: inset(0 50% 0 50%);
-                        letter-spacing: 1em;
-                        transform: scale(0.95);
-                    }
-                    40% {
-                        opacity: 1;
-                    }
-                    100% { 
-                        opacity: 1; 
-                        clip-path: inset(0 0% 0 0%);
-                        letter-spacing: 0.1em;
-                        transform: scale(1);
-                    }
-                }
-
                 .marquee-container:hover .marquee-track {
                     animation-play-state: paused; 
                 }
 
                 @keyframes infiniteScroll {
                     0% { transform: translate3d(0, 0, 0); }
-                    100% { transform: translate3d(-33.33%, 0, 0); } /* Moving 1/3 since we have 3 sets */
+                    100% { transform: translate3d(-50%, 0, 0); }
                 }
 
                 .marquee-item {
                     font-size: 1.2rem;
                     text-transform: uppercase;
-                    letter-spacing: 0.1em;
-                    color: rgba(255,255,255,0.5);
+                    letter-spacing: 0.15em;
+                    color: rgba(255,255,255,0.4);
                     white-space: nowrap;
-                    font-family: 'Trajan Pro 3', serif; /* Matching global font usage */
+                    font-family: 'Trajan Pro 3', serif;
                 }
                 
                 .marquee-item span {
                     color: #fff;
                     font-weight: 600;
-                    margin-left: 5px;
+                    margin-left: 8px;
                 }
             `}</style>
         </section>
