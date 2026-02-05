@@ -10,18 +10,26 @@ const KineticTitle = ({ children }) => {
 
         const update = () => {
             const currentScrollY = window.scrollY;
-            const speed = currentScrollY - lastScrollY;
+            const diff = currentScrollY - lastScrollY;
 
-            // Calculate skew based on speed
-            const newSkew = Math.max(Math.min(speed * 0.1, 15), -15);
+            // Ignore extreme jumps (like clicking an anchor link)
+            if (Math.abs(diff) > 300) {
+                lastScrollY = currentScrollY;
+                setSkew(0);
+                ticking = false;
+                return;
+            }
 
-            setSkew(newSkew);
+            const speed = diff;
+            const targetSkew = Math.max(Math.min(speed * 0.08, 12), -12);
+
+            setSkew(targetSkew);
             lastScrollY = currentScrollY;
             ticking = false;
 
             // Reset skew when stopped
             clearTimeout(timeout);
-            timeout = setTimeout(() => setSkew(0), 100);
+            timeout = setTimeout(() => setSkew(0), 150);
         };
 
         const onScroll = () => {
@@ -31,7 +39,7 @@ const KineticTitle = ({ children }) => {
             }
         };
 
-        window.addEventListener('scroll', onScroll);
+        window.addEventListener('scroll', onScroll, { passive: true });
         return () => window.removeEventListener('scroll', onScroll);
     }, []);
 
@@ -39,7 +47,7 @@ const KineticTitle = ({ children }) => {
         <span style={{
             display: 'inline-block',
             transform: `skewX(${-skew}deg)`,
-            transition: 'transform 0.1s cubic-bezier(0.2, 0, 0.2, 1)',
+            transition: 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
             willChange: 'transform',
             whiteSpace: 'nowrap'
         }}>
