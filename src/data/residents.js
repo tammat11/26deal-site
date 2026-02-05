@@ -11,7 +11,7 @@ export const residents = [
     { name: "Денис Саттаров", company: "Mastersky Group", photo: "/residents/Денис Саттаров.jpg" },
     { name: "Сергей Хрущев", company: "ТехНОвиД", photo: "/residents/Сергей Хрущёв.jpeg" },
     { name: "Ержан Калимулдиев", company: "TEPLOSTIL", photo: "/residents/Ержан Калимулдиев.jpeg" },
-    { name: "Зарина Шкабаро", company: "CeZar Group & Gallery", photo: "/residents/Ярослав Шкабаро.jpg" },
+    { name: "Ярослав Шкабаро", company: "CeZar Group & Gallery", photo: "/residents/Ярослав Шкабаро.jpg" },
     { name: "Жаркын Калелов", company: "Expert Neuro", photo: "/residents/Жаркын Калелов.jpeg" },
     { name: "Марат Успанов", company: "Starget", photo: "/residents/Марат Успанов.PNG" },
     { name: "Владимир Ким", company: "Maxipay", photo: "/residents/Владимир Ким.jpg" },

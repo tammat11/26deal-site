@@ -202,8 +202,8 @@ const Benefits = () => {
                     min-height: 3.4em;
                 }
                 .card-body p {
-                    color: #aaa;
-                    font-size: 0.9rem;
+                    color: #e0e0e0;
+                    font-size: 0.95rem;
                     font-family: sans-serif;
                     line-height: 1.6;
                 }

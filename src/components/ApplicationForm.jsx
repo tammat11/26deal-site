@@ -150,8 +150,8 @@ const ApplicationForm = () => {
                             </button>
                         </div>
 
-                        <p style={{ fontSize: '10px', color: '#555', marginTop: '20px', textAlign: 'center' }}>
-                            Нажимая кнопку «ПОДАТЬ ЗАЯВКУ» вы принимаете правила <a href="/policy" style={{ color: '#777', textDecoration: 'underline' }}>политики конфиденциальности</a>
+                        <p style={{ fontSize: '11px', color: '#aaa', marginTop: '20px', textAlign: 'center' }}>
+                            Нажимая кнопку «ПОДАТЬ ЗАЯВКУ» вы принимаете правила <a href="/policy" style={{ color: '#ccc', textDecoration: 'underline' }}>политики конфиденциальности</a>
                         </p>
                     </form>
                 </div>

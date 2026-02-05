@@ -68,7 +68,7 @@ const ResidentsGrid = () => {
                             <p style={{ fontSize: '1.2rem', color: '#aaa', marginBottom: '30px', fontFamily: 'Trajan Pro 3, serif' }}>
                                 Основатель <span style={{ color: 'white' }}>{president.company}</span>
                             </p>
-                            <p style={{ fontFamily: 'Trajan Pro 3, serif', lineHeight: '1.6', color: '#888', maxWidth: '500px' }}>
+                            <p style={{ fontFamily: 'Trajan Pro 3, serif', lineHeight: '1.6', color: '#ccc', maxWidth: '500px' }}>
                                 Лидер сообщества, объединяющий сильных предпринимателей для создания масштабных изменений.
                             </p>
                         </div>

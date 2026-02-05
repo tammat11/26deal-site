@@ -7,7 +7,7 @@ const AboutClub = () => {
             <div className="container text-center">
                 <div className="liquid-glass reveal-hidden" style={{ padding: '60px', maxWidth: '800px', margin: '0 auto' }}>
                     <h2 style={{ marginBottom: '40px' }}>
-                        <span style={{ fontStyle: 'italic', marginRight: '10px' }}>О</span>
+                        <span style={{ marginRight: '10px' }}>О</span>
                         <KineticTitle>КЛУБЕ</KineticTitle>
                     </h2>
                     <p style={{ fontSize: '0.8rem', lineHeight: '1.6', marginBottom: '20px', color: '#ccc' }}>
