@@ -124,7 +124,7 @@ const ApplicationForm = () => {
                             name="phone"
                             value={formData.phone}
                             onChange={handleChange}
-                            placeholder="Телефон"
+                            placeholder="+7 (XXX) XXXX XX-XX"
                             required
                             style={{ width: '100%', padding: '15px', marginBottom: '15px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '8px', outline: 'none' }}
                         />
@@ -133,7 +133,7 @@ const ApplicationForm = () => {
                             name="email"
                             value={formData.email}
                             onChange={handleChange}
-                            placeholder="Email"
+                            placeholder="XXXXX@GMAIL.COM"
                             required
                             style={{ width: '100%', padding: '15px', marginBottom: '15px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '8px', outline: 'none' }}
                         />
