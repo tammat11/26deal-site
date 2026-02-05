@@ -21,11 +21,11 @@ const StatsStrip = () => {
                             textAlign: 'center',
                             transitionDelay: `${index * 100}ms`
                         }}>
-                            <span style={{ fontFamily: 'Inter', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.15em', color: '#888', marginBottom: '15px' }}>
+                            <span style={{ fontFamily: 'var(--font-serif)', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.15em', color: '#888', marginBottom: '15px' }}>
                                 {stat.label}
                             </span>
                             <span style={{
-                                fontFamily: 'Playfair Display',
+                                fontFamily: 'var(--font-serif)',
                                 fontSize: '5.5rem',
                                 lineHeight: 1,
                                 color: 'white',
@@ -35,7 +35,7 @@ const StatsStrip = () => {
                                 {stat.value}
                             </span>
                             <span style={{
-                                fontFamily: 'Inter',
+                                fontFamily: 'var(--font-serif)',
                                 fontSize: '0.85rem',
                                 color: '#aaa',
                                 maxWidth: '180px',

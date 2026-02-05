@@ -20,7 +20,6 @@ const ResidentsGrid = () => {
             <div className="container">
                 <div style={{ marginBottom: '80px', textAlign: 'center' }}>
                     <h2 className="section-title">
-                        <span style={{ fontStyle: 'italic', fontFamily: 'Playfair Display', marginRight: '10px' }}></span>
                         <KineticTitle>РЕЗИДЕНТЫ</KineticTitle>
                     </h2>
                 </div>
