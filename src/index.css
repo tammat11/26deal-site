@@ -465,103 +465,104 @@ h1.hero-title {
     padding: 0 15px;
   }
 
-  /* Compact Hero */
+  /* Extreme Compact Hero */
   h1.hero-title {
-    font-size: 1.4rem !important;
+    font-size: 1.2rem !important;
     line-height: 1.3 !important;
     margin-bottom: 15px !important;
   }
 
   .hero-logo-container {
-    width: 65% !important;
+    width: 60% !important;
     margin-bottom: 10px !important;
   }
 
   /* Compact Sections */
   .section {
-    padding: 35px 0 !important;
+    padding: 25px 0 !important;
   }
 
   h2 {
-    font-size: 1.5rem !important;
+    font-size: 1.35rem !important;
     margin-bottom: 15px !important;
   }
 
-  /* Creative ZigZag Layout for Benefits & Steps */
-  #benefits .grid-3,
+  /* Horizontal Snap-Scroll for Benefits (Saves massive vertical space) */
+  #benefits .grid-3 {
+    display: flex !important;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 15px !important;
+    padding: 10px 0 15px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  #benefits .grid-3::-webkit-scrollbar {
+    display: none;
+  }
+
+  #benefits .liquid-glass {
+    min-width: 85vw;
+    scroll-snap-align: center;
+    margin-bottom: 0 !important;
+    padding: 20px !important;
+  }
+
+  /* Tight ZigZag for Admission */
   #admission .grid-4 {
     display: flex !important;
     flex-direction: column;
-    gap: 15px !important;
+    gap: 10px !important;
   }
 
-  /* Stagger cards: Odd left, Even right */
-  #benefits .liquid-glass:nth-child(odd),
   #admission .liquid-glass:nth-child(odd) {
     align-self: flex-start;
-    width: 92%;
+    width: 88%;
   }
 
-  #benefits .liquid-glass:nth-child(even),
   #admission .liquid-glass:nth-child(even) {
     align-self: flex-end;
-    width: 92%;
+    width: 88%;
     text-align: right;
   }
 
-  .liquid-glass {
-    padding: 20px !important;
-    min-height: auto !important;
-  }
-
   .liquid-glass h3 {
-    font-size: 1.2rem !important;
-    margin-top: 10px !important;
+    font-size: 1.15rem !important;
+    margin-top: 5px !important;
   }
 
-  /* Extreme Compact Residents */
+  .liquid-glass p {
+    font-size: 0.75rem !important;
+    line-height: 1.4 !important;
+  }
+
+  /* Clean 2-column Residents */
   #members .container>div:last-of-type {
-    grid-template-columns: repeat(3, 1fr) !important;
-    /* 3 columns for density */
-    gap: 6px !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
   }
 
   .resident-card-portrait {
-    aspect-ratio: 1/1.2 !important;
-    /* Shorter cards */
+    aspect-ratio: 1/1.1 !important;
     border-radius: 8px !important;
   }
 
-  .card-overlay {
-    padding: 6px !important;
-  }
-
   .card-overlay h3 {
-    font-size: 0.65rem !important;
-    margin-bottom: 2px !important;
+    font-size: 0.75rem !important;
   }
 
   .card-overlay p {
-    font-size: 0.45rem !important;
-    display: -webkit-box;
-    -webkit-line-clamp: 1;
-    line-clamp: 1;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    font-size: 0.5rem !important;
   }
 
-  /* Stats Strip Compact */
   .stat-item span:first-child {
-    font-size: 1.8rem !important;
-  }
-
-  .stat-item span:last-child {
-    font-size: 0.6rem !important;
+    font-size: 1.5rem !important;
   }
 
   .navbar {
     width: 95% !important;
-    padding: 6px 12px !important;
+    padding: 5px 12px !important;
   }
 
   .nav-links a {
