@@ -27,7 +27,7 @@ const Navbar = () => {
   return (
     <div className="nav-wrapper" style={{
       position: 'fixed',
-      top: scrolled ? '20px' : '40px',
+      top: scrolled ? '12px' : '20px',
       left: '50%',
       transform: 'translateX(-50%)',
       zIndex: 1000,
