@@ -45,7 +45,7 @@ const Benefits = () => {
         <section id="benefits" className="section" ref={sectionRef} style={{ overflow: 'hidden', padding: '100px 0', position: 'relative' }}>
             <div className="container" style={{ position: 'relative', zIndex: 1 }}>
                 <div className="reveal-hidden" style={{ marginBottom: '60px', textAlign: 'center' }}>
-                    <h2 style={{ lineHeight: '1.2', letterSpacing: '0.05em', marginBottom: '20px' }}>
+                    <h2 style={{ fontSize: 'clamp(2rem, 4vw, 2.8rem)', lineHeight: '1.2', letterSpacing: '0.05em', marginBottom: '20px' }}>
                         «26 BUSINESS CLUB» ДЛЯ ВАС, ЕСЛИ:
                     </h2>
                     <div style={{ width: '60px', height: '2px', background: '#fff', margin: '0 auto', opacity: 0.5 }}></div>
