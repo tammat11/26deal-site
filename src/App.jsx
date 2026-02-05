@@ -25,16 +25,33 @@ const Navbar = () => {
   }, []);
 
   return (
-    <div className="nav-wrapper">
+    <div className="nav-wrapper" style={{
+      position: 'fixed',
+      top: '25px',
+      left: '50%',
+      transform: 'translateX(-50%)',
+      zIndex: 1000,
+      width: 'max-content',
+      pointerEvents: 'none'
+    }}>
       <nav className="navbar" style={{
-        background: scrolled ? 'rgba(10, 10, 10, 0.8)' : 'transparent',
-        backdropFilter: scrolled ? 'blur(20px)' : 'none',
-        borderColor: scrolled ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
-        transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-        padding: scrolled ? '10px 40px' : '10px 0px'
+        pointerEvents: 'auto',
+        background: scrolled ? 'rgba(15, 15, 15, 0.5)' : 'rgba(255, 255, 255, 0.03)',
+        backdropFilter: 'blur(25px) saturate(180%)',
+        borderColor: scrolled ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.08)',
+        borderWidth: '1px',
+        borderStyle: 'solid',
+        borderRadius: '100px',
+        transition: 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+        padding: '10px 35px',
+        boxShadow: scrolled ? '0 15px 40px rgba(0,0,0,0.4)' : '0 5px 20px rgba(0,0,0,0.2)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '40px',
+        scale: scrolled ? '1' : '1.05'
       }}>
-        <img src="/logo_26_business_club_silver_invert.png" alt="26 Logo" style={{ height: '30px', opacity: 0.9 }} />
-        <span style={{ fontSize: '8px', opacity: 0.3, color: '#fff', marginLeft: '5px' }}>v.1.0.6</span>
+        <img src="/logo_26_business_club_silver_invert.png" alt="26 Logo" style={{ height: '24px', opacity: 0.9 }} />
+        <span style={{ fontSize: '8px', opacity: 0.3, color: '#fff', marginLeft: '-30px', marginRight: '10px' }}>v.1.0.7</span>
         <div className="nav-links">
           <a href="#about">О клубе</a>
           <a href="#benefits">Преимущества</a>
