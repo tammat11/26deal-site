@@ -6,7 +6,7 @@ const StatsStrip = () => {
         <section id="stats" className="section">
             <div className="container">
                 <div className="text-center reveal-hidden" style={{ marginBottom: '60px' }}>
-                    <h2 className="section-title">Наши <i>Результаты.</i></h2>
+                    <h2>Наши <i>Результаты.</i></h2>
                 </div>
 
                 <div className="grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
