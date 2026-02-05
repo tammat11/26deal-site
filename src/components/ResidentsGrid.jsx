@@ -6,7 +6,7 @@ const ResidentsGrid = () => {
     const president = residents.find(r => r.isPresident);
     const otherResidents = residents.filter(r => !r.isPresident);
 
-    const [visibleCount, setVisibleCount] = useState(15);
+    const [visibleCount, setVisibleCount] = useState(6);
 
     const visibleResidents = otherResidents.slice(0, visibleCount);
     const hasMore = visibleCount < otherResidents.length;

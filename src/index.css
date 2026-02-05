@@ -462,14 +462,45 @@ h1.hero-title {
 
 @media (max-width: 768px) {
   .container {
-    padding: 0 20px;
+    padding: 0 15px;
   }
 
-  .grid-3,
-  .grid-4,
-  .grid-6 {
-    grid-template-columns: 1fr;
-    gap: 30px;
+  /* Creative Mobile Layout for Benefits: Horizontal Snap Scroll */
+  #benefits .grid-3 {
+    display: flex !important;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 15px !important;
+    padding: 20px 0 40px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  #benefits .grid-3::-webkit-scrollbar {
+    display: none;
+  }
+
+  #benefits .liquid-glass {
+    min-width: 85vw;
+    scroll-snap-align: center;
+    margin-bottom: 0 !important;
+  }
+
+  /* Admission Steps: Staggered Layout */
+  #admission .grid-4 {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  #admission .liquid-glass:nth-child(even) {
+    align-self: flex-end;
+    width: 90%;
+  }
+
+  #admission .liquid-glass:nth-child(odd) {
+    align-self: flex-start;
+    width: 90%;
   }
 
   /* Half-grid for residents to see more at once */
@@ -480,19 +511,10 @@ h1.hero-title {
 
   h1.hero-title {
     font-size: 2.2rem !important;
-    line-height: 1.2 !important;
   }
 
   h2 {
-    font-size: 2.2rem !important;
-  }
-
-  .hero-logo-container {
-    width: 80% !important;
-  }
-
-  .manifesto-text {
-    font-size: 1.8rem;
+    font-size: 2rem !important;
   }
 
   .navbar {
@@ -503,25 +525,15 @@ h1.hero-title {
 
   .nav-links {
     display: flex !important;
-    /* Force visible as requested */
     gap: 10px !important;
   }
 
   .nav-links a {
     font-size: 8px !important;
-    letter-spacing: 0.05em !important;
-  }
-
-  .stat-item span:first-child {
-    font-size: 2.5rem !important;
-  }
-
-  .liquid-glass {
-    padding: 30px 20px !important;
   }
 
   .section {
-    padding: 60px 0 !important;
+    padding: 50px 0 !important;
   }
 }
 
