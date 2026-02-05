@@ -34,6 +34,7 @@ const Navbar = () => {
         padding: scrolled ? '10px 40px' : '10px 0px'
       }}>
         <img src="/logo_26_business_club_silver_invert.png" alt="26 Logo" style={{ height: '30px', opacity: 0.9 }} />
+        <span style={{ fontSize: '8px', opacity: 0.3, color: '#fff', marginLeft: '5px' }}>v.1.0.2</span>
         <div className="nav-links">
           <a href="#about">О клубе</a>
           <a href="#benefits">Преимущества</a>
