@@ -38,10 +38,10 @@ const Navbar = () => {
     }}>
       <nav className="navbar" style={{
         pointerEvents: 'auto',
-        background: scrolled ? 'rgba(10, 10, 10, 0.85)' : 'transparent',
+        background: scrolled ? 'rgba(10, 10, 10, 0.4)' : 'transparent',
         backdropFilter: scrolled ? 'blur(30px) saturate(180%)' : 'none',
         WebkitBackdropFilter: scrolled ? 'blur(30px) saturate(180%)' : 'none',
-        borderColor: scrolled ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
+        borderColor: scrolled ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
         borderWidth: '1px',
         borderStyle: 'solid',
         borderRadius: '100px',
