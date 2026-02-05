@@ -117,7 +117,7 @@ const ApplicationForm = () => {
                             onChange={handleChange}
                             placeholder="Имя"
                             required
-                            style={{ width: '100%', padding: '15px', marginBottom: '15px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '8px', outline: 'none' }}
+                            style={{ width: '100%', padding: '15px', marginBottom: '15px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '8px', outline: 'none', fontSize: '14px' }}
                         />
                         <input
                             type="tel"
@@ -126,7 +126,7 @@ const ApplicationForm = () => {
                             onChange={handleChange}
                             placeholder="+7 (XXX) XXXX XX-XX"
                             required
-                            style={{ width: '100%', padding: '15px', marginBottom: '15px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '8px', outline: 'none' }}
+                            style={{ width: '100%', padding: '15px', marginBottom: '15px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '8px', outline: 'none', fontSize: '14px' }}
                         />
                         <input
                             type="email"
@@ -135,7 +135,7 @@ const ApplicationForm = () => {
                             onChange={handleChange}
                             placeholder="XXXXX@GMAIL.COM"
                             required
-                            style={{ width: '100%', padding: '15px', marginBottom: '15px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '8px', outline: 'none' }}
+                            style={{ width: '100%', padding: '15px', marginBottom: '15px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '8px', outline: 'none', fontSize: '14px' }}
                         />
                         <input
                             type="text"
@@ -144,7 +144,7 @@ const ApplicationForm = () => {
                             onChange={handleChange}
                             placeholder="Компания"
                             required
-                            style={{ width: '100%', padding: '15px', marginBottom: '15px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '8px', outline: 'none' }}
+                            style={{ width: '100%', padding: '15px', marginBottom: '15px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '8px', outline: 'none', fontSize: '14px' }}
                         />
 
                         <div className="text-center" style={{ marginTop: '40px' }}>
