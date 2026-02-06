@@ -26,7 +26,7 @@ const StatsStrip = () => {
                             </span>
                             <span style={{
                                 fontFamily: 'var(--font-serif)',
-                                fontSize: '5.5rem',
+                                fontSize: stat.value.includes('млн') ? '3.5rem' : '5.5rem',
                                 lineHeight: 1,
                                 color: 'white',
                                 textShadow: '0 0 40px rgba(255,255,255,0.3)',
