@@ -1,7 +1,7 @@
 export const residents = [
-    { name: "Тимур Нуртаев", company: "TIMUS DEVELOPMENT", niche: "Девелопмент и строительство", photo: "/residents/IMG_5283.jpg", isPresident: true, website: "https://timusdevelopment.kz/" },
-    { name: "Ларион Лян", company: "IC-Group", niche: "Клининг и сервис", photo: "/residents/Ларион Лян.JPG", website: "https://ic-group.kz/" },
-    { name: "Болат Джанабаев", company: "Interlink Global Services", niche: "Логистика", photo: "/residents/Болат Джанабаев.jpg", website: "http://interlinkgs.com/" },
+    { name: "Тимур Нуртаев", company: "TIMUS DEVELOPMENT", niche: "Девелопмент и строительство", photo: "/residents/IMG_5283.jpg", isPresident: true, website: "https://timusdevelopment.kz/", brief: "Президент клуба 2026" },
+    { name: "Ларион Лян", company: "IC-Group", niche: "Клининг и сервис", photo: "/residents/Ларион Лян.JPG", website: "https://ic-group.kz/", brief: "Лидер отрасли клининга" },
+    { name: "Болат Джанабаев", company: "Interlink Global Services", niche: "Логистика", photo: "/residents/Болат Джанабаев.jpg", website: "http://interlinkgs.com/", brief: "Международная логистика" },
     { name: "Кайрат Аубакиров", company: "Садыхан", niche: "Фармацевтика", photo: "/residents/Кайрат Аубакиров.jpg", website: "https://sadykhan.kz/" },
     { name: "Федор Чередниченко", company: "Mladex", niche: "Производство", photo: "/residents/Федор Чередниченко.JPG", website: "https://mladex.kz/" },
     { name: "Димаш Сабитов", company: "Ломбард Белый, SoBes", niche: "Финтех и IT", photo: "/residents/Димаш Сабитов.jpg", website: "https://sobes.app/" },

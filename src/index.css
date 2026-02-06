@@ -47,16 +47,18 @@
 
 body {
   background-color: var(--color-bg);
+  background-image:
+    radial-gradient(circle at 50% -20%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 0% 50%, rgba(255, 255, 255, 0.05) 0%, transparent 40%),
+    url('/bg-scroll.png');
   color: var(--color-text-primary);
   font-family: var(--font-sans);
   line-height: 1.6;
   overflow-x: hidden;
-  /* Dark Luxury Starry Scrollable Background */
-  background-image: url('/bg-scroll.png');
-  background-size: cover;
+  background-size: 100% 100%, 100% 100%, cover;
   background-repeat: no-repeat;
-  background-attachment: scroll;
-  background-position: 0px -200px;
+  background-attachment: fixed, fixed, scroll;
+  filter: brightness(1.15);
 }
 
 /* Typography */
