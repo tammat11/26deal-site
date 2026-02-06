@@ -104,10 +104,19 @@ const ResidentsGrid = () => {
                                     }}
                                 />
                                 <div className="card-overlay">
-                                    <p style={{ color: '#999', fontSize: '0.75rem', fontWeight: 600, marginBottom: '4px', opacity: 0.85 }}>{resident.niche}</p>
                                     <h3 style={{ marginBottom: '8px' }}>{resident.name}</h3>
-                                    <p style={{ fontSize: '0.7rem', color: '#fff', opacity: 0.9, marginBottom: '8px' }}>{resident.company}</p>
-                                    {resident.brief && <p style={{ fontSize: '0.62rem', opacity: 0.7, lineHeight: '1.4', marginTop: '10px', color: '#ccc' }}>{resident.brief}</p>}
+                                    <p style={{ fontSize: '0.7rem', color: '#fff', opacity: 0.9, marginBottom: '6px' }}>{resident.company}</p>
+                                    <p style={{ color: '#999', fontSize: '0.7rem', fontWeight: 600, marginBottom: '4px', opacity: 0.75 }}>{resident.niche}</p>
+                                    {resident.brief && <p className="resident-brief" style={{
+                                        fontSize: '0.62rem',
+                                        opacity: 0,
+                                        maxHeight: 0,
+                                        lineHeight: '1.4',
+                                        marginTop: '10px',
+                                        color: '#ccc',
+                                        transition: 'opacity 0.4s ease, max-height 0.4s ease, margin-top 0.4s ease',
+                                        overflow: 'hidden'
+                                    }}>{resident.brief}</p>}
                                 </div>
                             </div>
                         );

@@ -319,6 +319,12 @@ h1.hero-title {
   color: white;
 }
 
+.resident-card-portrait:hover .resident-brief {
+  opacity: 1 !important;
+  max-height: 200px !important;
+  margin-top: 10px !important;
+}
+
 .card-overlay p {
   font-family: var(--font-sans);
   font-size: 0.65rem;
