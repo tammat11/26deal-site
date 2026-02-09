@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 const steps = [
     { id: 1, title: 'Анкетирование' },
     { id: 2, title: 'Интервью' },
-    { id: 3, title: 'РЕЗИДЕНТСТВО' },
+    { id: 3, title: 'Пробный Совет Директоров' },
     { id: 4, title: 'Договор + оплата' },
 ];
 

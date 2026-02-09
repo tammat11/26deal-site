@@ -57,7 +57,7 @@ const Benefits = () => {
                     <div ref={card1Ref} className="benefit-wrapper reveal-hidden reveal-3d" style={{ willChange: 'transform' }}>
                         <div className="benefit-card">
                             <div className="card-header">
-                                <div className="stat-value"><span className="stat-prefix">ОТ</span> 100</div>
+                                <div className="stat-value"><span className="stat-prefix">ОТ</span> 2</div>
                                 <div className="stat-label">МЛН ТГ ОБОРОТ</div>
                             </div>
                             <div className="card-body">

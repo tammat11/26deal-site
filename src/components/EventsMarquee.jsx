@@ -19,21 +19,21 @@ const EventsMarquee = () => {
                 <div className="marquee-track">
                     {/* First copy */}
                     <div className="marquee-item">Совет <span>директоров</span></div>
-                    <div className="marquee-item">Бизнес <span>Форум</span></div>
+                    <div className="marquee-item"><span>Форум</span></div>
                     <div className="marquee-item">Семейные <span>дни</span></div>
                     <div className="marquee-item"><span>Обучение</span></div>
                     <div className="marquee-item">Совет <span>директоров</span></div>
-                    <div className="marquee-item">Бизнес <span>Форум</span></div>
+                    <div className="marquee-item"><span>Форум</span></div>
                     <div className="marquee-item">Семейные <span>дни</span></div>
                     <div className="marquee-item"><span>Обучение</span></div>
 
                     {/* Duplicate copy for loop */}
                     <div className="marquee-item">Совет <span>директоров</span></div>
-                    <div className="marquee-item">Бизнес <span>Форум</span></div>
+                    <div className="marquee-item"><span>Форум</span></div>
                     <div className="marquee-item">Семейные <span>дни</span></div>
                     <div className="marquee-item"><span>Обучение</span></div>
                     <div className="marquee-item">Совет <span>директоров</span></div>
-                    <div className="marquee-item">Бизнес <span>Форум</span></div>
+                    <div className="marquee-item"><span>Форум</span></div>
                     <div className="marquee-item">Семейные <span>дни</span></div>
                     <div className="marquee-item"><span>Обучение</span></div>
                 </div>
