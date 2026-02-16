@@ -164,42 +164,6 @@ const Hero = () => (
   </section>
 );
 
-const AboutClub = () => (
-  <section className="section" id="about" style={{ padding: '200px 0 100px', background: 'transparent' }}>
-    <div className="container">
-      <div className="reveal-hidden">
-        <h2 className="section-title text-center" style={{ color: '#fff', marginBottom: '80px', fontSize: '5rem' }}>
-          СООБЩЕСТВО <br />
-          <span style={{ opacity: 0.3 }}>НОВОГО ПОКОЛЕНИЯ</span>
-        </h2>
-      </div>
-
-      <div className="grid-2" style={{ gap: '40px' }}>
-        <div className="liquid-glass reveal-hidden" style={{ minHeight: '400px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          <h3 style={{ fontSize: '2.5rem', marginBottom: '30px', letterSpacing: '-0.02em' }}>
-            МЫ ОБЪЕДИНЯЕМ <br />
-            <span style={{ opacity: 0.4 }}>СИЛЬНЫХ</span>
-          </h3>
-          <p style={{ color: '#888', fontSize: '1.1rem', lineHeight: '1.7', maxWidth: '450px' }}>
-            Место, где масштаб личности определяет масштаб бизнеса. Здесь нет конкуренции, есть только синергия лидеров, готовых менять среду вокруг себя.
-          </p>
-        </div>
-
-        <div className="reveal-hidden delay-200" style={{ display: 'grid', gridTemplateRows: '1fr 1fr', gap: '40px' }}>
-          <div className="liquid-glass" style={{ padding: '50px', background: 'rgba(255,255,255,0.02)' }}>
-            <h4 style={{ fontSize: '1.4rem', color: '#fff', marginBottom: '15px' }}>Миссия</h4>
-            <p style={{ color: '#666', lineHeight: '1.6' }}>Создать экосистему для роста high-impact предпринимателей через обмен опытом и ресурсами.</p>
-          </div>
-          <div className="liquid-glass" style={{ padding: '50px', background: 'rgba(255,255,255,0.02)' }}>
-            <h4 style={{ fontSize: '1.4rem', color: '#fff', marginBottom: '15px' }}>Ценности</h4>
-            <p style={{ color: '#666', lineHeight: '1.6' }}>Честность, масштаб, вклад в общество и непрерывное развитие.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-);
-
 const Footer = () => {
   const location = useLocation();
   if (location.pathname === '/admin') return null;
