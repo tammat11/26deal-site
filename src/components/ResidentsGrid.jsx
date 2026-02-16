@@ -3,8 +3,13 @@ import { residents } from '../data/residents';
 import KineticTitle from './KineticTitle';
 
 const ResidentsGrid = () => {
-    const president = residents.find(r => r.isPresident);
-    const otherResidents = residents.filter(r => !r.isPresident);
+    const [residentsData] = useState(() => {
+        const saved = localStorage.getItem('edited_residents');
+        return saved ? JSON.parse(saved) : residents;
+    });
+
+    const president = residentsData.find(r => r.isPresident);
+    const otherResidents = residentsData.filter(r => !r.isPresident);
 
     const [visibleCount, setVisibleCount] = useState(5);
 

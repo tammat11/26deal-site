@@ -8,6 +8,9 @@ import ApplicationForm from './components/ApplicationForm';
 import EventsMarquee from './components/EventsMarquee';
 import Policy from './components/Policy';
 import { stats } from './data/stats';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Admin from './components/Admin';
+import EventsPage from './components/EventsPage';
 
 const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -65,10 +68,8 @@ const Navbar = () => {
           alignItems: 'center',
           transition: 'all 0.6s ease'
         }}>
-          <a href="#about" className="mobile-nav-link" style={{ fontSize: scrolled ? '12px' : '13px' }}>Клуб</a>
-          <a href="#benefits" className="mobile-nav-link" style={{ fontSize: scrolled ? '12px' : '13px' }}>Плюсы</a>
-          <a href="#members" className="mobile-nav-link" style={{ fontSize: scrolled ? '12px' : '13px' }}>Лица</a>
-          <a href="#apply" className="mobile-nav-link" style={{ fontSize: scrolled ? '12px' : '13px' }}>Вступить</a>
+          <a href="/" className="mobile-nav-link" style={{ fontSize: scrolled ? '12px' : '13px' }}>Клуб</a>
+          <a href="/events" className="mobile-nav-link" style={{ fontSize: scrolled ? '12px' : '13px' }}>Мероприятия</a>
         </div>
       </nav>
       <style>{`
@@ -164,6 +165,7 @@ const Hero = () => (
   </section>
 );
 
+
 function App() {
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
@@ -180,23 +182,34 @@ function App() {
   }, []);
 
   return (
-    <div className="app" style={{ position: 'relative', minHeight: '100vh' }}>
-      <Navbar />
-      <Hero />
-      <AboutClub />
-      <StatsStrip stats={stats} />
-      <div className="silk-background-section">
-        <div className="stars-to-black"></div>
-        <EventsMarquee />
-        <div className="section-divider" />
-        <Benefits />
-        <div className="section-divider" />
-        <ResidentsGrid />
-        <div className="section-divider" />
-        <AdmissionSteps />
-        <div className="section-divider" />
-        <ApplicationForm />
-        <footer style={{ padding: '30px 0', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+    <Router>
+      <div className="app" style={{ position: 'relative', minHeight: '100vh' }}>
+        <Navbar />
+        <Routes>
+          <Route path="/" element={
+            <>
+              <Hero />
+              <AboutClub />
+              <StatsStrip stats={stats} />
+              <div className="silk-background-section">
+                <div className="stars-to-black"></div>
+                <EventsMarquee />
+                <div className="section-divider" />
+                <Benefits />
+                <div className="section-divider" />
+                <ResidentsGrid />
+                <div className="section-divider" />
+                <AdmissionSteps />
+                <div className="section-divider" />
+                <ApplicationForm />
+              </div>
+            </>
+          } />
+          <Route path="/events" element={<EventsPage />} />
+          <Route path="/admin" element={<Admin />} />
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+        <footer style={{ padding: '60px 0', borderTop: '1px solid rgba(255,255,255,0.05)', background: '#000', position: 'relative', zIndex: 10 }}>
           <div className="container text-center">
             <p style={{ color: '#aaa', fontSize: '12px', letterSpacing: '0.05em' }}>© 2026 BUSINESS CLUB. ALL RIGHTS RESERVED.</p>
             <div style={{ marginTop: '10px' }}>
@@ -205,7 +218,7 @@ function App() {
           </div>
         </footer>
       </div>
-    </div>
+    </Router>
   );
 }
 
