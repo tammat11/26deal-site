@@ -26,43 +26,34 @@ const Hero = () => (
       <img
         src="/logo_26_business_club_silver_invert.png"
         alt="26 Business Club"
-        style={{ width: '100%', height: 'auto', display: 'block' }}
+        style={{
+          filter: 'drop-shadow(0 0 30px rgba(255,255,255,0.2))',
+          cursor: 'pointer'
+        }}
       />
     </div>
 
-    <div className="reveal-entry-text" style={{ position: 'relative', zIndex: 1, textAlign: 'center', marginTop: '-40px' }}>
+    <div className="text-center reveal-entry-text" style={{
+      marginTop: '0px',
+      maxWidth: '1000px',
+      padding: '0 20px',
+      zIndex: 2
+    }}>
       <h1 className="hero-title" style={{
-        fontSize: 'clamp(2.5rem, 10vw, 6rem)',
-        letterSpacing: '0.15em',
-        margin: 0,
-        fontWeight: 400
+        fontSize: 'clamp(2.5rem, 6vw, 4rem)',
+        lineHeight: '1.2',
+        marginBottom: '40px',
+        color: '#fff',
+        textTransform: 'uppercase',
+        letterSpacing: '0.1em'
       }}>
-        BUSINESS CLUB
+        Закрытый клуб для <br />
+        <span style={{ fontFamily: 'Trajan Pro 3, serif', fontWeight: 400 }}> high-impact</span> предпринимателей и лидеров, создающих новую бизнес-культуру.
       </h1>
 
-      <p className="manifesto-text" style={{
-        fontSize: 'clamp(1rem, 3vw, 1.8rem)',
-        marginTop: '20px',
-        letterSpacing: '0.4em',
-        opacity: 0.8,
-        fontWeight: 300,
-        textTransform: 'uppercase'
-      }}>
-        Almaty • International Community
-      </p>
-
-      <a href="#apply" className="liquid-glass" style={{
-        display: 'inline-block',
-        marginTop: '50px',
-        padding: '18px 45px',
-        fontSize: '14px',
-        letterSpacing: '0.3em',
-        color: '#fff',
-        textDecoration: 'none',
-        border: '1px solid rgba(255,255,255,0.2)',
-        borderRadius: '100px',
-        backdropFilter: 'blur(10px)',
-        transition: 'all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)',
+      <a href="#apply" className="btn" style={{
+        minWidth: '200px',
+        boxShadow: '0 0 30px rgba(255,255,255,0.3)',
         position: 'relative',
         overflow: 'hidden'
       }}>
@@ -70,7 +61,9 @@ const Hero = () => (
       </a>
     </div>
 
+
     <style>{`
+
             @keyframes heroFadeInUp {
                 from { opacity: 0; transform: translateY(40px) scale(0.95); }
                 to { opacity: 1; transform: translateY(0) scale(1); }
@@ -86,29 +79,34 @@ const Hero = () => (
 );
 
 const AboutClub = () => (
-  <section className="section" style={{ padding: '100px 0', position: 'relative' }}>
+  <section className="section" id="about" style={{ padding: '200px 0 100px', background: 'transparent' }}>
     <div className="container">
-      <div className="grid-2" style={{ gap: '80px', alignItems: 'center' }}>
-        <div className="reveal-hidden">
-          <h2 style={{ fontSize: '3rem', marginBottom: '30px' }}>О КЛУБЕ</h2>
-          <p style={{ fontSize: '1.2rem', lineHeight: '1.8', color: '#ccc' }}>
-            26 Business Club — это закрытое сообщество предпринимателей,
-            объединенных общими ценностями и стремлением к росту.
-            Мы создаем среду для обмена опытом, ресурсами и энергией.
+      <div className="reveal-hidden">
+        <h2 className="section-title text-center" style={{ color: '#fff', marginBottom: '80px', fontSize: '5rem' }}>
+          СООБЩЕСТВО <br />
+          <span style={{ opacity: 0.3 }}>НОВОГО ПОКОЛЕНИЯ</span>
+        </h2>
+      </div>
+
+      <div className="grid-2" style={{ gap: '40px' }}>
+        <div className="liquid-glass reveal-hidden" style={{ minHeight: '400px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <h3 style={{ fontSize: '2.5rem', marginBottom: '30px', letterSpacing: '-0.02em' }}>
+            МЫ ОБЪЕДИНЯЕМ <br />
+            <span style={{ opacity: 0.4 }}>СИЛЬНЫХ</span>
+          </h3>
+          <p style={{ color: '#888', fontSize: '1.1rem', lineHeight: '1.7', maxWidth: '450px' }}>
+            Место, где масштаб личности определяет масштаб бизнеса. Здесь нет конкуренции, есть только синергия лидеров, готовых менять среду вокруг себя.
           </p>
         </div>
-        <div className="reveal-hidden delay-200">
-          <div className="liquid-glass" style={{ padding: '40px', borderRadius: '30px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
-              <div>
-                <h4 style={{ color: '#fff', marginBottom: '10px' }}>Миссия</h4>
-                <p style={{ fontSize: '0.9rem', color: '#888' }}>Развитие предпринимательской культуры и поддержка сильных.</p>
-              </div>
-              <div>
-                <h4 style={{ color: '#fff', marginBottom: '10px' }}>Резиденты</h4>
-                <p style={{ fontSize: '0.9rem', color: '#888' }}>Собственники бизнеса с оборотом от 100 млн тенге.</p>
-              </div>
-            </div>
+
+        <div className="reveal-hidden delay-200" style={{ display: 'grid', gridTemplateRows: '1fr 1fr', gap: '40px' }}>
+          <div className="liquid-glass" style={{ padding: '50px', background: 'rgba(255,255,255,0.02)' }}>
+            <h4 style={{ fontSize: '1.4rem', color: '#fff', marginBottom: '15px' }}>Миссия</h4>
+            <p style={{ color: '#666', lineHeight: '1.6' }}>Создать экосистему для роста high-impact предпринимателей через обмен опытом и ресурсами.</p>
+          </div>
+          <div className="liquid-glass" style={{ padding: '50px', background: 'rgba(255,255,255,0.02)' }}>
+            <h4 style={{ fontSize: '1.4rem', color: '#fff', marginBottom: '15px' }}>Ценности</h4>
+            <p style={{ color: '#666', lineHeight: '1.6' }}>Честность, масштаб, вклад в общество и непрерывное развитие.</p>
           </div>
         </div>
       </div>
