@@ -1,5 +1,15 @@
 export const events = [
     {
+        "title": "Мероприятие",
+        "description": "сыфсфы",
+        "date": "2121-04-17",
+        "photo": "https://via.placeholder.com/800x400",
+        "participants": [
+            "Денис Саттаров",
+            "Жаркын Калелов"
+        ]
+    },
+    {
         "id": 1,
         "title": "Совет Директоров",
         "description": "Стратегическая сессия по масштабированию бизнесов резидентов.",
