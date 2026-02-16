@@ -184,11 +184,7 @@ const AppContent = () => {
   return (
     <div className="app" style={{
       position: 'relative',
-      minHeight: '100vh',
-      backgroundImage: 'url("/bg-silk-v3.png")',
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      backgroundAttachment: 'fixed'
+      minHeight: '100vh'
     }}>
       <Navbar />
       <Routes>
