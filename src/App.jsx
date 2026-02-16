@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import AboutClub from './components/AboutClub';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import StatsStrip from './components/StatsStrip';
 import Benefits from './components/Benefits';
 import ResidentsGrid from './components/ResidentsGrid';
@@ -121,8 +120,7 @@ const Hero = () => (
       marginTop: '0px',
       maxWidth: '1000px',
       zIndex: 1,
-      padding: '0 20px',
-      opacity: 0
+      padding: '0 20px'
     }}>
       <h1 className="hero-title" style={{
         fontSize: 'clamp(1.2rem, 5vw, 2.5rem)',
@@ -149,20 +147,56 @@ const Hero = () => (
       </a>
     </div>
 
-
     <style>{`
-
             @keyframes heroFadeInUp {
                 from { opacity: 0; transform: translateY(40px) scale(0.95); }
                 to { opacity: 1; transform: translateY(0) scale(1); }
             }
             .reveal-entry-logo {
+                opacity: 0;
                 animation: heroFadeInUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
             }
             .reveal-entry-text {
+                opacity: 0;
                 animation: heroFadeInUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s forwards;
             }
         `}</style>
+  </section>
+);
+
+const AboutClub = () => (
+  <section className="section" id="about" style={{ padding: '200px 0 100px', background: 'transparent' }}>
+    <div className="container">
+      <div className="reveal-hidden">
+        <h2 className="section-title text-center" style={{ color: '#fff', marginBottom: '80px', fontSize: '5rem' }}>
+          СООБЩЕСТВО <br />
+          <span style={{ opacity: 0.3 }}>НОВОГО ПОКОЛЕНИЯ</span>
+        </h2>
+      </div>
+
+      <div className="grid-2" style={{ gap: '40px' }}>
+        <div className="liquid-glass reveal-hidden" style={{ minHeight: '400px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <h3 style={{ fontSize: '2.5rem', marginBottom: '30px', letterSpacing: '-0.02em' }}>
+            МЫ ОБЪЕДИНЯЕМ <br />
+            <span style={{ opacity: 0.4 }}>СИЛЬНЫХ</span>
+          </h3>
+          <p style={{ color: '#888', fontSize: '1.1rem', lineHeight: '1.7', maxWidth: '450px' }}>
+            Место, где масштаб личности определяет масштаб бизнеса. Здесь нет конкуренции, есть только синергия лидеров, готовых менять среду вокруг себя.
+          </p>
+        </div>
+
+        <div className="reveal-hidden delay-200" style={{ display: 'grid', gridTemplateRows: '1fr 1fr', gap: '40px' }}>
+          <div className="liquid-glass" style={{ padding: '50px', background: 'rgba(255,255,255,0.02)' }}>
+            <h4 style={{ fontSize: '1.4rem', color: '#fff', marginBottom: '15px' }}>Миссия</h4>
+            <p style={{ color: '#666', lineHeight: '1.6' }}>Создать экосистему для роста high-impact предпринимателей через обмен опытом и ресурсами.</p>
+          </div>
+          <div className="liquid-glass" style={{ padding: '50px', background: 'rgba(255,255,255,0.02)' }}>
+            <h4 style={{ fontSize: '1.4rem', color: '#fff', marginBottom: '15px' }}>Ценности</h4>
+            <p style={{ color: '#666', lineHeight: '1.6' }}>Честность, масштаб, вклад в общество и непрерывное развитие.</p>
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
 );
 
@@ -183,7 +217,14 @@ const Footer = () => {
 
 const AppContent = () => {
   return (
-    <div className="app" style={{ position: 'relative', minHeight: '100vh' }}>
+    <div className="app" style={{
+      position: 'relative',
+      minHeight: '100vh',
+      backgroundImage: 'url("/bg-silk-v3.png")',
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundAttachment: 'fixed'
+    }}>
       <Navbar />
       <Routes>
         <Route path="/" element={
