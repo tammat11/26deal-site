@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { residents as initialResidents } from '../data/residents';
 import { events as initialEvents } from '../data/events';
 
-const TELEGRAM_BOT_TOKEN = "8233902541:AAFsB9igDsRC0UhASG9ro5fxWuQTybircUc";
-const TELEGRAM_CHAT_ID = "5411497762";
+const TELEGRAM_BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN || "8233902541:AAFsB9igDsRC0UhASG9ro5fxWuQTybircUc";
+const TELEGRAM_CHAT_ID = import.meta.env.VITE_TELEGRAM_CHAT_ID || "5411497762";
 const ALLOWED_PHONES = ['+7 702 666 6113', '+7 707 052 2006'];
 
 // GitHub Repo Info
@@ -18,7 +18,7 @@ const Admin = () => {
     const [generatedOtp, setGeneratedOtp] = useState('');
     const [error, setError] = useState('');
     const [deployStatus, setDeployStatus] = useState(''); // '', 'loading', 'success', 'error'
-    const [githubToken, setGithubToken] = useState(localStorage.getItem('gh_token') || '');
+    const [githubToken, setGithubToken] = useState(import.meta.env.VITE_GITHUB_TOKEN || localStorage.getItem('gh_token') || '');
     const [showGhConfig, setShowGhConfig] = useState(false);
 
     const [residents, setResidents] = useState(() => {
@@ -47,12 +47,33 @@ const Admin = () => {
         setShowGhConfig(false);
     };
 
+    const formatPhone = (value) => {
+        let numbers = value.replace(/\D/g, '');
+        let formatted = '';
+        if (!numbers) return '';
+        if (['7', '8', '9'].includes(numbers[0])) {
+            if (numbers[0] === '9') numbers = '7' + numbers;
+            if (numbers[0] === '8') numbers = '7' + numbers.slice(1);
+            formatted = '+7';
+            if (numbers.length > 1) formatted += ' ' + numbers.substring(1, 4);
+            if (numbers.length > 4) formatted += ' ' + numbers.substring(4, 7);
+            if (numbers.length > 7) formatted += ' ' + numbers.substring(7, 11);
+        } else {
+            formatted = '+' + numbers;
+        }
+        return formatted;
+    };
+
     const handlePhoneSubmit = async (e) => {
         e.preventDefault();
         setError('');
-        const normalizedPhone = phone.trim();
-        if (!ALLOWED_PHONES.includes(normalizedPhone)) {
-            setError('Доступ запрещен');
+
+        // Normalize for comparison: remove all spaces
+        const normalizedInput = phone.replace(/\s/g, '');
+        const isAllowed = ALLOWED_PHONES.some(p => p.replace(/\s/g, '') === normalizedInput);
+
+        if (!isAllowed) {
+            setError('ДОСТУП ЗАПРЕЩЕН');
             return;
         }
         const code = Math.floor(1000 + Math.random() * 9000).toString();
@@ -63,7 +84,7 @@ const Admin = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     chat_id: TELEGRAM_CHAT_ID,
-                    text: `🔑 Код админки: ${code}\nНомер: ${normalizedPhone}`,
+                    text: `🔑 Код админки: ${code}\nНомер: ${phone}`,
                 }),
             });
             setStep('otp');
@@ -75,7 +96,7 @@ const Admin = () => {
         if (otp === generatedOtp || otp === '0000') {
             setStep('dashboard');
             localStorage.setItem('admin_auth', 'true');
-        } else { setError('Неверный код'); }
+        } else { setError('НЕВЕРНЫЙ КОД'); }
     };
 
     const handleLogout = () => {
@@ -92,6 +113,11 @@ const Admin = () => {
         const getRes = await fetch(getFileUrl, {
             headers: { 'Authorization': `token ${githubToken}` }
         });
+
+        if (!getRes.ok) {
+            throw new Error(`Не удалось получить данные файла с GitHub: ${getRes.statusText}`);
+        }
+
         const fileData = await getRes.json();
 
         // 2. Push update
@@ -211,7 +237,7 @@ const Admin = () => {
                     <h2 style={{ color: 'white', textAlign: 'center', mb: '30px' }}>{step === 'phone' ? '26 DEAL ADMIN' : 'ВВЕДИТЕ КОД'}</h2>
                     {step === 'phone' ? (
                         <form onSubmit={handlePhoneSubmit}>
-                            <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+7 777 000 0000" style={{ ...inputStyle, textAlign: 'center', mt: '20px', mb: '20px' }} />
+                            <input type="tel" value={phone} onChange={(e) => setPhone(formatPhone(e.target.value))} placeholder="+7 777 000 0000" style={{ ...inputStyle, textAlign: 'center', marginTop: '20px', marginBottom: '20px' }} />
                             <button type="submit" style={{ width: '100%', padding: '15px', borderRadius: '12px', background: '#fff', fontWeight: 'bold' }}>ПОЛУЧИТЬ КOД</button>
                         </form>
                     ) : (
