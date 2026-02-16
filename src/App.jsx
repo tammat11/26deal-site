@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
+import AboutClub from './components/AboutClub';
 import StatsStrip from './components/StatsStrip';
 import Benefits from './components/Benefits';
 import ResidentsGrid from './components/ResidentsGrid';
