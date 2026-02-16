@@ -69,10 +69,8 @@ const Navbar = () => {
           alignItems: 'center',
           transition: 'all 0.6s ease'
         }}>
-          <a href={location.pathname === '/' ? '#about' : '/#about'} className="mobile-nav-link" style={{ fontSize: scrolled ? '12px' : '13px' }}>Клуб</a>
-          <a href={location.pathname === '/' ? '#benefits' : '/#benefits'} className="mobile-nav-link" style={{ fontSize: scrolled ? '12px' : '13px' }}>Плюсы</a>
-          <a href={location.pathname === '/' ? '#members' : '/#members'} className="mobile-nav-link" style={{ fontSize: scrolled ? '12px' : '13px' }}>Лица</a>
-          <a href={location.pathname === '/' ? '#apply' : '/#apply'} className="mobile-nav-link" style={{ fontSize: scrolled ? '12px' : '13px' }}>Вступить</a>
+          <Link to="/" className="mobile-nav-link" style={{ fontSize: scrolled ? '12px' : '13px', textDecoration: 'none', color: 'inherit' }}>Главная</Link>
+          <Link to="/events" className="mobile-nav-link" style={{ fontSize: scrolled ? '12px' : '13px', textDecoration: 'none', color: 'inherit' }}>Мероприятия</Link>
         </div>
       </nav>
       <style>{`
