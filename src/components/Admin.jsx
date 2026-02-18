@@ -3,8 +3,8 @@ import { residents as initialResidents } from '../data/residents';
 import { events as initialEvents } from '../data/events';
 
 const TELEGRAM_BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN || "8233902541:AAFsB9igDsRC0UhASG9ro5fxWuQTybircUc";
-const TELEGRAM_CHAT_ID = import.meta.env.VITE_TELEGRAM_CHAT_ID || "5411497762";
-const ALLOWED_PHONES = ['+7 702 666 6113', '+7 707 052 2006'];
+const TELEGRAM_CHAT_ID = import.meta.env.VITE_TELEGRAM_CHAT_ID || "-1003895355819";
+const ALLOWED_PHONES = ['+7 702 666 6113', '+7 707 052 2006', '+7 707 186 0618'];
 
 // GitHub Repo Info
 const GITHUB_OWNER = "tammat11";
