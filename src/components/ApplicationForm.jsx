@@ -50,7 +50,7 @@ const ApplicationForm = () => {
         const token = "8233902541:AAFsB9igDsRC0UhASG9ro5fxWuQTybircUc";
         // TODO: Replace with your numeric Chat ID.
         // Message the bot @BotName and use https://api.telegram.org/bot<TOKEN>/getUpdates to find it.
-        const chatId = "5411497762";
+        const chatId = "-1003895355819";
 
         if (!chatId) {
             alert("Ошибка: Не настроен Chat ID получателя. Пожалуйста, напишите боту сообщение и сообщите разработчику.");
