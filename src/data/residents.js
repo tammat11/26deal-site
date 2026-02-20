@@ -129,7 +129,7 @@ export const residents = [
     },
     {
         "name": "Александр Нестерцов",
-        "niche": "Строительство дорог",
+        "niche": "Строительство",
         "company": "Nest Stroy",
         "photo": "/residents/Александр Нестерцов.jpg",
         "website": "https://gcity.kz/",
