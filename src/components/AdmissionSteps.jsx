@@ -43,9 +43,6 @@ const AdmissionSteps = () => {
             <div className="container" style={{ position: 'relative', zIndex: 2 }}>
                 <div className="text-center reveal-hidden" style={{ marginBottom: '60px' }}>
                     <h2>Этапы <i>вступления</i></h2>
-                    <p style={{ maxWidth: '800px', margin: '30px auto', color: '#ccc', lineHeight: '1.6', fontSize: '0.9rem' }}>
-                        Отличительной чертой 26 Business Club является строгий отбор участников, который осуществляется после подачи заявки и заполнения вступительной анкеты. В мире всего 4% high-impact предпринимателей. 26 Business Club — это клуб предпринимателей для предпринимателей, и поэтому окончательное решение по отбору принимают действующие резиденты
-                    </p>
                 </div>
 
                 <div className="grid-4 reveal-hidden" style={{ gap: '20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>

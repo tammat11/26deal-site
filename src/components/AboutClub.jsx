@@ -10,6 +10,12 @@ const AboutClub = () => {
                         <span style={{ marginRight: '10px' }}>О</span>
                         <KineticTitle>КЛУБЕ</KineticTitle>
                     </h2>
+                    <p style={{ fontSize: '0.8rem', lineHeight: '1.6', marginBottom: '20px', color: '#ccc' }}>
+                        <span style={{ fontFamily: 'Trajan Pro 3, serif', fontWeight: 400 }}> 26 Business Club</span> — это сообщество равных, где каждый предприниматель несёт ответственность за развитие среды и вносит свой вклад.
+                    </p>
+                    <p style={{ fontSize: '0.8rem', lineHeight: '1.6', color: '#ccc' }}>
+                        Мы объединяем тех, кто делится опытом, поддерживает других и усиливает сообщество через вклад и активное участие.
+                    </p>
                 </div>
             </div>
         </section>
