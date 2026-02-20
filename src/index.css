@@ -522,13 +522,13 @@ h1.hero-title {
   .residents-grid {
     display: grid !important;
     grid-template-columns: repeat(2, 1fr) !important;
-    gap: 10px !important;
+    gap: 15px !important;
   }
 
   /* Stats Item Compact */
   #stats .liquid-glass {
-    height: 180px !important;
-    padding: 20px 10px !important;
+    height: auto !important;
+    padding: 25px 12px !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: center !important;
@@ -536,35 +536,39 @@ h1.hero-title {
 
   /* Label */
   #stats .liquid-glass span:nth-child(1) {
-    font-size: 0.55rem !important;
-    margin-bottom: 8px !important;
+    font-size: 0.6rem !important;
+    letter-spacing: 0.1em !important;
+    margin-bottom: 12px !important;
   }
 
   /* Value */
   #stats .liquid-glass span:nth-child(2) {
-    font-size: 2rem !important;
-    margin-bottom: 8px !important;
+    font-size: clamp(1.8rem, 8vw, 2.8rem) !important;
+    margin-bottom: 12px !important;
+    text-shadow: 0 0 20px rgba(255,255,255,0.2) !important;
   }
 
   /* Subtext */
   #stats .liquid-glass span:nth-child(3) {
-    font-size: 0.65rem !important;
+    font-size: 0.7rem !important;
+    line-height: 1.3 !important;
     max-width: 100% !important;
+    opacity: 0.8 !important;
   }
 
   /* Benefits Compact Grid */
   .benefit-card {
-    padding: 15px !important;
+    padding: 20px 15px !important;
     border-radius: 20px !important;
   }
 
   .stat-value {
-    font-size: 1.8rem !important;
-    margin-bottom: 5px !important;
+    font-size: 2rem !important;
+    margin-bottom: 8px !important;
   }
 
   .stat-label {
-    font-size: 0.6rem !important;
+    font-size: 0.65rem !important;
   }
 
   .stat-prefix {
@@ -580,7 +584,7 @@ h1.hero-title {
   .card-body h3 {
     font-size: 0.85rem !important;
     min-height: auto !important;
-    margin-bottom: 8px !important;
+    margin-bottom: 10px !important;
     font-weight: 700 !important;
   }
 

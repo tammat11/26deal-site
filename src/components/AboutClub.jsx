@@ -10,11 +10,11 @@ const AboutClub = () => {
                         <span style={{ marginRight: '10px' }}>О</span>
                         <KineticTitle>КЛУБЕ</KineticTitle>
                     </h2>
-                    <p style={{ fontSize: '0.8rem', lineHeight: '1.6', marginBottom: '20px', color: '#ccc' }}>
-                        <span style={{ fontFamily: 'Trajan Pro 3, serif', fontWeight: 400 }}> 26 Business Club</span> — это сообщество равных, где каждый предприниматель несёт ответственность за развитие среды и вносит свой вклад.
+                    <p style={{ fontSize: '1rem', lineHeight: '1.7', color: '#ccc', textAlign: 'center' }}>
+                        Отличительной чертой 26 Business Club является строгий отбор участников, который осуществляется после подачи заявки и заполнения вступительной анкеты.
                     </p>
-                    <p style={{ fontSize: '0.8rem', lineHeight: '1.6', color: '#ccc' }}>
-                        Мы объединяем тех, кто делится опытом, поддерживает других и усиливает сообщество через вклад и активное участие.
+                    <p style={{ fontSize: '1rem', lineHeight: '1.7', color: '#ccc', marginTop: '20px', textAlign: 'center' }}>
+                        В мире всего 4% high-impact предпринимателей. 26 Business Club — это клуб предпринимателей для предпринимателей, и поэтому окончательное решение по отбору принимают действующие резиденты.
                     </p>
                 </div>
             </div>

@@ -151,9 +151,6 @@ const ApplicationForm = () => {
                             <button type="submit" className="btn" disabled={status === 'sending'}>
                                 {status === 'sending' ? 'ОТПРАВКА...' : 'ПОДАТЬ ЗАЯВКУ'}
                             </button>
-                            <p style={{ fontSize: '12px', color: '#fff', marginTop: '15px', opacity: 0.8, letterSpacing: '0.05em' }}>
-                                ⏱ Оставить заявку за 30 секунд
-                            </p>
                         </div>
 
                         <p style={{ fontSize: '11px', color: '#aaa', marginTop: '20px', textAlign: 'center' }}>
