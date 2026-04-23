@@ -103,6 +103,26 @@ a {
   grid-template-columns: repeat(1, minmax(0, 1fr));
 }
 
+.event-date {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.event-title {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  color: #fff;
+  line-height: 1.08;
+  margin: 0 0 14px 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  text-wrap: balance;
+  font-size: clamp(1.3rem, 1.2vw + 0.8rem, 1.8rem);
+}
+
 @media (min-width: 760px) {
   .events-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -118,6 +138,12 @@ a {
 @media (min-width: 1360px) {
   .events-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  /* With 4-up layout, titles must stay visually proportional. */
+  .event-title {
+    font-size: 1.45rem;
+    line-height: 1.06;
   }
 }
 

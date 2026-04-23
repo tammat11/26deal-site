@@ -99,17 +99,10 @@ const EventsPage = () => {
                                 }}></div>
                             </div>
                             <div style={{ padding: '30px' }}>
-                                <div style={{
-                                    fontSize: '11px',
-                                    letterSpacing: '0.2em',
-                                    color: 'rgba(255,255,255,0.5)',
-                                    marginBottom: '15px',
-                                    textTransform: 'uppercase',
-                                    fontWeight: 'bold'
-                                }}>
+                                <div className="event-date">
                                     {event.date}
                                 </div>
-                                <h3 style={{ fontSize: '1.8rem', marginBottom: '15px', color: '#fff', lineHeight: '1.2' }}>{event.title}</h3>
+                                <h3 className="event-title">{event.title}</h3>
                                 {(() => {
                                     const description = (event.description || '').toString();
                                     const isLong = description.length > 480;
