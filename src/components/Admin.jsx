@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { residents as initialResidents } from '../data/residents';
 import { events as initialEvents } from '../data/events';
 
@@ -9,7 +9,7 @@ const GITHUB_OWNER = "tammat11";
 const GITHUB_REPO = "26deal-site";
 
 const Admin = () => {
-    const [step, setStep] = useState('phone'); // phone, otp, dashboard
+    const [step, setStep] = useState(() => (localStorage.getItem('admin_auth') === 'true' ? 'dashboard' : 'phone')); // phone, otp, dashboard
     const [activeTab, setActiveTab] = useState('residents'); // residents, events
     const [phone, setPhone] = useState('');
     const [otp, setOtp] = useState('');
@@ -40,13 +40,6 @@ const Admin = () => {
 
     const fileInputRef = useRef(null);
     const eventFileInputRef = useRef(null);
-
-    useEffect(() => {
-        const auth = localStorage.getItem('admin_auth');
-        if (auth === 'true') {
-            setStep('dashboard');
-        }
-    }, []);
 
     const saveGhToken = (token) => {
         setGithubToken(token);
@@ -96,7 +89,7 @@ const Admin = () => {
                 }),
             });
             setStep('otp');
-        } catch (err) { setError('Ошибка сети'); }
+        } catch { setError('Ошибка сети'); }
     };
 
     const handleOtpSubmit = (e) => {
@@ -341,7 +334,7 @@ const Admin = () => {
                                     <input style={inputStyle} type="date" value={ev.date} onChange={e => updateEvent(index, 'date', e.target.value)} />
                                     <textarea style={{ ...inputStyle, minHeight: '80px' }} value={ev.description} onChange={e => updateEvent(index, 'description', e.target.value)} placeholder="Описание" />
                                     <div>
-                                        <p style={{ fontSize: '12px', color: '#444', mb: '5px' }}>УЧАСТНИКИ:</p>
+                                        <p style={{ fontSize: '12px', color: '#444', mb: '5px' }}>ЧЕМПИОН:</p>
                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '10px', border: '1px solid #222', borderRadius: '10px' }}>
                                             {residents.map((r, ri) => (
                                                 <div key={ri} onClick={() => toggleParticipant(index, r.name)} style={{ padding: '4px 10px', borderRadius: '100px', fontSize: '11px', border: '1px solid #333', cursor: 'pointer', background: ev.participants?.includes(r.name) ? '#fff' : 'transparent', color: ev.participants?.includes(r.name) ? '#000' : '#444' }}>{r.name}</div>

@@ -1,35 +1,46 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { events as initialEvents } from '../data/events';
 import { residents as initialResidents } from '../data/residents';
 
 const EventsPage = () => {
-    const [events, setEvents] = useState(initialEvents);
-
-    const [residents, setResidents] = useState(initialResidents);
-
-    useEffect(() => {
-        // Public page must not be overridden by stale local edits.
-        // Allow preview only for authenticated admin + explicit `?preview=1`.
+    const isPreviewEnabled = () => {
         try {
             const isAdmin = localStorage.getItem('admin_auth') === 'true';
             const preview = new URLSearchParams(window.location.search).get('preview') === '1';
-            if (!isAdmin || !preview) return;
-
-            const savedEvents = localStorage.getItem('edited_events');
-            if (savedEvents) setEvents(JSON.parse(savedEvents));
-            const savedResidents = localStorage.getItem('edited_residents');
-            if (savedResidents) setResidents(JSON.parse(savedResidents));
+            return isAdmin && preview;
         } catch {
-            // ignore malformed localStorage payloads
+            return false;
         }
-    }, []);
+    };
 
-    const getParticipantNames = (pIds) => {
-        if (!pIds || !Array.isArray(pIds)) return '';
-        return residents
-            .filter(r => pIds.includes(r.name))
-            .map(r => r.name)
-            .join(', ');
+    const [events] = useState(() => {
+        try {
+            if (!isPreviewEnabled()) return initialEvents;
+            const saved = localStorage.getItem('edited_events');
+            return saved ? JSON.parse(saved) : initialEvents;
+        } catch {
+            return initialEvents;
+        }
+    });
+
+    const [residents] = useState(() => {
+        try {
+            if (!isPreviewEnabled()) return initialResidents;
+            const saved = localStorage.getItem('edited_residents');
+            return saved ? JSON.parse(saved) : initialResidents;
+        } catch {
+            return initialResidents;
+        }
+    });
+    const [expanded, setExpanded] = useState(() => new Set());
+
+    const toggleExpanded = (index) => {
+        setExpanded(prev => {
+            const next = new Set(prev);
+            if (next.has(index)) next.delete(index);
+            else next.add(index);
+            return next;
+        });
     };
 
     return (
@@ -43,7 +54,7 @@ const EventsPage = () => {
             backgroundRepeat: 'no-repeat',
             backgroundAttachment: 'fixed, scroll'
         }}>
-            <div className="container" style={{ position: 'relative', zIndex: 2 }}>
+            <div className="container container--wide" style={{ position: 'relative', zIndex: 2 }}>
                 <div style={{ marginBottom: '80px', textAlign: 'center' }}>
                     <h1 style={{
                         fontSize: 'clamp(2.5rem, 8vw, 4.5rem)',
@@ -62,7 +73,7 @@ const EventsPage = () => {
                     }}></div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '40px' }}>
+                <div className="events-grid">
                     {events.map((event, index) => (
                         <div key={index} className="liquid-glass" style={{
                             borderRadius: '30px',
@@ -99,13 +110,32 @@ const EventsPage = () => {
                                     {event.date}
                                 </div>
                                 <h3 style={{ fontSize: '1.8rem', marginBottom: '15px', color: '#fff', lineHeight: '1.2' }}>{event.title}</h3>
-                                <p style={{ color: '#888', fontSize: '14px', lineHeight: '1.7', marginBottom: '25px', fontFamily: 'var(--font-sans)' }}>
-                                    {event.description}
-                                </p>
+                                {(() => {
+                                    const description = (event.description || '').toString();
+                                    const isLong = description.length > 480;
+                                    const isExpanded = expanded.has(index);
+
+                                    return (
+                                        <>
+                                            <p className={`event-description ${isLong && !isExpanded ? 'event-description--collapsed' : ''}`}>
+                                                {description}
+                                            </p>
+                                            {isLong && (
+                                                <button
+                                                    type="button"
+                                                    className="event-description-toggle"
+                                                    onClick={() => toggleExpanded(index)}
+                                                >
+                                                    {isExpanded ? 'Свернуть' : 'Показать полностью'}
+                                                </button>
+                                            )}
+                                        </>
+                                    );
+                                })()}
 
                                 {event.participants && event.participants.length > 0 && (
                                     <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '20px' }}>
-                                        <div style={{ fontSize: '10px', color: '#444', marginBottom: '10px', letterSpacing: '0.2em', fontWeight: 'bold' }}>УЧАСТНИКИ</div>
+                                        <div style={{ fontSize: '10px', color: '#444', marginBottom: '10px', letterSpacing: '0.2em', fontWeight: 'bold' }}>ЧЕМПИОН</div>
                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                                             {event.participants.map((p, i) => (
                                                 <span key={i} style={{
