@@ -47,36 +47,15 @@ const ApplicationForm = () => {
         e.preventDefault();
         setStatus('sending');
 
-        const token = "8233902541:AAFsB9igDsRC0UhASG9ro5fxWuQTybircUc";
-        // TODO: Replace with your numeric Chat ID.
-        // Message the bot @BotName and use https://api.telegram.org/bot<TOKEN>/getUpdates to find it.
-        const chatId = "-1003895355819";
-
-        if (!chatId) {
-            alert("Ошибка: Не настроен Chat ID получателя. Пожалуйста, напишите боту сообщение и сообщите разработчику.");
-            setStatus('');
-            return;
-        }
-
-        const text = `
-<b>🔔 Новая заявка с сайта 26 Deal</b>
-
-👤 <b>Имя:</b> ${formData.name}
-📱 <b>Телефон:</b> ${formData.phone}
-📧 <b>Email:</b> ${formData.email}
-🏢 <b>Компания:</b> ${formData.company}
-        `;
-
         try {
-            const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+            const response = await fetch(`/api/telegram`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    chat_id: chatId,
-                    text: text,
-                    parse_mode: 'HTML'
+                    kind: 'application',
+                    ...formData
                 }),
             });
 
@@ -86,7 +65,7 @@ const ApplicationForm = () => {
                 setFormData({ name: '', phone: '', email: '', company: '' });
                 alert('Заявка успешно отправлена!');
             } else {
-                throw new Error(data.description);
+                throw new Error(data.error || 'Ошибка отправки');
             }
         } catch (error) {
             console.error(error);

@@ -2,8 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { residents as initialResidents } from '../data/residents';
 import { events as initialEvents } from '../data/events';
 
-const TELEGRAM_BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN || "8233902541:AAFsB9igDsRC0UhASG9ro5fxWuQTybircUc";
-const TELEGRAM_CHAT_ID = import.meta.env.VITE_TELEGRAM_CHAT_ID || "-1003895355819";
 const ALLOWED_PHONES = ['+7 702 666 6113', '+7 707 052 2006', '+7 707 186 0618'];
 
 // GitHub Repo Info
@@ -18,17 +16,26 @@ const Admin = () => {
     const [generatedOtp, setGeneratedOtp] = useState('');
     const [error, setError] = useState('');
     const [deployStatus, setDeployStatus] = useState(''); // '', 'loading', 'success', 'error'
-    const [githubToken, setGithubToken] = useState(import.meta.env.VITE_GITHUB_TOKEN || localStorage.getItem('gh_token') || '');
+    // Don't read build-time env here: VITE_* gets embedded into the client bundle.
+    const [githubToken, setGithubToken] = useState(localStorage.getItem('gh_token') || '');
     const [showGhConfig, setShowGhConfig] = useState(false);
 
     const [residents, setResidents] = useState(() => {
-        const saved = localStorage.getItem('edited_residents');
-        return saved ? JSON.parse(saved) : initialResidents;
+        try {
+            const saved = localStorage.getItem('edited_residents');
+            return saved ? JSON.parse(saved) : initialResidents;
+        } catch {
+            return initialResidents;
+        }
     });
 
     const [events, setEvents] = useState(() => {
-        const saved = localStorage.getItem('edited_events');
-        return saved ? JSON.parse(saved) : initialEvents;
+        try {
+            const saved = localStorage.getItem('edited_events');
+            return saved ? JSON.parse(saved) : initialEvents;
+        } catch {
+            return initialEvents;
+        }
     });
 
     const fileInputRef = useRef(null);
@@ -79,12 +86,13 @@ const Admin = () => {
         const code = Math.floor(1000 + Math.random() * 9000).toString();
         setGeneratedOtp(code);
         try {
-            await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+            await fetch(`/api/telegram`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    chat_id: TELEGRAM_CHAT_ID,
-                    text: `🔑 Код админки: ${code}\nНомер: ${phone}`,
+                    kind: 'admin_otp',
+                    code,
+                    phone
                 }),
             });
             setStep('otp');

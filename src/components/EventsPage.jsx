@@ -1,17 +1,28 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { events as initialEvents } from '../data/events';
 import { residents as initialResidents } from '../data/residents';
 
 const EventsPage = () => {
-    const [events] = useState(() => {
-        const saved = localStorage.getItem('edited_events');
-        return saved ? JSON.parse(saved) : initialEvents;
-    });
+    const [events, setEvents] = useState(initialEvents);
 
-    const [residents] = useState(() => {
-        const saved = localStorage.getItem('edited_residents');
-        return saved ? JSON.parse(saved) : initialResidents;
-    });
+    const [residents, setResidents] = useState(initialResidents);
+
+    useEffect(() => {
+        // Public page must not be overridden by stale local edits.
+        // Allow preview only for authenticated admin + explicit `?preview=1`.
+        try {
+            const isAdmin = localStorage.getItem('admin_auth') === 'true';
+            const preview = new URLSearchParams(window.location.search).get('preview') === '1';
+            if (!isAdmin || !preview) return;
+
+            const savedEvents = localStorage.getItem('edited_events');
+            if (savedEvents) setEvents(JSON.parse(savedEvents));
+            const savedResidents = localStorage.getItem('edited_residents');
+            if (savedResidents) setResidents(JSON.parse(savedResidents));
+        } catch {
+            // ignore malformed localStorage payloads
+        }
+    }, []);
 
     const getParticipantNames = (pIds) => {
         if (!pIds || !Array.isArray(pIds)) return '';
