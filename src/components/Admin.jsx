@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { supabase } from '../supabase';
 import { residents as initialResidents } from '../data/residents';
 import { events as initialEvents } from '../data/events';
+import SupabaseAdmin from './SupabaseAdmin';
 
 const ALLOWED_PHONES = ['+7 702 666 6113', '+7 707 052 2006', '+7 707 186 0618'];
 
@@ -11,7 +12,7 @@ const GITHUB_REPO = "26deal-site";
 
 const Admin = () => {
     const [step, setStep] = useState(() => (localStorage.getItem('admin_auth') === 'true' ? 'dashboard' : 'phone')); // phone, otp, dashboard
-    const [activeTab, setActiveTab] = useState('residents'); // residents, events
+    const [activeTab, setActiveTab] = useState('residents'); // residents, events, partners, polls
     const [phone, setPhone] = useState('');
     const [otp, setOtp] = useState('');
     const [generatedOtp, setGeneratedOtp] = useState('');
@@ -208,8 +209,8 @@ const Admin = () => {
             reader.readAsDataURL(file);
         } else {
             const ext = file.name.split('.').pop();
-            const path = `event_${Date.now()}.${ext}`;
-            const { data, error } = await supabase.storage
+            const path = `event_${file.lastModified}_${file.size}.${ext}`;
+            const { error } = await supabase.storage
                 .from('events')
                 .upload(path, file, { upsert: true });
             if (error) { alert('Ошибка загрузки: ' + error.message); return; }
@@ -294,6 +295,8 @@ const Admin = () => {
                     <nav style={{ display: 'flex', gap: '30px' }}>
                         <button onClick={() => setActiveTab('residents')} style={{ background: 'none', border: 'none', color: activeTab === 'residents' ? '#fff' : '#444', fontWeight: 'bold', cursor: 'pointer' }}>РЕЗИДЕНТЫ</button>
                         <button onClick={() => setActiveTab('events')} style={{ background: 'none', border: 'none', color: activeTab === 'events' ? '#fff' : '#444', fontWeight: 'bold', cursor: 'pointer' }}>МЕРОПРИЯТИЯ</button>
+                        <button onClick={() => setActiveTab('partners')} style={{ background: 'none', border: 'none', color: activeTab === 'partners' ? '#fff' : '#444', fontWeight: 'bold', cursor: 'pointer' }}>ПАРТНЕРЫ</button>
+                        <button onClick={() => setActiveTab('polls')} style={{ background: 'none', border: 'none', color: activeTab === 'polls' ? '#fff' : '#444', fontWeight: 'bold', cursor: 'pointer' }}>ОПРОСЫ</button>
                     </nav>
                     <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
                         <button onClick={() => setShowGhConfig(true)} style={{ background: 'none', color: '#888', border: '1px solid #222', padding: '8px 15px', borderRadius: '100px', fontSize: '11px' }}>⚙️ GIT CONFIG</button>
@@ -327,11 +330,13 @@ const Admin = () => {
             )}
 
             <main style={{ maxWidth: '1200px', margin: '40px auto', padding: '0 20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'flex-start', mb: '30px' }}>
+                {['residents', 'events'].includes(activeTab) && <div style={{ display: 'flex', justifyContent: 'flex-start', mb: '30px' }}>
                     <button onClick={activeTab === 'residents' ? addNewResident : addNewEvent} style={{ background: '#fff', color: '#000', border: 'none', padding: '12px 24px', borderRadius: '100px', fontWeight: 'bold' }}>+ ДОБАВИТЬ {activeTab === 'residents' ? 'РЕЗИДЕНТА' : 'МЕРОПРИЯТИЕ'}</button>
-                </div>
+                </div>}
 
-                {activeTab === 'residents' ? (
+                {activeTab === 'partners' || activeTab === 'polls' ? (
+                    <SupabaseAdmin section={activeTab} />
+                ) : activeTab === 'residents' ? (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '25px' }}>
                         {residents.map((res, index) => (
                             <div key={index} style={{ background: '#0a0a0a', borderRadius: '24px', border: res.isPresident ? '2px solid #fff' : '1px solid #222', padding: '24px' }}>
