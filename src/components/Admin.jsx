@@ -142,7 +142,20 @@ const Admin = () => {
         }
     };
 
-    const handleDeploy = async () => {
+  const syncEventsToSupabase = async (eventsToSync) => {
+    await supabase.from('events').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    const rows = eventsToSync.map(e => ({
+      title: e.title||'', description: e.description||'',
+      date: e.date ? new Date(e.date).toISOString() : new Date().toISOString(),
+      location: '', image_url: e.photo||null, image_tag: 'blue',
+      tags: e.participants||[], status: 'upcoming', is_published: true,
+      capacity: 50, speaker_name: '', speaker_role: '',
+    }));
+    const {error} = await supabase.from('events').insert(rows);
+    if (error) throw new Error('Supabase: ' + error.message);
+  };
+
+      const handleDeploy = async () => {
         setDeployStatus('loading');
         try {
             await syncEventsToSupabase(events);
