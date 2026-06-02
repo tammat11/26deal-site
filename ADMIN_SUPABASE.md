@@ -2,62 +2,70 @@
 
 ## Purpose
 
-The `/admin` page manages two groups of data:
+The `/admin` page manages website content and mobile application data stored in
+the shared Supabase project. Do not add duplicate website-only tables.
 
-- legacy website content: residents and events;
-- mobile app data stored in Supabase: partners, polls and poll answers.
+## Required database migration
 
-The Supabase-backed tabs must follow the live mobile app schema. Do not replace it
-with a second website-only schema or synchronize data between duplicate tables.
+Before enabling the polls tab, apply the mobile application migration:
 
-## Live schema used by the admin UI
+`supabase/migrations/2026-06-02_poll_admin_upgrade.sql`
+
+The SQL is mirrored from the Flutter application repository. It creates
+`poll_options`, adds the admin fields and backfills legacy `polls.options`.
+
+Then apply the website supplement:
+
+`supabase/migrations/2026-06-02_site_admin_upgrade.sql`
+
+It adds partner and poll sorting fields, partner cover images and indexes used by
+the website admin. It also removes the original single-vote unique index because
+that index blocks valid `multiple` poll answers. Single-choice validation belongs
+in the application service.
+
+## Server-side admin API
+
+Partners and polls use `/api/admin-data`. The browser no longer writes these
+tables through the public Supabase client.
+
+Configure these environment variables in Vercel:
+
+- `SUPABASE_URL`: optional, defaults to the current project URL;
+- `SUPABASE_SECRET_KEY`: required server-side Supabase secret key;
+- `ADMIN_API_TOKEN`: required private token entered by an administrator in the
+  admin UI.
+
+Never expose `SUPABASE_SECRET_KEY` through a `VITE_*` variable.
+
+## Shared tables
 
 ### `partners`
 
-The UI currently reads and writes:
-
-- `id`
-- `created_at`
-- `name`
-- `description`
-- `category`
-- `discount`
-- `discount_conditions`
-- `address`
-- `website`
-- `phone`
-- `logo_url`
-- `is_exclusive`
-- `is_published`
+The admin UI reads and writes `name`, `description`, `category`, `address`,
+`phone`, `website`, `discount`, `discount_conditions`, `is_exclusive`,
+`is_published`, `sort_order`, `logo_url` and `cover_url`.
 
 ### `polls`
 
-The UI currently reads and writes:
+The admin UI reads and writes `question`, `description`, `type`, `is_active`,
+`is_published`, `starts_at`, `ends_at` and `sort_order`.
 
-- `id`
-- `created_at`
-- `question`
-- `description`
-- `type`: `single`, `multiple`, `text` or `rating`
-- `options`: JSON array of strings
-- `is_active`
-- `ends_at`
+### `poll_options`
 
-The current database does not expose a `poll_options` table. Options belong to
-the `polls.options` array until the mobile app and database are migrated together.
+Each option is stored as a row with `poll_id`, `label`, `value` and
+`sort_order`. The admin UI does not write new values into legacy `polls.options`.
 
 ### `poll_answers`
 
-The UI reads answers by `poll_id`, shows raw answer records for compatibility
-with the mobile app payload and exports them to CSV. It does not edit answers.
+The admin UI reads answers by `poll_id`, shows vote aggregates and exports raw
+answers to CSV. It does not edit answers.
 
 ## Security follow-up
 
-The admin page currently uses the public Supabase client from the browser. Before
-production use, verify Row Level Security policies for `partners`, `polls`,
-`poll_answers`, `events` and the `events` storage bucket. Public application users
-must not receive insert, update or delete permissions for admin-managed tables.
+Keep Row Level Security enabled. Public application users may read published
+content and write only their own answers. They must not receive admin write
+permissions for partners, polls or options.
 
-A production hardening pass should move admin writes behind authenticated
-server-side routes or Supabase Auth with an admin role. The existing localStorage
-admin flag and the `0000` OTP bypass are not sufficient authorization controls.
+The existing website OTP flow still contains a `0000` bypass and a
+`localStorage` login flag. Remove both when the website receives proper
+server-side authentication.
