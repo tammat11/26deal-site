@@ -199,15 +199,24 @@ const Admin = () => {
         localStorage.setItem('edited_residents', JSON.stringify(newRes));
     };
 
-    const handleFileUpload = (e, index, type = 'resident') => {
+    const handleFileUpload = async (e, index, type = 'resident') => {
         const file = e.target.files[0];
-        if (file) {
+        if (!file) return;
+        if (type === 'resident') {
             const reader = new FileReader();
-            reader.onloadend = () => {
-                if (type === 'resident') updateResident(index, 'photo', reader.result);
-                else updateEvent(index, 'photo', reader.result);
-            };
+            reader.onloadend = () => updateResident(index, 'photo', reader.result);
             reader.readAsDataURL(file);
+        } else {
+            const ext = file.name.split('.').pop();
+            const path = `event_${Date.now()}.${ext}`;
+            const { data, error } = await supabase.storage
+                .from('events')
+                .upload(path, file, { upsert: true });
+            if (error) { alert('Ошибка загрузки: ' + error.message); return; }
+            const { data: { publicUrl } } = supabase.storage
+                .from('events')
+                .getPublicUrl(path);
+            updateEvent(index, 'photo', publicUrl);
         }
     };
 
