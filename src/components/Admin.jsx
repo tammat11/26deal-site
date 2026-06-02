@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { supabase } from '../supabase';
 import { residents as initialResidents } from '../data/residents';
 import { events as initialEvents } from '../data/events';
 
