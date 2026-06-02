@@ -143,6 +143,17 @@ const Admin = () => {
     };
 
     const handleDeploy = async () => {
+        setDeployStatus('loading');
+        try {
+            await syncEventsToSupabase(events);
+            setDeployStatus('success');
+            setTimeout(() => setDeployStatus(''), 3000);
+        } catch (err) {
+            console.error(err);
+            setDeployStatus('error');
+            alert('Ошибка: ' + err.message);
+            return;
+        }
         if (!githubToken) {
             setShowGhConfig(true);
             return;
