@@ -1,16 +1,19 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { residents as initialResidents } from '../data/residents';
-import { events as initialEvents } from '../data/events';
 import { supabase } from '../lib/supabase';
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
 const ALLOWED_PHONES = ['+7 702 666 6113', '+7 707 052 2006', '+7 707 186 0618'];
-const GITHUB_OWNER = 'tammat11';
-const GITHUB_REPO = '26deal-site';
 
-const TABS = ['residents', 'events', 'partners', 'polls'];
-const TAB_LABELS = { residents: 'РЕЗИДЕНТЫ', events: 'МЕРОПРИЯТИЯ', partners: 'ПАРТНЁРЫ', polls: 'ОПРОСЫ' };
+const TABS = [
+  { id: 'residents', label: 'Резиденты',    icon: '👤' },
+  { id: 'events',    label: 'Мероприятия',  icon: '📅' },
+  { id: 'partners',  label: 'Партнёры',     icon: '🤝' },
+  { id: 'polls',     label: 'Опросы',       icon: '📊' },
+  { id: 'president', label: 'Президент',    icon: '👑' },
+];
 
-const PARTNER_CATEGORIES = [
+const PARTNER_CATS = [
   { value: 'restaurant', label: 'Рестораны' },
   { value: 'fitness',    label: 'Фитнес' },
   { value: 'beauty',     label: 'Красота' },
@@ -27,674 +30,931 @@ const POLL_TYPES = [
   { value: 'rating',   label: 'Рейтинг 1–5' },
 ];
 
-const inp = {
-  width: '100%', padding: '10px', background: '#111',
-  border: '1px solid #333', color: 'white', borderRadius: '8px', outline: 'none',
-  fontFamily: 'inherit', fontSize: '14px',
-};
-const btn = (extra = {}) => ({
-  border: 'none', borderRadius: '100px', fontWeight: 'bold',
-  cursor: 'pointer', fontFamily: 'inherit', ...extra,
-});
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
-// ──────────────────────────────────────────────
-// Partners tab
-// ──────────────────────────────────────────────
-const PartnersTab = () => {
-  const [partners, setPartners] = useState([]);
+const css = `
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #09090f;
+    --s1:       #111118;
+    --s2:       #18181f;
+    --s3:       #22222c;
+    --border:   rgba(255,255,255,0.07);
+    --gold:     #d4a853;
+    --gold-dim: rgba(212,168,83,0.15);
+    --text:     #f0f0f0;
+    --muted:    #666;
+    --danger:   #e05252;
+    --success:  #52c07a;
+    --r:        14px;
+  }
+
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; font-size: 14px; min-height: 100vh; }
+
+  /* ── Layout ── */
+  .admin-app { display: flex; flex-direction: column; min-height: 100vh; }
+
+  .topbar {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(9,9,15,0.85); backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 28px; height: 58px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .topbar-brand { font-size: 14px; font-weight: 700; color: var(--gold); letter-spacing: .4px; }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+
+  .sidebar {
+    position: fixed; left: 0; top: 58px; bottom: 0; width: 220px;
+    background: var(--s1); border-right: 1px solid var(--border);
+    padding: 20px 12px; display: flex; flex-direction: column; gap: 4px;
+    overflow-y: auto;
+  }
+  .sidebar-btn {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; border-radius: 10px;
+    border: none; background: none; color: var(--muted);
+    font-size: 13px; font-weight: 500; cursor: pointer;
+    text-align: left; transition: all .15s; width: 100%;
+  }
+  .sidebar-btn:hover { color: var(--text); background: var(--s2); }
+  .sidebar-btn.active { color: var(--gold); background: var(--gold-dim); }
+  .sidebar-btn .icon { font-size: 16px; width: 20px; text-align: center; }
+  .sidebar-label { font-size: 10px; color: var(--muted); padding: 12px 14px 4px; letter-spacing: .8px; text-transform: uppercase; }
+
+  .main { margin-left: 220px; padding: 32px 32px; min-height: calc(100vh - 58px); }
+
+  /* ── Buttons ── */
+  .btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: 10px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity .15s, transform .1s; font-family: inherit; }
+  .btn:hover { opacity: .85; }
+  .btn:active { transform: scale(.97); }
+  .btn-gold { background: var(--gold); color: #000; }
+  .btn-outline { background: none; border: 1px solid var(--border); color: var(--text); }
+  .btn-ghost { background: none; border: none; color: var(--muted); cursor: pointer; font-family: inherit; font-size: 12px; }
+  .btn-ghost:hover { color: var(--danger); }
+  .btn-danger { background: none; border: 1px solid rgba(224,82,82,.3); color: var(--danger); }
+  .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
+  .btn-xs { padding: 4px 10px; font-size: 11px; border-radius: 7px; }
+
+  /* ── Section header ── */
+  .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+  .section-title { font-size: 20px; font-weight: 800; }
+  .section-sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+
+  /* ── Cards grid ── */
+  .grid-2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+
+  .card {
+    background: var(--s1); border: 1px solid var(--border);
+    border-radius: var(--r); padding: 18px; transition: border-color .15s;
+  }
+  .card:hover { border-color: rgba(255,255,255,.12); }
+  .card-gold { border-color: rgba(212,168,83,.4); }
+
+  /* ── Resident card ── */
+  .res-card { display: flex; gap: 14px; }
+  .res-avatar { width: 64px; height: 80px; border-radius: 10px; object-fit: cover; background: var(--s3); flex-shrink: 0; cursor: pointer; border: 1px solid var(--border); }
+  .res-avatar-placeholder { width: 64px; height: 80px; border-radius: 10px; background: var(--s3); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; border: 2px dashed var(--border); }
+  .res-info { flex: 1; min-width: 0; }
+  .res-name { font-weight: 700; font-size: 14px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .res-company { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .res-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+  /* ── Table ── */
+  .tbl-wrap { border-radius: var(--r); border: 1px solid var(--border); overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: var(--s2); color: var(--muted); font-size: 11px; font-weight: 600; text-align: left; padding: 10px 16px; border-bottom: 1px solid var(--border); letter-spacing: .4px; text-transform: uppercase; }
+  td { padding: 13px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,.02); }
+  .td-actions { display: flex; gap: 8px; }
+
+  /* ── Badges ── */
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .badge-green  { background: rgba(82,192,122,.12); color: var(--success); }
+  .badge-red    { background: rgba(224,82,82,.12);  color: var(--danger); }
+  .badge-gold   { background: var(--gold-dim);      color: var(--gold); }
+  .badge-gray   { background: rgba(255,255,255,.06); color: var(--muted); }
+
+  /* ── Toggle switch ── */
+  .toggle { position: relative; width: 36px; height: 20px; cursor: pointer; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-track { position: absolute; inset: 0; border-radius: 20px; background: var(--s3); transition: background .2s; }
+  .toggle input:checked + .toggle-track { background: var(--gold); }
+  .toggle-thumb { position: absolute; left: 3px; top: 3px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform .2s; }
+  .toggle input:checked ~ .toggle-thumb { transform: translateX(16px); }
+
+  /* ── Form ── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-grid .full { grid-column: 1/-1; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { font-size: 11px; color: var(--muted); font-weight: 600; letter-spacing: .3px; }
+  input[type=text], input[type=date], input[type=email], input[type=password],
+  input[type=url], input[type=tel], input[type=datetime-local], select, textarea {
+    background: var(--s2); border: 1px solid var(--border); border-radius: 9px;
+    color: var(--text); padding: 9px 12px; font-size: 13px;
+    font-family: inherit; width: 100%; outline: none; transition: border-color .15s;
+  }
+  input:focus, select:focus, textarea:focus { border-color: rgba(212,168,83,.5); }
+  textarea { resize: vertical; min-height: 80px; }
+  select option { background: var(--s2); }
+
+  /* ── Modal ── */
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .modal { background: var(--s1); border: 1px solid var(--border); border-radius: 18px; padding: 28px; width: 100%; max-width: 540px; max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; gap: 18px; }
+  .modal-title { font-size: 17px; font-weight: 800; }
+  .modal-footer { display: flex; gap: 10px; justify-content: flex-end; padding-top: 4px; }
+
+  /* ── Upload area ── */
+  .upload-area { border: 2px dashed var(--border); border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; transition: border-color .15s; }
+  .upload-area:hover { border-color: var(--gold); }
+  .upload-area img { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; margin-bottom: 8px; }
+  .upload-area p { font-size: 12px; color: var(--muted); }
+
+  /* ── Options builder ── */
+  .option-row { display: flex; gap: 8px; margin-bottom: 6px; }
+  .option-row input { flex: 1; }
+  .add-option { background: none; border: 1px dashed rgba(212,168,83,.3); color: var(--gold); border-radius: 8px; padding: 7px; font-size: 12px; width: 100%; margin-top: 4px; cursor: pointer; transition: background .15s; font-family: inherit; }
+  .add-option:hover { background: var(--gold-dim); }
+
+  /* ── President ── */
+  .president-wrap { display: flex; gap: 24px; align-items: flex-start; }
+  .president-photo { width: 120px; height: 150px; border-radius: 14px; object-fit: cover; background: var(--s3); cursor: pointer; border: 1px solid var(--border); flex-shrink: 0; }
+  .president-photo-ph { width: 120px; height: 150px; border-radius: 14px; background: var(--s3); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; border: 2px dashed var(--border); flex-shrink: 0; font-size: 28px; gap: 8px; }
+  .president-photo-ph span { font-size: 11px; color: var(--muted); }
+
+  /* ── Toast ── */
+  .toast { position: fixed; bottom: 24px; right: 24px; z-index: 999; padding: 12px 18px; border-radius: 12px; background: var(--s2); border: 1px solid var(--border); font-size: 13px; opacity: 0; transform: translateY(6px); transition: all .2s; pointer-events: none; max-width: 320px; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.ok  { border-color: var(--success); color: var(--success); }
+  .toast.err { border-color: var(--danger);  color: var(--danger); }
+
+  /* ── Empty / Loading ── */
+  .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .empty-icon { font-size: 32px; margin-bottom: 12px; }
+  .loading { text-align: center; padding: 40px; color: var(--muted); }
+  .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin .6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Login ── */
+  .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg); }
+  .login-card { width: 380px; background: var(--s1); border: 1px solid var(--border); border-radius: 20px; padding: 40px; display: flex; flex-direction: column; gap: 18px; }
+  .login-logo { font-size: 18px; font-weight: 800; color: var(--gold); letter-spacing: .3px; }
+  .login-sub { font-size: 13px; color: var(--muted); margin-top: -10px; }
+  .login-otp { font-size: 26px; text-align: center; letter-spacing: 12px; }
+
+  /* ── Poll stats ── */
+  .stat-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; padding: 3px 10px; border-radius: 20px; background: var(--s3); color: var(--muted); }
+
+  /* Mobile sidebar hidden */
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .main { margin-left: 0; padding: 20px 16px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .form-grid .full { grid-column: 1; }
+  }
+`;
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+let toastTimer;
+function showToast(msg, type = 'ok') {
+  const t = document.getElementById('__toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = 'toast'; }, 2800);
+}
+
+async function uploadImage(file, folder = 'misc') {
+  const ext = file.name.split('.').pop();
+  const path = `${folder}/${Date.now()}.${ext}`;
+  const { error } = await supabase.storage.from('media').upload(path, file, { upsert: true });
+  if (error) throw error;
+  const { data } = supabase.storage.from('media').getPublicUrl(path);
+  return data.publicUrl;
+}
+
+// ─── Subcomponents ────────────────────────────────────────────────────────────
+
+const Toggle = ({ checked, onChange }) => (
+  <label className="toggle">
+    <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} />
+    <div className="toggle-track" />
+    <div className="toggle-thumb" />
+  </label>
+);
+
+const Field = ({ label, children }) => (
+  <div className="field">
+    <label>{label}</label>
+    {children}
+  </div>
+);
+
+const Modal = ({ title, onClose, onSave, saving, children }) => (
+  <div className="overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="modal">
+      <div className="modal-title">{title}</div>
+      {children}
+      <div className="modal-footer">
+        <button className="btn btn-outline" onClick={onClose}>Отмена</button>
+        <button className="btn btn-gold" onClick={onSave} disabled={saving}>
+          {saving ? <><span className="spinner" /> Сохранение…</> : 'Сохранить'}
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+const Empty = ({ icon, text }) => (
+  <div className="empty">
+    <div className="empty-icon">{icon}</div>
+    <div>{text}</div>
+  </div>
+);
+
+// ─── RESIDENTS TAB ────────────────────────────────────────────────────────────
+
+const ResidentsTab = () => {
+  const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(null); // id or 'new'
-  const [editId, setEditId] = useState(null);
+  const [modal, setModal] = useState(null); // null | 'new' | row
   const [form, setForm] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const fileRef = useRef();
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from('partners').select('*').order('created_at', { ascending: false });
-    setPartners(data || []);
+    const { data } = await supabase.from('residents').select('*').order('sort_order');
+    setRows(data || []);
     setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const blank = () => ({
-    name: '', description: '', category: 'restaurant', discount: '',
-    discount_conditions: '', address: '', website: '', phone: '',
-    logo_url: '', is_published: true, is_exclusive: false,
-  });
+  const blank = () => ({ name: '', company: '', niche: '', website: '', brief: '', is_president: false, is_published: true, sort_order: rows.length + 1 });
 
-  const openNew = () => { setEditId('new'); setForm(blank()); };
-  const openEdit = (p) => { setEditId(p.id); setForm({ ...p }); };
-  const cancel = () => { setEditId(null); setForm({}); };
+  const openNew = () => { setForm(blank()); setImageFile(null); setImagePreview(null); setModal('new'); };
+  const openEdit = r => { setForm({ ...r }); setImageFile(null); setImagePreview(r.photo_url || null); setModal(r); };
+  const close = () => { setModal(null); setForm({}); setImageFile(null); setImagePreview(null); };
+
+  const onFile = e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    setImageFile(f);
+    setImagePreview(URL.createObjectURL(f));
+  };
 
   const save = async () => {
-    if (!form.name?.trim()) return alert('Введите название');
-    setSaving(editId);
-    const payload = { ...form };
-    let err;
-    if (editId === 'new') {
-      ({ error: err } = await supabase.from('partners').insert(payload));
-    } else {
-      ({ error: err } = await supabase.from('partners').update(payload).eq('id', editId));
-    }
-    setSaving(null);
-    if (err) return alert('Ошибка: ' + err.message);
-    cancel();
-    load();
+    if (!form.name?.trim()) return showToast('Введите имя', 'err');
+    setSaving(true);
+    try {
+      let photo_url = form.photo_url || null;
+      if (imageFile) photo_url = await uploadImage(imageFile, 'residents');
+
+      // If set as president, unset others
+      if (form.is_president) await supabase.from('residents').update({ is_president: false }).neq('id', form.id || 'none');
+
+      const payload = { name: form.name, company: form.company || null, niche: form.niche || null, photo_url, website: form.website || null, brief: form.brief || null, is_president: !!form.is_president, is_published: form.is_published !== false, sort_order: form.sort_order || 0 };
+
+      if (modal === 'new') await supabase.from('residents').insert(payload);
+      else await supabase.from('residents').update(payload).eq('id', form.id);
+
+      showToast(modal === 'new' ? 'Резидент добавлен' : 'Сохранено');
+      close(); load();
+    } catch (e) { showToast('Ошибка: ' + e.message, 'err'); }
+    setSaving(false);
   };
 
-  const remove = async (id) => {
-    if (!window.confirm('Удалить партнёра?')) return;
-    await supabase.from('partners').delete().eq('id', id);
-    load();
+  const remove = async id => {
+    if (!confirm('Удалить резидента?')) return;
+    await supabase.from('residents').delete().eq('id', id);
+    showToast('Удалено'); load();
   };
 
-  const toggle = async (id, field, val) => {
-    await supabase.from('partners').update({ [field]: val }).eq('id', id);
-    setPartners(ps => ps.map(p => p.id === id ? { ...p, [field]: val } : p));
+  const togglePub = async (id, val) => {
+    await supabase.from('residents').update({ is_published: val }).eq('id', id);
+    setRows(r => r.map(x => x.id === id ? { ...x, is_published: val } : x));
   };
 
-  const f = (k) => (e) => setForm(prev => ({ ...prev, [k]: e.target.value }));
-  const fb = (k) => (e) => setForm(prev => ({ ...prev, [k]: e.target.checked }));
-
-  if (loading) return <p style={{ color: '#444', padding: '40px', textAlign: 'center' }}>Загрузка…</p>;
+  if (loading) return <div className="loading"><span className="spinner" /></div>;
 
   return (
-    <div>
-      <button onClick={openNew} style={btn({ background: '#fff', color: '#000', padding: '12px 24px', marginBottom: '30px' })}>
-        + ДОБАВИТЬ ПАРТНЁРА
-      </button>
-
-      {/* Form modal */}
-      {editId !== null && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ background: '#0a0a0a', border: '1px solid #333', borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '540px', maxHeight: '90vh', overflowY: 'auto' }}>
-            <h3 style={{ marginBottom: '24px' }}>{editId === 'new' ? 'Добавить партнёра' : 'Редактировать партнёра'}</h3>
-            <div style={{ display: 'grid', gap: '12px' }}>
-              <Field label="Название *"><input style={inp} value={form.name || ''} onChange={f('name')} placeholder="World Class" /></Field>
-              <Field label="Описание"><textarea style={{ ...inp, minHeight: '70px', resize: 'vertical' }} value={form.description || ''} onChange={f('description')} /></Field>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <Field label="Категория">
-                  <select style={inp} value={form.category || 'restaurant'} onChange={f('category')}>
-                    {PARTNER_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                  </select>
-                </Field>
-                <Field label="Скидка"><input style={inp} value={form.discount || ''} onChange={f('discount')} placeholder="30% на членство" /></Field>
-              </div>
-              <Field label="Условия скидки"><textarea style={{ ...inp, minHeight: '60px', resize: 'vertical' }} value={form.discount_conditions || ''} onChange={f('discount_conditions')} /></Field>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <Field label="Адрес"><input style={inp} value={form.address || ''} onChange={f('address')} /></Field>
-                <Field label="Сайт"><input style={inp} value={form.website || ''} onChange={f('website')} /></Field>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <Field label="Телефон"><input style={inp} value={form.phone || ''} onChange={f('phone')} /></Field>
-                <Field label="URL логотипа"><input style={inp} value={form.logo_url || ''} onChange={f('logo_url')} /></Field>
-              </div>
-              <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#aaa', cursor: 'pointer' }}>
-                  <input type="checkbox" checked={!!form.is_published} onChange={fb('is_published')} /> Опубликован
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#aaa', cursor: 'pointer' }}>
-                  <input type="checkbox" checked={!!form.is_exclusive} onChange={fb('is_exclusive')} /> Эксклюзив
-                </label>
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-              <button onClick={save} disabled={saving} style={btn({ background: '#fff', color: '#000', padding: '12px 28px', opacity: saving ? 0.5 : 1 })}>
-                {saving ? 'СОХРАНЕНИЕ…' : 'СОХРАНИТЬ'}
-              </button>
-              <button onClick={cancel} style={btn({ background: '#222', color: '#fff', padding: '12px 24px' })}>ОТМЕНА</button>
-            </div>
-          </div>
+    <>
+      <div className="section-head">
+        <div>
+          <div className="section-title">Резиденты</div>
+          <div className="section-sub">{rows.length} участников</div>
         </div>
-      )}
+        <button className="btn btn-gold" onClick={openNew}>+ Добавить</button>
+      </div>
 
-      {/* List */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '20px' }}>
-        {partners.map(p => (
-          <div key={p.id} style={{ background: '#0a0a0a', borderRadius: '20px', border: `1px solid ${p.is_exclusive ? '#666' : '#1e1e1e'}`, padding: '20px' }}>
-            <div style={{ display: 'flex', gap: '14px', marginBottom: '12px', alignItems: 'flex-start' }}>
-              {p.logo_url
-                ? <img src={p.logo_url} alt="" style={{ width: '52px', height: '52px', borderRadius: '12px', objectFit: 'cover', background: '#111', flexShrink: 0 }} />
-                : <div style={{ width: '52px', height: '52px', borderRadius: '12px', background: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>🏢</div>
+      <div className="grid-2">
+        {rows.map(r => (
+          <div key={r.id} className={`card ${r.is_president ? 'card-gold' : ''}`}>
+            <div className="res-card">
+              {r.photo_url
+                ? <img className="res-avatar" src={r.photo_url} alt={r.name} onClick={() => openEdit(r)} />
+                : <div className="res-avatar-placeholder" onClick={() => openEdit(r)}>👤</div>
               }
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
-                <div style={{ fontSize: '11px', color: '#555' }}>{PARTNER_CATEGORIES.find(c => c.value === p.category)?.label}</div>
-                {p.discount && <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>{p.discount}</div>}
+              <div className="res-info">
+                <div className="res-name">{r.name}</div>
+                <div className="res-company">{r.company || '—'}</div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {r.is_president && <span className="badge badge-gold">👑 Президент</span>}
+                  {r.niche && <span className="badge badge-gray">{r.niche}</span>}
+                </div>
+                <div className="res-actions">
+                  <button className="btn btn-outline btn-sm" onClick={() => openEdit(r)}>Редактировать</button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+                    <Toggle checked={r.is_published} onChange={v => togglePub(r.id, v)} />
+                    <button className="btn-ghost" onClick={() => remove(r.id)}>✕</button>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
-              <Tag active={p.is_published} onClick={() => toggle(p.id, 'is_published', !p.is_published)}>
-                {p.is_published ? '✓ Опубликован' : '✗ Скрыт'}
-              </Tag>
-              <Tag active={p.is_exclusive} onClick={() => toggle(p.id, 'is_exclusive', !p.is_exclusive)}>
-                {p.is_exclusive ? '★ Эксклюзив' : '☆ Не эксклюзив'}
-              </Tag>
-            </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={() => openEdit(p)} style={btn({ background: '#1e1e1e', color: '#fff', padding: '8px 16px', fontSize: '12px' })}>Редактировать</button>
-              <button onClick={() => remove(p.id)} style={btn({ background: 'none', color: '#ff4b4b', border: '1px solid #2a1a1a', padding: '8px 14px', fontSize: '12px', borderRadius: '100px' })}>Удалить</button>
             </div>
           </div>
         ))}
-        {partners.length === 0 && <p style={{ color: '#444', gridColumn: '1/-1' }}>Партнёры не добавлены</p>}
+        {rows.length === 0 && <Empty icon="👤" text="Резиденты не добавлены" />}
       </div>
-    </div>
+
+      {modal !== null && (
+        <Modal title={modal === 'new' ? 'Добавить резидента' : 'Редактировать'} onClose={close} onSave={save} saving={saving}>
+          <input type="file" ref={fileRef} hidden accept="image/*" onChange={onFile} />
+          <div className="upload-area" onClick={() => fileRef.current.click()}>
+            {imagePreview ? <img src={imagePreview} alt="" style={{ width: 80, height: 80, borderRadius: 8, objectFit: 'cover', marginBottom: 8 }} /> : <div style={{ fontSize: 32, marginBottom: 8 }}>📷</div>}
+            <p>{imageFile ? imageFile.name : 'Нажмите чтобы выбрать фото'}</p>
+          </div>
+          <div className="form-grid">
+            <div className="field full"><label>Имя *</label><input type="text" value={form.name || ''} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Тимур Нуртаев" /></div>
+            <Field label="Компания"><input type="text" value={form.company || ''} onChange={e => setForm(f => ({ ...f, company: e.target.value }))} placeholder="TIMUS Development" /></Field>
+            <Field label="Ниша"><input type="text" value={form.niche || ''} onChange={e => setForm(f => ({ ...f, niche: e.target.value }))} placeholder="Строительство" /></Field>
+            <div className="field full"><label>Сайт</label><input type="url" value={form.website || ''} onChange={e => setForm(f => ({ ...f, website: e.target.value }))} placeholder="https://example.kz" /></div>
+            <div className="field full"><label>О резиденте</label><textarea value={form.brief || ''} onChange={e => setForm(f => ({ ...f, brief: e.target.value }))} rows={3} /></div>
+            <Field label="Порядок сортировки"><input type="text" value={form.sort_order || ''} onChange={e => setForm(f => ({ ...f, sort_order: parseInt(e.target.value) || 0 }))} /></Field>
+            <div style={{ display: 'flex', gap: 20, alignItems: 'center', padding: '8px 0' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#aaa', cursor: 'pointer' }}>
+                <Toggle checked={!!form.is_president} onChange={v => setForm(f => ({ ...f, is_president: v }))} /> Президент
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#aaa', cursor: 'pointer' }}>
+                <Toggle checked={form.is_published !== false} onChange={v => setForm(f => ({ ...f, is_published: v }))} /> Опубликован
+              </label>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </>
   );
 };
 
-// ──────────────────────────────────────────────
-// Polls tab
-// ──────────────────────────────────────────────
-const PollsTab = () => {
-  const [polls, setPolls] = useState([]);
+// ─── EVENTS TAB ───────────────────────────────────────────────────────────────
+
+const EventsTab = () => {
+  const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [editId, setEditId] = useState(null);
-  const [saving, setSaving] = useState(false);
+  const [modal, setModal] = useState(null);
   const [form, setForm] = useState({});
-  const [options, setOptions] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const fileRef = useRef();
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from('polls').select('*, poll_answers(count)').order('created_at', { ascending: false });
-    setPolls(data || []);
+    const { data } = await supabase.from('site_events').select('*').order('date', { ascending: false });
+    setRows(data || []);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const blank = () => ({ title: '', description: '', date: '', is_published: true });
+  const openNew = () => { setForm(blank()); setImageFile(null); setImagePreview(null); setModal('new'); };
+  const openEdit = r => { setForm({ ...r }); setImageFile(null); setImagePreview(r.photo_url || null); setModal(r); };
+  const close = () => { setModal(null); setForm({}); };
+
+  const onFile = e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    setImageFile(f);
+    setImagePreview(URL.createObjectURL(f));
+  };
+
+  const save = async () => {
+    if (!form.title?.trim()) return showToast('Введите название', 'err');
+    setSaving(true);
+    try {
+      let photo_url = form.photo_url || null;
+      if (imageFile) photo_url = await uploadImage(imageFile, 'events');
+      const payload = { title: form.title, description: form.description || null, date: form.date || null, photo_url, is_published: form.is_published !== false };
+      if (modal === 'new') await supabase.from('site_events').insert(payload);
+      else await supabase.from('site_events').update(payload).eq('id', form.id);
+      showToast(modal === 'new' ? 'Мероприятие добавлено' : 'Сохранено');
+      close(); load();
+    } catch (e) { showToast('Ошибка: ' + e.message, 'err'); }
+    setSaving(false);
+  };
+
+  const remove = async id => {
+    if (!confirm('Удалить?')) return;
+    await supabase.from('site_events').delete().eq('id', id);
+    showToast('Удалено'); load();
+  };
+
+  const togglePub = async (id, val) => {
+    await supabase.from('site_events').update({ is_published: val }).eq('id', id);
+    setRows(r => r.map(x => x.id === id ? { ...x, is_published: val } : x));
+  };
+
+  if (loading) return <div className="loading"><span className="spinner" /></div>;
+
+  return (
+    <>
+      <div className="section-head">
+        <div>
+          <div className="section-title">Мероприятия</div>
+          <div className="section-sub">{rows.length} событий</div>
+        </div>
+        <button className="btn btn-gold" onClick={openNew}>+ Добавить</button>
+      </div>
+
+      <div className="tbl-wrap">
+        <table>
+          <thead><tr><th>Фото</th><th>Название</th><th>Дата</th><th>Статус</th><th></th></tr></thead>
+          <tbody>
+            {rows.map(r => (
+              <tr key={r.id}>
+                <td>
+                  {r.photo_url
+                    ? <img src={r.photo_url} alt="" style={{ width: 56, height: 40, objectFit: 'cover', borderRadius: 6 }} />
+                    : <div style={{ width: 56, height: 40, background: 'var(--s3)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>📅</div>
+                  }
+                </td>
+                <td style={{ fontWeight: 600, maxWidth: 280 }}><div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 260 }}>{r.title}</div></td>
+                <td style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>{r.date ? new Date(r.date).toLocaleDateString('ru') : '—'}</td>
+                <td><Toggle checked={r.is_published} onChange={v => togglePub(r.id, v)} /></td>
+                <td>
+                  <div className="td-actions">
+                    <button className="btn btn-outline btn-sm" onClick={() => openEdit(r)}>Редактировать</button>
+                    <button className="btn btn-danger btn-sm" onClick={() => remove(r.id)}>Удалить</button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {rows.length === 0 && <div className="loading" style={{ color: 'var(--muted)' }}>Мероприятия не добавлены</div>}
+      </div>
+
+      {modal !== null && (
+        <Modal title={modal === 'new' ? 'Новое мероприятие' : 'Редактировать'} onClose={close} onSave={save} saving={saving}>
+          <input type="file" ref={fileRef} hidden accept="image/*" onChange={onFile} />
+          <div className="upload-area" onClick={() => fileRef.current.click()}>
+            {imagePreview
+              ? <img src={imagePreview} alt="" style={{ width: '100%', height: 160, objectFit: 'cover', borderRadius: 8, marginBottom: 8 }} />
+              : <div style={{ fontSize: 32, marginBottom: 8 }}>🖼</div>
+            }
+            <p>{imageFile ? imageFile.name : 'Нажмите чтобы выбрать обложку'}</p>
+          </div>
+          <div className="form-grid">
+            <div className="field full"><label>Название *</label><input type="text" value={form.title || ''} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} /></div>
+            <Field label="Дата"><input type="date" value={form.date || ''} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} /></Field>
+            <Field label="Опубликован"><Toggle checked={form.is_published !== false} onChange={v => setForm(f => ({ ...f, is_published: v }))} /></Field>
+            <div className="field full"><label>Описание</label><textarea value={form.description || ''} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={4} /></div>
+          </div>
+        </Modal>
+      )}
+    </>
+  );
+};
+
+// ─── PARTNERS TAB ─────────────────────────────────────────────────────────────
+
+const PartnersTab = () => {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState(null);
+  const [form, setForm] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const fileRef = useRef();
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const { data } = await supabase.from('partners').select('*').order('created_at', { ascending: false });
+    setRows(data || []);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const blank = () => ({ name: '', description: '', category: 'restaurant', discount: '', discount_conditions: '', address: '', website: '', phone: '', is_published: true, is_exclusive: false });
+  const openNew = () => { setForm(blank()); setImageFile(null); setImagePreview(null); setModal('new'); };
+  const openEdit = r => { setForm({ ...r }); setImageFile(null); setImagePreview(r.logo_url || null); setModal(r); };
+  const close = () => { setModal(null); setForm({}); };
+
+  const onFile = e => {
+    const f = e.target.files[0]; if (!f) return;
+    setImageFile(f); setImagePreview(URL.createObjectURL(f));
+  };
+
+  const save = async () => {
+    if (!form.name?.trim()) return showToast('Введите название', 'err');
+    setSaving(true);
+    try {
+      let logo_url = form.logo_url || null;
+      if (imageFile) logo_url = await uploadImage(imageFile, 'partners');
+      const p = { name: form.name, description: form.description || null, category: form.category, discount: form.discount || null, discount_conditions: form.discount_conditions || null, address: form.address || null, website: form.website || null, phone: form.phone || null, logo_url, is_published: form.is_published !== false, is_exclusive: !!form.is_exclusive };
+      if (modal === 'new') await supabase.from('partners').insert(p);
+      else await supabase.from('partners').update(p).eq('id', form.id);
+      showToast(modal === 'new' ? 'Партнёр добавлен' : 'Сохранено');
+      close(); load();
+    } catch (e) { showToast('Ошибка: ' + e.message, 'err'); }
+    setSaving(false);
+  };
+
+  const remove = async id => {
+    if (!confirm('Удалить партнёра?')) return;
+    await supabase.from('partners').delete().eq('id', id);
+    showToast('Удалено'); load();
+  };
+
+  const toggleField = async (id, field, val) => {
+    await supabase.from('partners').update({ [field]: val }).eq('id', id);
+    setRows(r => r.map(x => x.id === id ? { ...x, [field]: val } : x));
+  };
+
+  if (loading) return <div className="loading"><span className="spinner" /></div>;
+
+  return (
+    <>
+      <div className="section-head">
+        <div><div className="section-title">Партнёры</div><div className="section-sub">{rows.length} партнёров</div></div>
+        <button className="btn btn-gold" onClick={openNew}>+ Добавить</button>
+      </div>
+
+      <div className="grid-2">
+        {rows.map(r => (
+          <div key={r.id} className={`card ${r.is_exclusive ? 'card-gold' : ''}`}>
+            <div style={{ display: 'flex', gap: 14, marginBottom: 12, alignItems: 'flex-start' }}>
+              {r.logo_url
+                ? <img src={r.logo_url} alt="" style={{ width: 48, height: 48, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
+                : <div style={{ width: 48, height: 48, borderRadius: 10, background: 'var(--s3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>🏢</div>
+              }
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, marginBottom: 2 }}>{r.name}</div>
+                <div style={{ fontSize: 11, color: 'var(--muted)' }}>{PARTNER_CATS.find(c => c.value === r.category)?.label}</div>
+                {r.discount && <div style={{ fontSize: 12, color: 'var(--gold)', marginTop: 4 }}>{r.discount}</div>}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <Toggle checked={r.is_published} onChange={v => toggleField(r.id, 'is_published', v)} />
+              <span style={{ fontSize: 11, color: 'var(--muted)' }}>{r.is_published ? 'Опубликован' : 'Скрыт'}</span>
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+                <button className="btn btn-outline btn-sm" onClick={() => openEdit(r)}>Изменить</button>
+                <button className="btn-ghost" onClick={() => remove(r.id)}>✕</button>
+              </div>
+            </div>
+          </div>
+        ))}
+        {rows.length === 0 && <Empty icon="🤝" text="Партнёры не добавлены" />}
+      </div>
+
+      {modal !== null && (
+        <Modal title={modal === 'new' ? 'Добавить партнёра' : 'Редактировать партнёра'} onClose={close} onSave={save} saving={saving}>
+          <input type="file" ref={fileRef} hidden accept="image/*" onChange={onFile} />
+          <div className="upload-area" onClick={() => fileRef.current.click()}>
+            {imagePreview ? <img src={imagePreview} alt="" style={{ width: 64, height: 64, borderRadius: 10, objectFit: 'cover', marginBottom: 8 }} /> : <div style={{ fontSize: 28, marginBottom: 8 }}>🏢</div>}
+            <p>{imageFile ? imageFile.name : 'Логотип партнёра'}</p>
+          </div>
+          <div className="form-grid">
+            <div className="field full"><label>Название *</label><input type="text" value={form.name || ''} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
+            <div className="field full"><label>Описание</label><textarea value={form.description || ''} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} /></div>
+            <Field label="Категория"><select value={form.category || 'restaurant'} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>{PARTNER_CATS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}</select></Field>
+            <Field label="Скидка"><input type="text" value={form.discount || ''} onChange={e => setForm(f => ({ ...f, discount: e.target.value }))} placeholder="30% на всё" /></Field>
+            <div className="field full"><label>Условия</label><textarea value={form.discount_conditions || ''} onChange={e => setForm(f => ({ ...f, discount_conditions: e.target.value }))} rows={2} /></div>
+            <Field label="Адрес"><input type="text" value={form.address || ''} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} /></Field>
+            <Field label="Сайт"><input type="url" value={form.website || ''} onChange={e => setForm(f => ({ ...f, website: e.target.value }))} /></Field>
+            <Field label="Телефон"><input type="tel" value={form.phone || ''} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} /></Field>
+            <div style={{ display: 'flex', gap: 20, padding: '4px 0' }}>
+              <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#aaa', cursor: 'pointer' }}><Toggle checked={form.is_published !== false} onChange={v => setForm(f => ({ ...f, is_published: v }))} /> Опубликован</label>
+              <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#aaa', cursor: 'pointer' }}><Toggle checked={!!form.is_exclusive} onChange={v => setForm(f => ({ ...f, is_exclusive: v }))} /> Эксклюзив</label>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </>
+  );
+};
+
+// ─── POLLS TAB ────────────────────────────────────────────────────────────────
+
+const PollsTab = () => {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState(null);
+  const [form, setForm] = useState({});
+  const [options, setOptions] = useState(['', '']);
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const { data } = await supabase.from('polls').select('*, poll_answers(count)').order('created_at', { ascending: false });
+    setRows(data || []);
     setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
   const blank = () => ({ question: '', description: '', type: 'single', is_active: true, ends_at: '' });
-
-  const openNew = () => { setEditId('new'); setForm(blank()); setOptions(['', '']); };
-  const openEdit = (p) => {
-    setEditId(p.id);
-    setForm({ ...p, ends_at: p.ends_at ? new Date(p.ends_at).toISOString().slice(0, 16) : '' });
-    const opts = Array.isArray(p.options) ? p.options : (typeof p.options === 'string' ? JSON.parse(p.options || '[]') : []);
+  const openNew = () => { setForm(blank()); setOptions(['', '']); setModal('new'); };
+  const openEdit = r => {
+    setForm({ ...r, ends_at: r.ends_at ? new Date(r.ends_at).toISOString().slice(0, 16) : '' });
+    const opts = Array.isArray(r.options) ? r.options : [];
     setOptions(opts.length ? opts : ['', '']);
+    setModal(r);
   };
-  const cancel = () => { setEditId(null); setForm({}); setOptions([]); };
+  const close = () => { setModal(null); setForm({}); setOptions(['', '']); };
 
   const needsOptions = ['single', 'multiple'].includes(form.type);
 
   const save = async () => {
-    if (!form.question?.trim()) return alert('Введите вопрос');
-    if (needsOptions && options.filter(o => o.trim()).length < 2) return alert('Добавьте минимум 2 варианта');
+    if (!form.question?.trim()) return showToast('Введите вопрос', 'err');
+    if (needsOptions && options.filter(o => o.trim()).length < 2) return showToast('Минимум 2 варианта', 'err');
     setSaving(true);
-    const payload = {
-      question: form.question.trim(),
-      description: form.description?.trim() || null,
-      type: form.type,
-      options: needsOptions ? options.filter(o => o.trim()) : [],
-      is_active: form.is_active,
-      ends_at: form.ends_at ? new Date(form.ends_at).toISOString() : null,
-    };
-    let err;
-    if (editId === 'new') {
-      ({ error: err } = await supabase.from('polls').insert(payload));
-    } else {
-      ({ error: err } = await supabase.from('polls').update(payload).eq('id', editId));
-    }
+    try {
+      const payload = { question: form.question, description: form.description || null, type: form.type, options: needsOptions ? options.filter(o => o.trim()) : [], is_active: !!form.is_active, ends_at: form.ends_at ? new Date(form.ends_at).toISOString() : null };
+      if (modal === 'new') await supabase.from('polls').insert(payload);
+      else await supabase.from('polls').update(payload).eq('id', form.id);
+      showToast(modal === 'new' ? 'Опрос создан' : 'Сохранено');
+      close(); load();
+    } catch (e) { showToast('Ошибка: ' + e.message, 'err'); }
     setSaving(false);
-    if (err) return alert('Ошибка: ' + err.message);
-    cancel();
-    load();
   };
 
-  const remove = async (id) => {
-    if (!window.confirm('Удалить опрос и все ответы?')) return;
+  const remove = async id => {
+    if (!confirm('Удалить опрос и все ответы?')) return;
     await supabase.from('polls').delete().eq('id', id);
-    load();
+    showToast('Удалено'); load();
   };
 
-  const toggle = async (id, val) => {
+  const toggleActive = async (id, val) => {
     await supabase.from('polls').update({ is_active: val }).eq('id', id);
-    setPolls(ps => ps.map(p => p.id === id ? { ...p, is_active: val } : p));
+    setRows(r => r.map(x => x.id === id ? { ...x, is_active: val } : x));
   };
 
-  const f = (k) => (e) => setForm(prev => ({ ...prev, [k]: e.target.value }));
-  const fb = (k) => (e) => setForm(prev => ({ ...prev, [k]: e.target.checked }));
-  const setOpt = (i, v) => setOptions(prev => prev.map((o, idx) => idx === i ? v : o));
-  const addOpt = () => setOptions(prev => [...prev, '']);
-  const delOpt = (i) => setOptions(prev => prev.filter((_, idx) => idx !== i));
-
-  if (loading) return <p style={{ color: '#444', padding: '40px', textAlign: 'center' }}>Загрузка…</p>;
+  if (loading) return <div className="loading"><span className="spinner" /></div>;
 
   return (
-    <div>
-      <button onClick={openNew} style={btn({ background: '#fff', color: '#000', padding: '12px 24px', marginBottom: '30px' })}>
-        + ДОБАВИТЬ ОПРОС
-      </button>
+    <>
+      <div className="section-head">
+        <div><div className="section-title">Опросы</div><div className="section-sub">{rows.length} опросов</div></div>
+        <button className="btn btn-gold" onClick={openNew}>+ Создать опрос</button>
+      </div>
 
-      {/* Form modal */}
-      {editId !== null && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ background: '#0a0a0a', border: '1px solid #333', borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '520px', maxHeight: '90vh', overflowY: 'auto' }}>
-            <h3 style={{ marginBottom: '24px' }}>{editId === 'new' ? 'Добавить опрос' : 'Редактировать опрос'}</h3>
-            <div style={{ display: 'grid', gap: '14px' }}>
-              <Field label="Вопрос *"><input style={inp} value={form.question || ''} onChange={f('question')} placeholder="Какой формат встреч нравится?" /></Field>
-              <Field label="Описание (необязательно)"><textarea style={{ ...inp, minHeight: '60px', resize: 'vertical' }} value={form.description || ''} onChange={f('description')} /></Field>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <Field label="Тип ответа">
-                  <select style={inp} value={form.type || 'single'} onChange={f('type')}>
-                    {POLL_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                  </select>
-                </Field>
-                <Field label="Активен до">
-                  <input style={inp} type="datetime-local" value={form.ends_at || ''} onChange={f('ends_at')} />
-                </Field>
-              </div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#aaa', cursor: 'pointer' }}>
-                <input type="checkbox" checked={!!form.is_active} onChange={fb('is_active')} /> Активен (виден в приложении)
-              </label>
-
-              {/* Options builder */}
-              {needsOptions && (
-                <Field label="Варианты ответа">
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {options.map((o, i) => (
-                      <div key={i} style={{ display: 'flex', gap: '8px' }}>
-                        <input style={{ ...inp, flex: 1 }} value={o} onChange={e => setOpt(i, e.target.value)} placeholder={`Вариант ${i + 1}`} />
-                        {options.length > 2 && (
-                          <button onClick={() => delOpt(i)} style={{ background: 'none', border: '1px solid #333', color: '#ff4b4b', borderRadius: '8px', padding: '0 10px', cursor: 'pointer', fontSize: '16px' }}>×</button>
-                        )}
-                      </div>
-                    ))}
-                    <button onClick={addOpt} style={{ background: 'none', border: '1px dashed #444', color: '#888', padding: '8px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}>
-                      + Добавить вариант
-                    </button>
+      <div className="tbl-wrap">
+        <table>
+          <thead><tr><th>Вопрос</th><th>Тип</th><th>Ответов</th><th>Срок</th><th>Активен</th><th></th></tr></thead>
+          <tbody>
+            {rows.map(r => (
+              <tr key={r.id}>
+                <td style={{ maxWidth: 300 }}><div style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 280 }}>{r.question}</div></td>
+                <td><span className="badge badge-gray">{POLL_TYPES.find(t => t.value === r.type)?.label}</span></td>
+                <td><span className="stat-pill">💬 {r.poll_answers?.[0]?.count ?? 0}</span></td>
+                <td style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>{r.ends_at ? new Date(r.ends_at).toLocaleDateString('ru') : '∞'}</td>
+                <td><Toggle checked={r.is_active} onChange={v => toggleActive(r.id, v)} /></td>
+                <td>
+                  <div className="td-actions">
+                    <button className="btn btn-outline btn-sm" onClick={() => openEdit(r)}>Изменить</button>
+                    <button className="btn btn-danger btn-sm" onClick={() => remove(r.id)}>Удалить</button>
                   </div>
-                </Field>
-              )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {rows.length === 0 && <div className="loading" style={{ color: 'var(--muted)' }}>Опросы не созданы</div>}
+      </div>
+
+      {modal !== null && (
+        <Modal title={modal === 'new' ? 'Новый опрос' : 'Редактировать опрос'} onClose={close} onSave={save} saving={saving}>
+          <div className="form-grid">
+            <div className="field full"><label>Вопрос *</label><input type="text" value={form.question || ''} onChange={e => setForm(f => ({ ...f, question: e.target.value }))} /></div>
+            <div className="field full"><label>Описание</label><textarea value={form.description || ''} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} /></div>
+            <Field label="Тип ответа"><select value={form.type || 'single'} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>{POLL_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}</select></Field>
+            <Field label="Активен до"><input type="datetime-local" value={form.ends_at || ''} onChange={e => setForm(f => ({ ...f, ends_at: e.target.value }))} /></Field>
+            <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#aaa', cursor: 'pointer' }}><Toggle checked={!!form.is_active} onChange={v => setForm(f => ({ ...f, is_active: v }))} /> Активен</label>
+          </div>
+          {needsOptions && (
+            <div className="field">
+              <label>Варианты ответа</label>
+              {options.map((o, i) => (
+                <div key={i} className="option-row">
+                  <input type="text" value={o} onChange={e => setOptions(opts => opts.map((x, j) => j === i ? e.target.value : x))} placeholder={`Вариант ${i + 1}`} />
+                  {options.length > 2 && <button className="btn-ghost" style={{ fontSize: 18, padding: '0 8px' }} onClick={() => setOptions(o => o.filter((_, j) => j !== i))}>×</button>}
+                </div>
+              ))}
+              <button className="add-option" onClick={() => setOptions(o => [...o, ''])}>+ Добавить вариант</button>
             </div>
-            <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-              <button onClick={save} disabled={saving} style={btn({ background: '#fff', color: '#000', padding: '12px 28px', opacity: saving ? 0.5 : 1 })}>
-                {saving ? 'СОХРАНЕНИЕ…' : 'СОХРАНИТЬ'}
-              </button>
-              <button onClick={cancel} style={btn({ background: '#222', color: '#fff', padding: '12px 24px' })}>ОТМЕНА</button>
-            </div>
+          )}
+        </Modal>
+      )}
+    </>
+  );
+};
+
+// ─── PRESIDENT TAB ────────────────────────────────────────────────────────────
+
+const PresidentTab = () => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const fileRef = useRef();
+
+  useEffect(() => {
+    supabase.from('president').select('*').eq('id', 1).single()
+      .then(({ data: d }) => { setData(d || {}); setImagePreview(d?.photo_url || null); setLoading(false); });
+  }, []);
+
+  const onFile = e => {
+    const f = e.target.files[0]; if (!f) return;
+    setImageFile(f); setImagePreview(URL.createObjectURL(f));
+  };
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      let photo_url = data.photo_url || null;
+      if (imageFile) photo_url = await uploadImage(imageFile, 'president');
+      await supabase.from('president').upsert({ id: 1, name: data.name, bio: data.bio, photo_url });
+      showToast('Сохранено');
+    } catch (e) { showToast('Ошибка: ' + e.message, 'err'); }
+    setSaving(false);
+  };
+
+  if (loading) return <div className="loading"><span className="spinner" /></div>;
+
+  return (
+    <>
+      <div className="section-head">
+        <div><div className="section-title">Президент клуба</div><div className="section-sub">Информация на главной странице сайта</div></div>
+        <button className="btn btn-gold" onClick={save} disabled={saving}>
+          {saving ? <><span className="spinner" /> Сохранение…</> : '💾 Сохранить'}
+        </button>
+      </div>
+
+      <div className="card" style={{ maxWidth: 600 }}>
+        <input type="file" ref={fileRef} hidden accept="image/*" onChange={onFile} />
+        <div className="president-wrap">
+          {imagePreview
+            ? <img className="president-photo" src={imagePreview} alt="" onClick={() => fileRef.current.click()} />
+            : <div className="president-photo-ph" onClick={() => fileRef.current.click()}>📷<span>Загрузить фото</span></div>
+          }
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <Field label="Имя"><input type="text" value={data.name || ''} onChange={e => setData(d => ({ ...d, name: e.target.value }))} placeholder="Тимур Нуртаев" /></Field>
+            <Field label="Биография"><textarea value={data.bio || ''} onChange={e => setData(d => ({ ...d, bio: e.target.value }))} rows={5} placeholder="Расскажите о президенте клуба…" /></Field>
+            {imageFile && <div style={{ fontSize: 12, color: 'var(--muted)' }}>Выбрано: {imageFile.name}</div>}
           </div>
         </div>
-      )}
+      </div>
+    </>
+  );
+};
 
-      {/* List */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '20px' }}>
-        {polls.map(p => {
-          const count = p.poll_answers?.[0]?.count ?? 0;
-          const opts = Array.isArray(p.options) ? p.options : [];
-          const ends = p.ends_at ? new Date(p.ends_at).toLocaleDateString('ru') : null;
-          return (
-            <div key={p.id} style={{ background: '#0a0a0a', borderRadius: '20px', border: `1px solid ${p.is_active ? '#2a2a1a' : '#1e1e1e'}`, padding: '20px' }}>
-              <div style={{ fontWeight: 700, marginBottom: '8px', lineHeight: 1.4 }}>{p.question}</div>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
-                <Tag>{POLL_TYPES.find(t => t.value === p.type)?.label || p.type}</Tag>
-                <Tag>{count} ответов</Tag>
-                {ends && <Tag>до {ends}</Tag>}
-              </div>
-              {opts.length > 0 && (
-                <div style={{ marginBottom: '12px' }}>
-                  {opts.slice(0, 3).map((o, i) => (
-                    <div key={i} style={{ fontSize: '12px', color: '#555', padding: '3px 0' }}>· {o}</div>
-                  ))}
-                  {opts.length > 3 && <div style={{ fontSize: '12px', color: '#444' }}>+{opts.length - 3} ещё</div>}
-                </div>
-              )}
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                <Tag active={p.is_active} onClick={() => toggle(p.id, !p.is_active)}>
-                  {p.is_active ? '✓ Активен' : '✗ Скрыт'}
-                </Tag>
-              </div>
-              <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
-                <button onClick={() => openEdit(p)} style={btn({ background: '#1e1e1e', color: '#fff', padding: '8px 16px', fontSize: '12px' })}>Редактировать</button>
-                <button onClick={() => remove(p.id)} style={btn({ background: 'none', color: '#ff4b4b', border: '1px solid #2a1a1a', padding: '8px 14px', fontSize: '12px', borderRadius: '100px' })}>Удалить</button>
-              </div>
-            </div>
-          );
-        })}
-        {polls.length === 0 && <p style={{ color: '#444', gridColumn: '1/-1' }}>Опросы не созданы</p>}
+// ─── LOGIN ────────────────────────────────────────────────────────────────────
+
+const Login = ({ onAuth }) => {
+  const [step, setStep] = useState('phone');
+  const [phone, setPhone] = useState('');
+  const [otp, setOtp] = useState('');
+  const [generatedOtp, setGeneratedOtp] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const fmt = v => {
+    let d = v.replace(/\D/g, '');
+    if (!d) return '';
+    if (['7','8','9'].includes(d[0])) {
+      if (d[0] === '9') d = '7' + d;
+      if (d[0] === '8') d = '7' + d.slice(1);
+      let r = '+7';
+      if (d.length > 1) r += ' ' + d.substring(1, 4);
+      if (d.length > 4) r += ' ' + d.substring(4, 7);
+      if (d.length > 7) r += ' ' + d.substring(7, 11);
+      return r;
+    }
+    return '+' + d;
+  };
+
+  const sendCode = async e => {
+    e.preventDefault(); setError('');
+    const norm = phone.replace(/\s/g, '');
+    if (!ALLOWED_PHONES.some(p => p.replace(/\s/g, '') === norm)) { setError('Доступ запрещён'); return; }
+    const code = Math.floor(1000 + Math.random() * 9000).toString();
+    setGeneratedOtp(code); setLoading(true);
+    try {
+      await fetch('/api/telegram', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'admin_otp', code, phone }) });
+      setStep('otp');
+    } catch { setError('Ошибка сети'); }
+    setLoading(false);
+  };
+
+  const verify = e => {
+    e.preventDefault();
+    if (otp === generatedOtp || otp === '0000') { localStorage.setItem('admin_auth', 'true'); onAuth(); }
+    else setError('Неверный код');
+  };
+
+  return (
+    <div className="login-wrap">
+      <div className="login-card">
+        <div className="login-logo">26 Business Club</div>
+        <div className="login-sub">Панель администратора</div>
+        {step === 'phone' ? (
+          <form onSubmit={sendCode} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <Field label="Номер телефона">
+              <input type="tel" value={phone} onChange={e => setPhone(fmt(e.target.value))} placeholder="+7 777 000 0000" style={{ textAlign: 'center', fontSize: 18 }} />
+            </Field>
+            <button className="btn btn-gold" type="submit" style={{ width: '100%', justifyContent: 'center', padding: 14 }} disabled={loading}>
+              {loading ? <span className="spinner" /> : 'Получить код'}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={verify} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <Field label="Код из Telegram">
+              <input className="login-otp" type="text" value={otp} onChange={e => setOtp(e.target.value)} placeholder="0000" maxLength={4} />
+            </Field>
+            <button className="btn btn-gold" type="submit" style={{ width: '100%', justifyContent: 'center', padding: 14 }}>Войти</button>
+            <button type="button" className="btn-ghost" style={{ textAlign: 'center' }} onClick={() => setStep('phone')}>← Изменить номер</button>
+          </form>
+        )}
+        {error && <div style={{ color: 'var(--danger)', fontSize: 12, textAlign: 'center' }}>{error}</div>}
       </div>
     </div>
   );
 };
 
-// ──────────────────────────────────────────────
-// Helper components
-// ──────────────────────────────────────────────
-const Field = ({ label, children }) => (
-  <div>
-    <div style={{ fontSize: '11px', color: '#555', marginBottom: '5px', letterSpacing: '0.05em' }}>{label}</div>
-    {children}
-  </div>
-);
+// ─── MAIN ADMIN ───────────────────────────────────────────────────────────────
 
-const Tag = ({ children, active, onClick }) => (
-  <span
-    onClick={onClick}
-    style={{
-      display: 'inline-block', padding: '3px 10px', borderRadius: '100px',
-      fontSize: '11px', fontWeight: 500,
-      background: active ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)',
-      border: `1px solid ${active ? '#444' : '#222'}`,
-      color: active ? '#ccc' : '#555',
-      cursor: onClick ? 'pointer' : 'default',
-    }}
-  >
-    {children}
-  </span>
-);
-
-// ──────────────────────────────────────────────
-// Main Admin component
-// ──────────────────────────────────────────────
 const Admin = () => {
-  const [step, setStep] = useState(() => (localStorage.getItem('admin_auth') === 'true' ? 'dashboard' : 'phone'));
-  const [activeTab, setActiveTab] = useState('residents');
-  const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
-  const [generatedOtp, setGeneratedOtp] = useState('');
-  const [error, setError] = useState('');
-  const [deployStatus, setDeployStatus] = useState('');
-  const [githubToken, setGithubToken] = useState(localStorage.getItem('gh_token') || '');
-  const [showGhConfig, setShowGhConfig] = useState(false);
+  const [authed, setAuthed] = useState(() => localStorage.getItem('admin_auth') === 'true');
+  const [tab, setTab] = useState('residents');
 
-  const [residents, setResidents] = useState(() => {
-    try { const s = localStorage.getItem('edited_residents'); return s ? JSON.parse(s) : initialResidents; }
-    catch { return initialResidents; }
-  });
-  const [events, setEvents] = useState(() => {
-    try { const s = localStorage.getItem('edited_events'); return s ? JSON.parse(s) : initialEvents; }
-    catch { return initialEvents; }
-  });
+  const logout = () => { localStorage.removeItem('admin_auth'); setAuthed(false); };
 
-  const fileInputRef = useRef(null);
-  const eventFileInputRef = useRef(null);
+  if (!authed) return (
+    <>
+      <style>{css}</style>
+      <Login onAuth={() => setAuthed(true)} />
+      <div id="__toast" className="toast" />
+    </>
+  );
 
-  const saveGhToken = (token) => {
-    setGithubToken(token);
-    localStorage.setItem('gh_token', token);
-    setShowGhConfig(false);
+  const tabContent = {
+    residents: <ResidentsTab />,
+    events:    <EventsTab />,
+    partners:  <PartnersTab />,
+    polls:     <PollsTab />,
+    president: <PresidentTab />,
   };
-
-  const formatPhone = (value) => {
-    let numbers = value.replace(/\D/g, '');
-    let formatted = '';
-    if (!numbers) return '';
-    if (['7', '8', '9'].includes(numbers[0])) {
-      if (numbers[0] === '9') numbers = '7' + numbers;
-      if (numbers[0] === '8') numbers = '7' + numbers.slice(1);
-      formatted = '+7';
-      if (numbers.length > 1) formatted += ' ' + numbers.substring(1, 4);
-      if (numbers.length > 4) formatted += ' ' + numbers.substring(4, 7);
-      if (numbers.length > 7) formatted += ' ' + numbers.substring(7, 11);
-    } else { formatted = '+' + numbers; }
-    return formatted;
-  };
-
-  const handlePhoneSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    const normalizedInput = phone.replace(/\s/g, '');
-    const isAllowed = ALLOWED_PHONES.some(p => p.replace(/\s/g, '') === normalizedInput);
-    if (!isAllowed) { setError('ДОСТУП ЗАПРЕЩЕН'); return; }
-    const code = Math.floor(1000 + Math.random() * 9000).toString();
-    setGeneratedOtp(code);
-    try {
-      await fetch('/api/telegram', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kind: 'admin_otp', code, phone }),
-      });
-      setStep('otp');
-    } catch { setError('Ошибка сети'); }
-  };
-
-  const handleOtpSubmit = (e) => {
-    e.preventDefault();
-    if (otp === generatedOtp || otp === '0000') {
-      setStep('dashboard');
-      localStorage.setItem('admin_auth', 'true');
-    } else { setError('НЕВЕРНЫЙ КОД'); }
-  };
-
-  const handleLogout = () => { localStorage.removeItem('admin_auth'); setStep('phone'); };
-
-  const updateFileOnGithub = async (filePath, content, message) => {
-    if (!githubToken) throw new Error('GitHub Token не настроен');
-    const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${filePath}`;
-    const getRes = await fetch(url, { headers: { Authorization: `token ${githubToken}` } });
-    if (!getRes.ok) throw new Error(`GitHub: ${getRes.statusText}`);
-    const fileData = await getRes.json();
-    const pushRes = await fetch(url, {
-      method: 'PUT',
-      headers: { Authorization: `token ${githubToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, content: btoa(unescape(encodeURIComponent(content))), sha: fileData.sha }),
-    });
-    if (!pushRes.ok) { const d = await pushRes.json(); throw new Error(d.message || 'Ошибка GitHub'); }
-  };
-
-  const handleDeploy = async () => {
-    if (!githubToken) { setShowGhConfig(true); return; }
-    setDeployStatus('loading');
-    try {
-      await updateFileOnGithub('src/data/residents.js', `export const residents = ${JSON.stringify(residents, null, 4)};\n`, 'Update residents');
-      await updateFileOnGithub('src/data/events.js', `export const events = ${JSON.stringify(events, null, 4)};\n`, 'Update events');
-      setDeployStatus('success');
-      setTimeout(() => setDeployStatus(''), 3000);
-    } catch (err) {
-      setDeployStatus('error');
-      alert('Ошибка деплоя: ' + err.message);
-    }
-  };
-
-  // Residents
-  const updateResident = (index, field, value) => {
-    const newRes = [...residents];
-    newRes[index] = { ...newRes[index], [field]: value };
-    if (field === 'isPresident' && value) newRes.forEach((r, i) => { if (i !== index) r.isPresident = false; });
-    setResidents(newRes);
-    localStorage.setItem('edited_residents', JSON.stringify(newRes));
-  };
-  const handleFileUpload = (e, index, type = 'resident') => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      if (type === 'resident') updateResident(index, 'photo', reader.result);
-      else updateEvent(index, 'photo', reader.result);
-    };
-    reader.readAsDataURL(file);
-  };
-  const addNewResident = () => {
-    const newRes = [{ name: 'Новый резидент', company: '', niche: '', photo: 'https://via.placeholder.com/300x400', brief: '', website: '', isPresident: false }, ...residents];
-    setResidents(newRes);
-    localStorage.setItem('edited_residents', JSON.stringify(newRes));
-  };
-  const deleteResident = (index) => {
-    if (!window.confirm('Удалить?')) return;
-    const newRes = residents.filter((_, i) => i !== index);
-    setResidents(newRes);
-    localStorage.setItem('edited_residents', JSON.stringify(newRes));
-  };
-
-  // Events
-  const updateEvent = (index, field, value) => {
-    const newEvents = [...events];
-    newEvents[index] = { ...newEvents[index], [field]: value };
-    setEvents(newEvents);
-    localStorage.setItem('edited_events', JSON.stringify(newEvents));
-  };
-  const addNewEvent = () => {
-    const newEvents = [{ title: 'Новое мероприятие', description: '', date: '', photo: 'https://via.placeholder.com/800x400', participants: [] }, ...events];
-    setEvents(newEvents);
-    localStorage.setItem('edited_events', JSON.stringify(newEvents));
-  };
-  const deleteEvent = (index) => {
-    if (!window.confirm('Удалить?')) return;
-    const newEv = events.filter((_, i) => i !== index);
-    setEvents(newEv);
-    localStorage.setItem('edited_events', JSON.stringify(newEv));
-  };
-  const toggleParticipant = (eventIndex, residentName) => {
-    const ev = events[eventIndex];
-    const participants = ev.participants || [];
-    const newParticipants = participants.includes(residentName)
-      ? participants.filter(n => n !== residentName) : [...participants, residentName];
-    updateEvent(eventIndex, 'participants', newParticipants);
-  };
-
-  const inputStyle = { width: '100%', padding: '10px', background: '#111', border: '1px solid #333', color: 'white', borderRadius: '8px', outline: 'none' };
-
-  // ── Login screens ──
-  if (step !== 'dashboard') {
-    return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
-        <div style={{ width: '100%', maxWidth: '380px', padding: '40px', background: '#0a0a0a', borderRadius: '24px', border: '1px solid #222' }}>
-          <h2 style={{ color: 'white', textAlign: 'center', marginBottom: '30px' }}>
-            {step === 'phone' ? '26 DEAL ADMIN' : 'ВВЕДИТЕ КОД'}
-          </h2>
-          {step === 'phone' ? (
-            <form onSubmit={handlePhoneSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <input type="tel" value={phone} onChange={(e) => setPhone(formatPhone(e.target.value))} placeholder="+7 777 000 0000" style={{ ...inputStyle, textAlign: 'center' }} />
-              <button type="submit" style={btn({ width: '100%', padding: '15px', background: '#fff', color: '#000' })}>ПОЛУЧИТЬ КОД</button>
-            </form>
-          ) : (
-            <form onSubmit={handleOtpSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <input type="text" value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="0000" style={{ ...inputStyle, fontSize: '28px', textAlign: 'center', letterSpacing: '10px' }} />
-              <button type="submit" style={btn({ width: '100%', padding: '15px', background: '#fff', color: '#000' })}>ВОЙТИ</button>
-            </form>
-          )}
-          {error && <p style={{ color: '#ff4b4b', textAlign: 'center', marginTop: '15px' }}>{error}</p>}
-        </div>
-      </div>
-    );
-  }
-
-  // ── Dashboard ──
-  const isGitTab = activeTab === 'residents' || activeTab === 'events';
 
   return (
-    <div style={{ background: '#000', minHeight: '100vh', color: 'white', paddingBottom: '100px', fontFamily: 'sans-serif' }}>
-      <header style={{ position: 'sticky', top: 0, zIndex: 100, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(20px)', borderBottom: '1px solid #1a1a1a', padding: '16px 32px' }}>
-        <div style={{ maxWidth: '1300px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px' }}>
-          <nav style={{ display: 'flex', gap: '4px' }}>
-            {TABS.map(tab => (
-              <button key={tab} onClick={() => setActiveTab(tab)} style={{
-                border: 'none',
-                color: activeTab === tab ? '#fff' : '#444',
-                fontWeight: 'bold', cursor: 'pointer', fontSize: '12px',
-                padding: '8px 14px', borderRadius: '100px',
-                background: activeTab === tab ? '#1e1e1e' : 'none',
-                letterSpacing: '0.05em',
-              }}>{TAB_LABELS[tab]}</button>
-            ))}
-          </nav>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            {isGitTab && <>
-              <button onClick={() => setShowGhConfig(true)} style={btn({ background: 'none', color: '#555', border: '1px solid #1e1e1e', padding: '8px 14px', fontSize: '11px' })}>⚙ GIT</button>
-              <button onClick={handleDeploy} disabled={deployStatus === 'loading'} style={btn({
-                background: deployStatus === 'success' ? '#4bb543' : (deployStatus === 'error' ? '#ff4b4b' : '#0066ff'),
-                color: 'white', padding: '10px 20px', fontSize: '12px',
-              })}>
-                {deployStatus === 'loading' ? 'ПУБЛИКАЦИЯ…' : (deployStatus === 'success' ? '✓ ГОТОВО' : 'ОПУБЛИКОВАТЬ')}
-              </button>
-            </>}
-            <button onClick={handleLogout} style={btn({ background: 'none', color: '#ff4b4b', border: '1px solid #2a1a1a', padding: '8px 16px', fontSize: '12px' })}>ВЫЙТИ</button>
+    <>
+      <style>{css}</style>
+      <div className="admin-app">
+        <div className="topbar">
+          <div className="topbar-brand">26 Business Club — Admin</div>
+          <div className="topbar-right">
+            <a href="/" style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none' }}>← На сайт</a>
+            <button className="btn btn-outline btn-sm" onClick={logout}>Выйти</button>
           </div>
         </div>
-      </header>
 
-      {/* GitHub modal */}
-      {showGhConfig && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 201, background: 'rgba(0,0,0,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ width: '400px', padding: '40px', background: '#0a0a0a', borderRadius: '24px', border: '1px solid #333' }}>
-            <h3 style={{ marginBottom: '12px' }}>GitHub Token</h3>
-            <p style={{ fontSize: '12px', color: '#555', marginBottom: '20px' }}>Personal Access Token для публикации изменений в репо.</p>
-            <input type="password" placeholder="ghp_xxxx…" value={githubToken} onChange={(e) => setGithubToken(e.target.value)} style={{ ...inputStyle, padding: '12px', marginBottom: '20px' }} />
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={() => saveGhToken(githubToken)} style={btn({ flex: 1, padding: '12px', background: '#fff', color: '#000' })}>СОХРАНИТЬ</button>
-              <button onClick={() => setShowGhConfig(false)} style={btn({ flex: 1, padding: '12px', background: '#222', color: '#fff' })}>ОТМЕНА</button>
-            </div>
-          </div>
+        <div className="sidebar">
+          <div className="sidebar-label">Управление</div>
+          {TABS.map(t => (
+            <button key={t.id} className={`sidebar-btn ${tab === t.id ? 'active' : ''}`} onClick={() => setTab(t.id)}>
+              <span className="icon">{t.icon}</span>
+              {t.label}
+            </button>
+          ))}
         </div>
-      )}
 
-      <main style={{ maxWidth: '1300px', margin: '36px auto', padding: '0 24px' }}>
-
-        {/* RESIDENTS */}
-        {activeTab === 'residents' && (
-          <>
-            <button onClick={addNewResident} style={btn({ background: '#fff', color: '#000', padding: '12px 24px', marginBottom: '30px' })}>+ ДОБАВИТЬ РЕЗИДЕНТА</button>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '25px' }}>
-              {residents.map((res, index) => (
-                <div key={index} style={{ background: '#0a0a0a', borderRadius: '24px', border: res.isPresident ? '2px solid #fff' : '1px solid #222', padding: '24px' }}>
-                  <div style={{ display: 'flex', gap: '20px', marginBottom: '15px' }}>
-                    <div style={{ width: '100px' }}>
-                      <div onClick={() => { fileInputRef.current.dataset.index = index; fileInputRef.current.click(); }}
-                        style={{ width: '100px', height: '130px', borderRadius: '12px', overflow: 'hidden', background: '#111', cursor: 'pointer', border: '1px solid #333' }}>
-                        <img src={res.photo} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-                      </div>
-                      <label style={{ fontSize: '11px', color: '#888', display: 'block', marginTop: '8px' }}>
-                        <input type="checkbox" checked={res.isPresident} onChange={e => updateResident(index, 'isPresident', e.target.checked)} /> Президент
-                      </label>
-                    </div>
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      <input style={inputStyle} value={res.name} onChange={e => updateResident(index, 'name', e.target.value)} placeholder="Имя" />
-                      <input style={inputStyle} value={res.company} onChange={e => updateResident(index, 'company', e.target.value)} placeholder="Компания" />
-                      <input style={inputStyle} value={res.niche} onChange={e => updateResident(index, 'niche', e.target.value)} placeholder="Ниша" />
-                      <input style={inputStyle} value={res.website} onChange={e => updateResident(index, 'website', e.target.value)} placeholder="Сайт" />
-                    </div>
-                  </div>
-                  <textarea style={{ ...inputStyle, minHeight: '60px' }} value={res.brief} onChange={e => updateResident(index, 'brief', e.target.value)} placeholder="Описание" />
-                  <button onClick={() => deleteResident(index)} style={{ width: '100%', color: '#444', background: 'none', border: 'none', marginTop: '10px', cursor: 'pointer' }}>УДАЛИТЬ</button>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* EVENTS */}
-        {activeTab === 'events' && (
-          <>
-            <button onClick={addNewEvent} style={btn({ background: '#fff', color: '#000', padding: '12px 24px', marginBottom: '30px' })}>+ ДОБАВИТЬ МЕРОПРИЯТИЕ</button>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(450px, 1fr))', gap: '25px' }}>
-              {events.map((ev, index) => (
-                <div key={index} style={{ background: '#0a0a0a', borderRadius: '24px', border: '1px solid #222', padding: '24px' }}>
-                  <div onClick={() => { eventFileInputRef.current.dataset.index = index; eventFileInputRef.current.click(); }}
-                    style={{ width: '100%', height: '200px', borderRadius: '15px', overflow: 'hidden', cursor: 'pointer', border: '1px solid #333', marginBottom: '20px' }}>
-                    <img src={ev.photo} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                    <input style={{ ...inputStyle, fontSize: '18px', fontWeight: 'bold' }} value={ev.title} onChange={e => updateEvent(index, 'title', e.target.value)} placeholder="Название" />
-                    <input style={inputStyle} type="date" value={ev.date} onChange={e => updateEvent(index, 'date', e.target.value)} />
-                    <textarea style={{ ...inputStyle, minHeight: '80px' }} value={ev.description} onChange={e => updateEvent(index, 'description', e.target.value)} placeholder="Описание" />
-                    <div>
-                      <p style={{ fontSize: '12px', color: '#444', marginBottom: '6px' }}>УЧАСТНИКИ:</p>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '10px', border: '1px solid #222', borderRadius: '10px' }}>
-                        {residents.map((r, ri) => (
-                          <div key={ri} onClick={() => toggleParticipant(index, r.name)} style={{ padding: '4px 10px', borderRadius: '100px', fontSize: '11px', border: '1px solid #333', cursor: 'pointer', background: ev.participants?.includes(r.name) ? '#fff' : 'transparent', color: ev.participants?.includes(r.name) ? '#000' : '#444' }}>
-                            {r.name}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <button onClick={() => deleteEvent(index)} style={{ color: '#444', background: 'none', border: 'none', textAlign: 'right', cursor: 'pointer' }}>УДАЛИТЬ</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* PARTNERS */}
-        {activeTab === 'partners' && <PartnersTab />}
-
-        {/* POLLS */}
-        {activeTab === 'polls' && <PollsTab />}
-      </main>
-
-      <input type="file" ref={fileInputRef} hidden onChange={(e) => handleFileUpload(e, parseInt(fileInputRef.current.dataset.index), 'resident')} />
-      <input type="file" ref={eventFileInputRef} hidden onChange={(e) => handleFileUpload(e, parseInt(eventFileInputRef.current.dataset.index), 'event')} />
-    </div>
+        <div className="main">
+          {tabContent[tab]}
+        </div>
+      </div>
+      <div id="__toast" className="toast" />
+    </>
   );
 };
 
