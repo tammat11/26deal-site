@@ -298,7 +298,7 @@ const ResidentsTab = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  const blank = () => ({ name: '', company: '', niche: '', website: '', brief: '', industry: '', turnover: '', employees: '', phone: '', email: '', member_since: '', telegram: '', instagram: '', linkedin: '', partner_companies: '', achievements: '', is_president: false, is_published: true, sort_order: rows.length + 1 });
+  const blank = () => ({ name: '', company: '', niche: '', website: '', brief: '', turnover: '', employees: '', member_since: '', partner_companies: '', achievements: '', is_president: false, is_published: true, sort_order: rows.length + 1 });
 
   const openNew = () => { setForm(blank()); setImageFile(null); setImagePreview(null); setModal('new'); };
   const openEdit = r => {
@@ -334,10 +334,8 @@ const ResidentsTab = () => {
       const payload = {
         name: form.name, company: form.company || null, niche: form.niche || null, photo_url,
         website: form.website || null, brief: form.brief || null,
-        industry: form.industry || null, turnover: form.turnover || null, employees: form.employees || null,
-        phone: form.phone || null, email: form.email || null,
+        turnover: form.turnover || null, employees: form.employees || null,
         member_since: form.member_since ? parseInt(form.member_since) : null,
-        telegram: form.telegram || null, instagram: form.instagram || null, linkedin: form.linkedin || null,
         partner_companies: partnerCompanies, achievements,
         is_president: !!form.is_president, is_published: form.is_published !== false, sort_order: form.sort_order || 0,
       };
@@ -417,15 +415,9 @@ const ResidentsTab = () => {
             <div className="field full"><label>Сайт</label><input type="url" value={form.website || ''} onChange={e => setForm(f => ({ ...f, website: e.target.value }))} placeholder="https://example.kz" /></div>
             <div className="field full"><label>О резиденте</label><textarea value={form.brief || ''} onChange={e => setForm(f => ({ ...f, brief: e.target.value }))} rows={3} /></div>
 
-            <Field label="Отрасль"><input type="text" value={form.industry || ''} onChange={e => setForm(f => ({ ...f, industry: e.target.value }))} placeholder="Технологии / SaaS" /></Field>
             <Field label="Оборот"><input type="text" value={form.turnover || ''} onChange={e => setForm(f => ({ ...f, turnover: e.target.value }))} placeholder="2 млрд ₸ / год" /></Field>
             <Field label="Команда"><input type="text" value={form.employees || ''} onChange={e => setForm(f => ({ ...f, employees: e.target.value }))} placeholder="120 сотрудников" /></Field>
-            <Field label="Телефон"><input type="text" value={form.phone || ''} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+7 700 000 0000" /></Field>
-            <Field label="Email"><input type="email" value={form.email || ''} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="name@company.kz" /></Field>
             <Field label="Год вступления"><input type="text" value={form.member_since || ''} onChange={e => setForm(f => ({ ...f, member_since: e.target.value }))} placeholder="2024" /></Field>
-            <Field label="Telegram"><input type="text" value={form.telegram || ''} onChange={e => setForm(f => ({ ...f, telegram: e.target.value }))} placeholder="@username" /></Field>
-            <Field label="Instagram"><input type="text" value={form.instagram || ''} onChange={e => setForm(f => ({ ...f, instagram: e.target.value }))} placeholder="username" /></Field>
-            <Field label="LinkedIn"><input type="text" value={form.linkedin || ''} onChange={e => setForm(f => ({ ...f, linkedin: e.target.value }))} placeholder="username" /></Field>
             <div className="field full"><label>Компании-партнёры</label><textarea value={form.partner_companies || ''} onChange={e => setForm(f => ({ ...f, partner_companies: e.target.value }))} rows={2} placeholder="Через запятую: Kaspi, Halyk Bank, Kcell" /></div>
             <div className="field full"><label>Достижения</label><textarea value={form.achievements || ''} onChange={e => setForm(f => ({ ...f, achievements: e.target.value }))} rows={3} placeholder={'По одному в строке:\nForbes 30 under 30 (2023)\n3 успешных экзита'} /></div>
 
