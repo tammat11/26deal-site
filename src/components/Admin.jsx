@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import Cropper from 'react-easy-crop';
 import { supabase } from '../lib/supabase';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -238,6 +239,96 @@ async function uploadImage(file, folder = 'misc') {
   return data.publicUrl;
 }
 
+// ─── Image cropping ───────────────────────────────────────────────────────────
+
+function loadImageEl(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.addEventListener('load', () => resolve(img));
+    img.addEventListener('error', reject);
+    img.setAttribute('crossOrigin', 'anonymous');
+    img.src = src;
+  });
+}
+
+async function getCroppedBlob(imageSrc, cropPixels, mimeType = 'image/jpeg') {
+  const img = await loadImageEl(imageSrc);
+  const canvas = document.createElement('canvas');
+  canvas.width = cropPixels.width;
+  canvas.height = cropPixels.height;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(
+    img,
+    cropPixels.x, cropPixels.y, cropPixels.width, cropPixels.height,
+    0, 0, cropPixels.width, cropPixels.height,
+  );
+  return new Promise(resolve => canvas.toBlob(blob => resolve(blob), mimeType, 0.92));
+}
+
+/** Crop/zoom modal — takes a raw File, resolves a cropped File via onDone. */
+const CropModal = ({ file, aspect = 3 / 4, onCancel, onDone }) => {
+  const [imageSrc, setImageSrc] = useState(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const url = URL.createObjectURL(file);
+    setImageSrc(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  const onCropComplete = useCallback((_area, areaPixels) => {
+    setCroppedAreaPixels(areaPixels);
+  }, []);
+
+  const confirm = async () => {
+    if (!croppedAreaPixels) return;
+    setBusy(true);
+    try {
+      const blob = await getCroppedBlob(imageSrc, croppedAreaPixels);
+      const croppedFile = new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' });
+      onDone(croppedFile);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!imageSrc) return null;
+
+  return (
+    <div className="overlay" style={{ zIndex: 300 }} onClick={e => e.target === e.currentTarget && onCancel()}>
+      <div className="modal" style={{ width: 420 }}>
+        <div className="modal-title">Кадрировать фото</div>
+        <div style={{ position: 'relative', width: '100%', height: 360, background: '#000', borderRadius: 12, overflow: 'hidden' }}>
+          <Cropper
+            image={imageSrc}
+            crop={crop}
+            zoom={zoom}
+            aspect={aspect}
+            onCropChange={setCrop}
+            onZoomChange={setZoom}
+            onCropComplete={onCropComplete}
+          />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 16 }}>
+          <span style={{ fontSize: 12, color: 'var(--muted)' }}>Масштаб</span>
+          <input
+            type="range" min={1} max={3} step={0.01} value={zoom}
+            onChange={e => setZoom(Number(e.target.value))}
+            style={{ flex: 1 }}
+          />
+        </div>
+        <div className="modal-footer" style={{ marginTop: 20 }}>
+          <button className="btn btn-outline" onClick={onCancel}>Отмена</button>
+          <button className="btn btn-gold" onClick={confirm} disabled={busy}>{busy ? 'Обработка…' : 'Готово'}</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─── Subcomponents ────────────────────────────────────────────────────────────
 
 const Toggle = ({ checked, onChange }) => (
@@ -287,6 +378,7 @@ const ResidentsTab = () => {
   const [saving, setSaving] = useState(false);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [cropSource, setCropSource] = useState(null); // raw File pending crop
   const fileRef = useRef();
 
   const load = useCallback(async () => {
@@ -314,8 +406,14 @@ const ResidentsTab = () => {
   const onFile = e => {
     const f = e.target.files[0];
     if (!f) return;
-    setImageFile(f);
-    setImagePreview(URL.createObjectURL(f));
+    setCropSource(f);
+    e.target.value = ''; // allow picking the same file again later
+  };
+
+  const onCropDone = croppedFile => {
+    setImageFile(croppedFile);
+    setImagePreview(URL.createObjectURL(croppedFile));
+    setCropSource(null);
   };
 
   const save = async () => {
@@ -401,6 +499,15 @@ const ResidentsTab = () => {
         {rows.length === 0 && <Empty icon="👤" text="Резиденты не добавлены" />}
       </div>
 
+      {cropSource && (
+        <CropModal
+          file={cropSource}
+          aspect={3 / 4}
+          onCancel={() => setCropSource(null)}
+          onDone={onCropDone}
+        />
+      )}
+
       {modal !== null && (
         <Modal title={modal === 'new' ? 'Добавить резидента' : 'Редактировать'} onClose={close} onSave={save} saving={saving}>
           <input type="file" ref={fileRef} hidden accept="image/*" onChange={onFile} />
@@ -408,6 +515,19 @@ const ResidentsTab = () => {
             {imagePreview ? <img src={imagePreview} alt="" style={{ width: 80, height: 80, borderRadius: 8, objectFit: 'cover', marginBottom: 8 }} /> : <div style={{ fontSize: 32, marginBottom: 8 }}>📷</div>}
             <p>{imageFile ? imageFile.name : 'Нажмите чтобы выбрать фото'}</p>
           </div>
+          {imagePreview && (
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              style={{ marginTop: -8, marginBottom: 12 }}
+              onClick={() => {
+                if (imageFile) setCropSource(imageFile);
+                else fetch(imagePreview).then(r => r.blob()).then(b => setCropSource(new File([b], 'photo.jpg', { type: b.type || 'image/jpeg' })));
+              }}
+            >
+              ✂️ Перекадрировать
+            </button>
+          )}
           <div className="form-grid">
             <div className="field full"><label>Имя *</label><input type="text" value={form.name || ''} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Тимур Нуртаев" /></div>
             <Field label="Компания"><input type="text" value={form.company || ''} onChange={e => setForm(f => ({ ...f, company: e.target.value }))} placeholder="TIMUS Development" /></Field>
