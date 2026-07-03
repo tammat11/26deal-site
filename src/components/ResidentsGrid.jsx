@@ -1,12 +1,31 @@
-import React, { useState } from 'react';
-import { residents } from '../data/residents';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 import KineticTitle from './KineticTitle';
 
 const ResidentsGrid = () => {
-    const [residentsData] = useState(() => {
-        const saved = localStorage.getItem('edited_residents');
-        return saved ? JSON.parse(saved) : residents;
-    });
+    const [residentsData, setResidentsData] = useState([]);
+
+    useEffect(() => {
+        let active = true;
+        supabase
+            .from('residents')
+            .select('*')
+            .eq('is_published', true)
+            .order('sort_order')
+            .then(({ data }) => {
+                if (!active) return;
+                setResidentsData((data || []).map(r => ({
+                    name: r.name,
+                    company: r.company,
+                    niche: r.niche,
+                    photo: r.photo_url,
+                    website: r.website,
+                    brief: r.brief,
+                    isPresident: r.is_president,
+                })));
+            });
+        return () => { active = false; };
+    }, []);
 
     const president = residentsData.find(r => r.isPresident);
     const otherResidents = residentsData.filter(r => !r.isPresident);
