@@ -7,11 +7,12 @@ import { supabase } from '../lib/supabase';
 const ALLOWED_PHONES = ['+7 702 666 6113', '+7 707 052 2006', '+7 707 186 0618'];
 
 const TABS = [
-  { id: 'residents', label: 'Резиденты',    icon: '👤' },
-  { id: 'events',    label: 'Мероприятия',  icon: '📅' },
-  { id: 'partners',  label: 'Партнёры',     icon: '🤝' },
-  { id: 'polls',     label: 'Опросы',       icon: '📊' },
-  { id: 'president', label: 'Президент',    icon: '👑' },
+  { id: 'residents',       label: 'Резиденты',       icon: '👤' },
+  { id: 'events',          label: 'Мероприятия',     icon: '📅' },
+  { id: 'partners',        label: 'Партнёры',        icon: '🤝' },
+  { id: 'polls',           label: 'Опросы',          icon: '📊' },
+  { id: 'president',       label: 'Президент',       icon: '👑' },
+  { id: 'access-requests', label: 'Заявки на доступ', icon: '🔑' },
 ];
 
 const PARTNER_CATS = [
@@ -974,6 +975,95 @@ const PresidentTab = () => {
   );
 };
 
+// ─── ACCESS REQUESTS TAB ───────────────────────────────────────────────────────
+
+const AccessRequestsTab = () => {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from('access_requests')
+      .select('*, residents(name, company)')
+      .order('created_at', { ascending: false });
+    setRows(data || []);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const approve = async (req) => {
+    if (!confirm('Привязать этот номер к резиденту и одобрить вход?')) return;
+    const { error: updErr } = await supabase.from('residents').update({ phone: req.phone }).eq('id', req.resident_id);
+    if (updErr) return showToast('Ошибка: ' + updErr.message, 'err');
+    const { error } = await supabase.from('access_requests')
+      .update({ status: 'approved', reviewed_at: new Date().toISOString() })
+      .eq('id', req.id);
+    if (error) return showToast('Ошибка: ' + error.message, 'err');
+    showToast('Заявка одобрена, номер привязан');
+    load();
+  };
+
+  const reject = async (id) => {
+    if (!confirm('Отклонить заявку?')) return;
+    const { error } = await supabase.from('access_requests')
+      .update({ status: 'rejected', reviewed_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) return showToast('Ошибка: ' + error.message, 'err');
+    showToast('Заявка отклонена');
+    load();
+  };
+
+  if (loading) return <div className="loading"><span className="spinner" /></div>;
+
+  return (
+    <>
+      <div className="section-head">
+        <div>
+          <div className="section-title">Заявки на доступ</div>
+          <div className="section-sub">{rows.length} заявок</div>
+        </div>
+      </div>
+
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Резидент</th><th>Номер телефона</th><th>Подана</th><th>Статус</th><th></th></tr>
+          </thead>
+          <tbody>
+            {rows.map(r => {
+              const resident = r.residents || {};
+              const created = new Date(r.created_at).toLocaleString('ru');
+              return (
+                <tr key={r.id}>
+                  <td><strong>{resident.name || '—'}</strong><br /><span className="badge badge-gray">{resident.company || ''}</span></td>
+                  <td>{r.phone}</td>
+                  <td>{created}</td>
+                  <td>
+                    {r.status === 'pending' && <span className="badge badge-gray">Ожидает</span>}
+                    {r.status === 'approved' && <span className="badge badge-gold">Одобрена</span>}
+                    {r.status === 'rejected' && <span className="badge">Отклонена</span>}
+                  </td>
+                  <td>
+                    {r.status === 'pending' && (
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button className="btn btn-gold btn-sm" onClick={() => approve(r)}>Одобрить</button>
+                        <button className="btn btn-outline btn-sm" onClick={() => reject(r.id)}>Отклонить</button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+            {rows.length === 0 && <tr><td colSpan={5}><Empty icon="🔑" text="Заявок нет" /></td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+};
+
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
 
 const Login = ({ onAuth }) => {
@@ -1064,11 +1154,12 @@ const Admin = () => {
   );
 
   const tabContent = {
-    residents: <ResidentsTab />,
-    events:    <EventsTab />,
-    partners:  <PartnersTab />,
-    polls:     <PollsTab />,
-    president: <PresidentTab />,
+    residents:       <ResidentsTab />,
+    events:          <EventsTab />,
+    partners:        <PartnersTab />,
+    polls:           <PollsTab />,
+    president:       <PresidentTab />,
+    'access-requests': <AccessRequestsTab />,
   };
 
   return (
