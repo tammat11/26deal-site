@@ -194,7 +194,25 @@ const AppContent = () => {
 
     document.querySelectorAll('.reveal-hidden').forEach((el) => observer.observe(el));
 
-    return () => observer.disconnect();
+    // Content that loads asynchronously (e.g. residents fetched from
+    // Supabase after mount) doesn't exist yet during the pass above, so it
+    // would never receive `.reveal-visible` and stay invisible forever.
+    // Watch for newly-added `.reveal-hidden` nodes and observe those too.
+    const mutationObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (const node of mutation.addedNodes) {
+          if (node.nodeType !== 1) continue;
+          if (node.matches?.('.reveal-hidden')) observer.observe(node);
+          node.querySelectorAll?.('.reveal-hidden').forEach((el) => observer.observe(el));
+        }
+      }
+    });
+    mutationObserver.observe(document.body, { childList: true, subtree: true });
+
+    return () => {
+      observer.disconnect();
+      mutationObserver.disconnect();
+    };
   }, [location.pathname]);
 
   return (
