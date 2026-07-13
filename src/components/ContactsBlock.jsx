@@ -25,7 +25,7 @@ const MailIcon = () => (
     </svg>
 );
 
-const CONTACTS = [
+export const CONTACTS = [
     { label: 'Instagram', href: 'https://www.instagram.com/26businessclub/', text: '@26businessclub', icon: InstagramIcon },
     { label: 'Телефон', href: 'tel:+77026666113', text: '+7 702 666 61 13', icon: PhoneIcon },
     { label: 'WhatsApp Business', href: 'https://wa.me/77470620428', text: '+7 747 062 0428', icon: WhatsAppIcon },

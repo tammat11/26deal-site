@@ -7,7 +7,7 @@ import ResidentsGrid from './components/ResidentsGrid';
 import AdmissionSteps from './components/AdmissionSteps';
 import ApplicationForm from './components/ApplicationForm';
 import EventsMarquee from './components/EventsMarquee';
-import ContactsBlock from './components/ContactsBlock';
+import { CONTACTS } from './components/ContactsBlock';
 import { stats } from './data/stats';
 import './index.css';
 
@@ -171,14 +171,80 @@ const Footer = () => {
   const location = useLocation();
   if (location.pathname === '/admin') return null;
   return (
-    <footer style={{ padding: '60px 0 30px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-      <div className="container text-center">
-        <ContactsBlock style={{ marginBottom: '40px' }} />
-        <p style={{ color: '#aaa', fontSize: '12px', letterSpacing: '0.05em' }}>© 2026 BUSINESS CLUB. ALL RIGHTS RESERVED.</p>
-        <div style={{ marginTop: '10px' }}>
-          <a href="/policy" style={{ color: '#888', fontSize: '11px', textDecoration: 'none', transition: 'color 0.3s' }}>PRIVACY POLICY</a>
+    <footer style={{ paddingTop: '80px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+      <div className="container footer-grid" style={{
+        display: 'grid',
+        gridTemplateColumns: '1.3fr 0.7fr 1.3fr',
+        gap: '40px',
+        paddingBottom: '50px',
+      }}>
+        <div>
+          <img src="/logo_26_business_club_silver_invert.png" alt="26 Business Club" style={{ height: '32px', opacity: 0.9, marginBottom: '18px' }} />
+          <p style={{ color: '#888', fontSize: '13px', lineHeight: 1.6, maxWidth: '320px' }}>
+            Сообщество high-impact предпринимателей и лидеров, создающих новую бизнес-культуру.
+          </p>
+        </div>
+
+        <div>
+          <p style={{ color: '#fff', fontSize: '12px', letterSpacing: '0.1em', fontWeight: 600, marginBottom: '16px' }}>НАВИГАЦИЯ</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <Link to="/" style={{ color: '#888', fontSize: '13px', textDecoration: 'none' }}>Главная</Link>
+            <Link to="/events" style={{ color: '#888', fontSize: '13px', textDecoration: 'none' }}>Мероприятия</Link>
+            <a href="/#apply" style={{ color: '#888', fontSize: '13px', textDecoration: 'none' }}>Вступить</a>
+            <a href="/policy" style={{ color: '#888', fontSize: '13px', textDecoration: 'none' }}>Политика конфиденциальности</a>
+          </div>
+        </div>
+
+        <div>
+          <p style={{ color: '#fff', fontSize: '12px', letterSpacing: '0.1em', fontWeight: 600, marginBottom: '16px' }}>КОНТАКТЫ</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '11px' }}>
+            {CONTACTS.map((c, i) => {
+              const Icon = c.icon;
+              return (
+                <a
+                  key={i}
+                  href={c.href}
+                  target={c.href.startsWith('http') ? '_blank' : undefined}
+                  rel={c.href.startsWith('http') ? 'noopener noreferrer' : undefined}
+                  className="footer-contact-link"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    color: '#888',
+                    fontSize: '13px',
+                    textDecoration: 'none',
+                    transition: 'color 0.2s ease',
+                  }}
+                >
+                  <Icon />
+                  <span>{c.text}</span>
+                </a>
+              );
+            })}
+          </div>
         </div>
       </div>
+
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+        <div className="container text-center" style={{ padding: '22px 0' }}>
+          <p style={{ color: '#666', fontSize: '11px', letterSpacing: '0.05em' }}>© 2026 BUSINESS CLUB. ALL RIGHTS RESERVED.</p>
+        </div>
+      </div>
+
+      <style>{`
+        .footer-contact-link:hover { color: #fff !important; }
+        @media (max-width: 768px) {
+          .footer-grid {
+            grid-template-columns: 1fr !important;
+            gap: 32px !important;
+            text-align: center;
+          }
+          .footer-grid > div:first-child img { margin-left: auto; margin-right: auto; }
+          .footer-grid > div:first-child p { margin-left: auto; margin-right: auto; }
+          .footer-grid a { justify-content: center; }
+        }
+      `}</style>
     </footer>
   );
 };
