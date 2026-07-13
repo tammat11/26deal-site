@@ -125,8 +125,6 @@ const ApplicationForm = () => {
                     </p>
                 </div>
 
-                <ContactsBlock style={{ marginBottom: '30px' }} />
-
                 <div className="liquid-glass reveal-hidden delay-100" style={{ maxWidth: '600px', margin: '0 auto' }}>
                     <form className="minimal-form" onSubmit={handleSubmit}>
                         <input
