@@ -7,6 +7,7 @@ import ResidentsGrid from './components/ResidentsGrid';
 import AdmissionSteps from './components/AdmissionSteps';
 import ApplicationForm from './components/ApplicationForm';
 import EventsMarquee from './components/EventsMarquee';
+import ContactsBlock from './components/ContactsBlock';
 import { stats } from './data/stats';
 import './index.css';
 
@@ -170,8 +171,9 @@ const Footer = () => {
   const location = useLocation();
   if (location.pathname === '/admin') return null;
   return (
-    <footer style={{ padding: '30px 0', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+    <footer style={{ padding: '60px 0 30px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
       <div className="container text-center">
+        <ContactsBlock style={{ marginBottom: '40px' }} />
         <p style={{ color: '#aaa', fontSize: '12px', letterSpacing: '0.05em' }}>© 2026 BUSINESS CLUB. ALL RIGHTS RESERVED.</p>
         <div style={{ marginTop: '10px' }}>
           <a href="/policy" style={{ color: '#888', fontSize: '11px', textDecoration: 'none', transition: 'color 0.3s' }}>PRIVACY POLICY</a>
