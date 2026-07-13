@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import AboutClub from './components/AboutClub';
 import StatsStrip from './components/StatsStrip';
@@ -7,10 +7,11 @@ import ResidentsGrid from './components/ResidentsGrid';
 import AdmissionSteps from './components/AdmissionSteps';
 import ApplicationForm from './components/ApplicationForm';
 import EventsMarquee from './components/EventsMarquee';
-import EventsPage from './components/EventsPage';
-import Admin from './components/Admin';
 import { stats } from './data/stats';
 import './index.css';
+
+const Admin = lazy(() => import('./components/Admin'));
+const EventsPage = lazy(() => import('./components/EventsPage'));
 
 const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -241,8 +242,8 @@ const AppContent = () => {
             </div>
           </>
         } />
-        <Route path="/events" element={<EventsPage />} />
-        <Route path="/admin" element={<Admin />} />
+        <Route path="/events" element={<Suspense fallback={null}><EventsPage /></Suspense>} />
+        <Route path="/admin" element={<Suspense fallback={null}><Admin /></Suspense>} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
       <Footer />

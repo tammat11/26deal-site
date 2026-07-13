@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { events as initialEvents } from '../data/events';
 import { supabase } from '../supabase';
 
 const EventsPage = () => {
-    const [events, setEvents] = useState(initialEvents);
+    const [events, setEvents] = useState([]);
     const [expanded, setExpanded] = useState(() => new Set());
 
     useEffect(() => {

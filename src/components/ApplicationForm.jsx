@@ -1,5 +1,43 @@
 import React, { useState } from 'react';
 
+const CONTACTS = [
+    { label: 'Instagram', href: 'https://www.instagram.com/26businessclub/', text: '@26businessclub' },
+    { label: 'Телефон', href: 'tel:+77026666113', text: '+7 702 666 61 13' },
+    { label: 'WhatsApp Business', href: 'https://wa.me/77470620428', text: '+7 747 062 0428' },
+    { label: 'Почта', href: 'mailto:info@26businessclub.kz', text: 'info@26businessclub.kz' },
+    { label: 'Почта', href: 'mailto:26businessclub@gmail.com', text: '26businessclub@gmail.com' },
+];
+
+const ContactsBlock = ({ style }) => (
+    <div
+        className="liquid-glass reveal-hidden"
+        style={{
+            maxWidth: '600px',
+            margin: '0 auto',
+            padding: '25px 30px',
+            textAlign: 'center',
+            ...style,
+        }}
+    >
+        <p style={{ fontSize: '12px', letterSpacing: '0.05em', color: '#aaa', marginBottom: '15px' }}>
+            НЕ ПОЛУЧИЛОСЬ ОТПРАВИТЬ ЗАЯВКУ? СВЯЖИТЕСЬ С НАМИ НАПРЯМУЮ
+        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '10px 25px' }}>
+            {CONTACTS.map((c, i) => (
+                <a
+                    key={i}
+                    href={c.href}
+                    target={c.href.startsWith('http') ? '_blank' : undefined}
+                    rel={c.href.startsWith('http') ? 'noopener noreferrer' : undefined}
+                    style={{ color: '#fff', fontSize: '13px', textDecoration: 'none', opacity: 0.85 }}
+                >
+                    <span style={{ color: '#888' }}>{c.label}:</span> {c.text}
+                </a>
+            ))}
+        </div>
+    </div>
+);
+
 const ApplicationForm = () => {
     const [formData, setFormData] = useState({
         name: '',
@@ -87,6 +125,8 @@ const ApplicationForm = () => {
                     </p>
                 </div>
 
+                <ContactsBlock style={{ marginBottom: '30px' }} />
+
                 <div className="liquid-glass reveal-hidden delay-100" style={{ maxWidth: '600px', margin: '0 auto' }}>
                     <form className="minimal-form" onSubmit={handleSubmit}>
                         <input
@@ -137,6 +177,8 @@ const ApplicationForm = () => {
                         </p>
                     </form>
                 </div>
+
+                <ContactsBlock style={{ marginTop: '30px' }} />
             </div>
         </section>
     );
