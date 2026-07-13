@@ -44,15 +44,6 @@ const ContactsBlock = ({ style }) => (
             ...style,
         }}
     >
-        <p style={{
-            fontSize: '11px',
-            letterSpacing: '0.15em',
-            color: '#888',
-            marginBottom: '22px',
-            fontWeight: 600,
-        }}>
-            НЕ ПОЛУЧИЛОСЬ ОТПРАВИТЬ ЗАЯВКУ? СВЯЖИТЕСЬ С НАМИ НАПРЯМУЮ
-        </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {CONTACTS.map((c, i) => {
                 const Icon = c.icon;
