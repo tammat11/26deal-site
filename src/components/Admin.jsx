@@ -563,6 +563,8 @@ const ResidentsTab = () => {
 
 // ─── EVENTS TAB ───────────────────────────────────────────────────────────────
 
+const RSVP_LABELS = { going: 'Идут', maybe: 'Возможно', not_going: 'Не идут' };
+
 const EventsTab = () => {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -571,6 +573,7 @@ const EventsTab = () => {
   const [saving, setSaving] = useState(false);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [rsvps, setRsvps] = useState(null); // null = not loaded, [] = loaded empty
   const fileRef = useRef();
 
   const load = useCallback(async () => {
@@ -583,7 +586,7 @@ const EventsTab = () => {
   useEffect(() => { load(); }, [load]);
 
   const blank = () => ({ title: '', description: '', date: '', time: '', location: '', speaker_name: '', speaker_role: '', capacity: '', tags: '', is_published: true });
-  const openNew = () => { setForm(blank()); setImageFile(null); setImagePreview(null); setModal('new'); };
+  const openNew = () => { setForm(blank()); setImageFile(null); setImagePreview(null); setRsvps(null); setModal('new'); };
   const openEdit = r => {
     const d = r.date ? new Date(r.date) : null;
     setForm({
@@ -592,9 +595,11 @@ const EventsTab = () => {
       time: d ? d.toISOString().slice(11, 16) : '',
       tags: Array.isArray(r.tags) ? r.tags.join(', ') : '',
     });
-    setImageFile(null); setImagePreview(r.image_url || null); setModal(r);
+    setImageFile(null); setImagePreview(r.image_url || null); setRsvps(null); setModal(r);
+    supabase.from('event_rsvps_with_resident').select('*').eq('event_id', r.id)
+      .then(({ data, error }) => setRsvps(error ? [] : (data || [])));
   };
-  const close = () => { setModal(null); setForm({}); };
+  const close = () => { setModal(null); setForm({}); setRsvps(null); };
 
   const onFile = e => {
     const f = e.target.files[0];
@@ -700,6 +705,36 @@ const EventsTab = () => {
             <div className="field full"><label>Участники (резиденты)</label><input type="text" value={form.tags || ''} onChange={e => setForm(f => ({ ...f, tags: e.target.value }))} placeholder="Через запятую: Ларион Лян, Тимур Нуртаев" /></div>
             <div className="field full"><label>Описание</label><textarea value={form.description || ''} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={4} /></div>
           </div>
+
+          {modal !== 'new' && (
+            <div style={{ marginTop: 18, paddingTop: 18, borderTop: '1px solid var(--border)' }}>
+              <label style={{ display: 'block', marginBottom: 10 }}>Кто идёт (из приложения)</label>
+              {rsvps === null ? (
+                <div style={{ color: 'var(--muted)', fontSize: 13 }}>Загрузка…</div>
+              ) : rsvps.length === 0 ? (
+                <div style={{ color: 'var(--muted)', fontSize: 13 }}>Пока никто не ответил</div>
+              ) : (
+                ['going', 'maybe', 'not_going'].map(status => {
+                  const list = rsvps.filter(r => r.status === status);
+                  if (list.length === 0) return null;
+                  return (
+                    <div key={status} style={{ marginBottom: 10 }}>
+                      <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>
+                        {RSVP_LABELS[status] || status} ({list.length})
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                        {list.map(r => (
+                          <span key={r.id} className="badge-gold" style={{ padding: '5px 10px', borderRadius: 8, fontSize: 12 }}>
+                            {r.name}{r.company ? ` · ${r.company}` : ''}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
         </Modal>
       )}
     </>
