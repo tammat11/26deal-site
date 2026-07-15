@@ -581,9 +581,18 @@ const EventsTab = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  const blank = () => ({ title: '', description: '', date: '', is_published: true });
+  const blank = () => ({ title: '', description: '', date: '', time: '', location: '', speaker_name: '', speaker_role: '', capacity: '', tags: '', is_published: true });
   const openNew = () => { setForm(blank()); setImageFile(null); setImagePreview(null); setModal('new'); };
-  const openEdit = r => { setForm({ ...r }); setImageFile(null); setImagePreview(r.image_url || null); setModal(r); };
+  const openEdit = r => {
+    const d = r.date ? new Date(r.date) : null;
+    setForm({
+      ...r,
+      date: d ? d.toISOString().slice(0, 10) : '',
+      time: d ? d.toISOString().slice(11, 16) : '',
+      tags: Array.isArray(r.tags) ? r.tags.join(', ') : '',
+    });
+    setImageFile(null); setImagePreview(r.image_url || null); setModal(r);
+  };
   const close = () => { setModal(null); setForm({}); };
 
   const onFile = e => {
@@ -599,7 +608,16 @@ const EventsTab = () => {
     try {
       let image_url = form.image_url || null;
       if (imageFile) image_url = await uploadImage(imageFile, 'events');
-      const payload = { title: form.title, description: form.description || null, date: form.date || null, image_url, is_published: form.is_published !== false };
+      const dateTime = form.date ? `${form.date}T${form.time || '00:00'}:00` : null;
+      const tags = (form.tags || '').split(',').map(s => s.trim()).filter(Boolean);
+      const payload = {
+        title: form.title, description: form.description || null, date: dateTime, image_url,
+        location: form.location || null,
+        speaker_name: form.speaker_name || null, speaker_role: form.speaker_role || null,
+        capacity: form.capacity ? parseInt(form.capacity) : null,
+        tags,
+        is_published: form.is_published !== false,
+      };
       if (modal === 'new') await supabase.from('events').insert(payload);
       else await supabase.from('events').update(payload).eq('id', form.id);
       showToast(modal === 'new' ? 'Мероприятие добавлено' : 'Сохранено');
@@ -644,7 +662,7 @@ const EventsTab = () => {
                   }
                 </td>
                 <td style={{ fontWeight: 600, maxWidth: 280 }}><div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 260 }}>{r.title}</div></td>
-                <td style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>{r.date ? new Date(r.date).toLocaleDateString('ru') : '—'}</td>
+                <td style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>{r.date ? new Date(r.date).toLocaleString('ru', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}</td>
                 <td><Toggle checked={r.is_published} onChange={v => togglePub(r.id, v)} /></td>
                 <td>
                   <div className="td-actions">
@@ -672,7 +690,13 @@ const EventsTab = () => {
           <div className="form-grid">
             <div className="field full"><label>Название *</label><input type="text" value={form.title || ''} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} /></div>
             <Field label="Дата"><input type="date" value={form.date || ''} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} /></Field>
+            <Field label="Время"><input type="time" value={form.time || ''} onChange={e => setForm(f => ({ ...f, time: e.target.value }))} /></Field>
+            <div className="field full"><label>Место проведения</label><input type="text" value={form.location || ''} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="Ritz-Carlton, Алматы" /></div>
+            <Field label="Организатор"><input type="text" value={form.speaker_name || ''} onChange={e => setForm(f => ({ ...f, speaker_name: e.target.value }))} placeholder="Ларион Лян" /></Field>
+            <Field label="Роль организатора"><input type="text" value={form.speaker_role || ''} onChange={e => setForm(f => ({ ...f, speaker_role: e.target.value }))} placeholder="Президент клуба" /></Field>
+            <Field label="Вместимость (мест)"><input type="number" min="0" value={form.capacity || ''} onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))} placeholder="50" /></Field>
             <Field label="Опубликован"><Toggle checked={form.is_published !== false} onChange={v => setForm(f => ({ ...f, is_published: v }))} /></Field>
+            <div className="field full"><label>Участники (резиденты)</label><input type="text" value={form.tags || ''} onChange={e => setForm(f => ({ ...f, tags: e.target.value }))} placeholder="Через запятую: Ларион Лян, Тимур Нуртаев" /></div>
             <div className="field full"><label>Описание</label><textarea value={form.description || ''} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={4} /></div>
           </div>
         </Modal>
