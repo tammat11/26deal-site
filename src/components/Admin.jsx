@@ -391,7 +391,7 @@ const ResidentsTab = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  const blank = () => ({ name: '', company: '', niche: '', website: '', brief: '', turnover: '', employees: '', member_since: '', partner_companies: '', achievements: '', is_president: false, is_published: true, sort_order: rows.length + 1 });
+  const blank = () => ({ name: '', company: '', niche: '', phone: '', website: '', brief: '', turnover: '', employees: '', member_since: '', partner_companies: '', achievements: '', is_president: false, is_published: true, sort_order: rows.length + 1 });
 
   const openNew = () => { setForm(blank()); setImageFile(null); setImagePreview(null); setModal('new'); };
   const openEdit = r => {
@@ -432,6 +432,7 @@ const ResidentsTab = () => {
 
       const payload = {
         name: form.name, company: form.company || null, niche: form.niche || null, photo_url,
+        phone: form.phone || null,
         website: form.website || null, brief: form.brief || null,
         turnover: form.turnover || null, employees: form.employees || null,
         member_since: form.member_since ? parseInt(form.member_since) : null,
@@ -533,6 +534,7 @@ const ResidentsTab = () => {
             <div className="field full"><label>Имя *</label><input type="text" value={form.name || ''} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Тимур Нуртаев" /></div>
             <Field label="Компания"><input type="text" value={form.company || ''} onChange={e => setForm(f => ({ ...f, company: e.target.value }))} placeholder="TIMUS Development" /></Field>
             <Field label="Ниша"><input type="text" value={form.niche || ''} onChange={e => setForm(f => ({ ...f, niche: e.target.value }))} placeholder="Строительство" /></Field>
+            <Field label="Телефон"><input type="tel" value={form.phone || ''} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+7 702 666 6113" /></Field>
             <div className="field full"><label>Сайт</label><input type="url" value={form.website || ''} onChange={e => setForm(f => ({ ...f, website: e.target.value }))} placeholder="https://example.kz" /></div>
             <div className="field full"><label>О резиденте</label><textarea value={form.brief || ''} onChange={e => setForm(f => ({ ...f, brief: e.target.value }))} rows={3} /></div>
 
