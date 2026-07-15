@@ -155,7 +155,8 @@ const css = `
   .field { display: flex; flex-direction: column; gap: 5px; }
   .field label { font-size: 11px; color: var(--muted); font-weight: 600; letter-spacing: .3px; }
   input[type=text], input[type=date], input[type=email], input[type=password],
-  input[type=url], input[type=tel], input[type=datetime-local], select, textarea {
+  input[type=url], input[type=tel], input[type=datetime-local], input[type=time],
+  input[type=number], select, textarea {
     background: var(--s2); border: 1px solid var(--border); border-radius: 9px;
     color: var(--text); padding: 9px 12px; font-size: 13px;
     font-family: inherit; width: 100%; outline: none; transition: border-color .15s;
