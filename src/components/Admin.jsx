@@ -9,6 +9,7 @@ const ALLOWED_PHONES = ['+7 702 666 6113', '+7 707 052 2006', '+7 707 186 0618']
 const TABS = [
   { id: 'residents',       label: 'Резиденты',       icon: '👤' },
   { id: 'events',          label: 'Мероприятия',     icon: '📅' },
+  { id: 'news',            label: 'Новости',         icon: '📰' },
   { id: 'partners',        label: 'Партнёры',        icon: '🤝' },
   { id: 'polls',           label: 'Опросы',          icon: '📊' },
   { id: 'president',       label: 'Президент',       icon: '👑' },
@@ -705,6 +706,133 @@ const EventsTab = () => {
   );
 };
 
+// ─── NEWS TAB ─────────────────────────────────────────────────────────────────
+
+const NewsTab = () => {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState(null);
+  const [form, setForm] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const fileRef = useRef();
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const { data } = await supabase.from('news').select('*').order('published_at', { ascending: false });
+    setRows(data || []);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const blank = () => ({ title: '', excerpt: '', body: '', category: '', is_pinned: false, is_published: true });
+  const openNew = () => { setForm(blank()); setImageFile(null); setImagePreview(null); setModal('new'); };
+  const openEdit = r => { setForm({ ...r }); setImageFile(null); setImagePreview(r.image_url || null); setModal(r); };
+  const close = () => { setModal(null); setForm({}); };
+
+  const onFile = e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    setImageFile(f);
+    setImagePreview(URL.createObjectURL(f));
+  };
+
+  const save = async () => {
+    if (!form.title?.trim()) return showToast('Введите название', 'err');
+    setSaving(true);
+    try {
+      let image_url = form.image_url || null;
+      if (imageFile) image_url = await uploadImage(imageFile, 'news');
+      const payload = {
+        title: form.title, excerpt: form.excerpt || null, body: form.body || null,
+        category: form.category || null, image_url,
+        is_pinned: !!form.is_pinned, is_published: form.is_published !== false,
+      };
+      if (modal === 'new') await supabase.from('news').insert(payload);
+      else await supabase.from('news').update(payload).eq('id', form.id);
+      showToast(modal === 'new' ? 'Новость добавлена' : 'Сохранено');
+      close(); load();
+    } catch (e) { showToast('Ошибка: ' + e.message, 'err'); }
+    setSaving(false);
+  };
+
+  const remove = async id => {
+    if (!confirm('Удалить?')) return;
+    await supabase.from('news').delete().eq('id', id);
+    showToast('Удалено'); load();
+  };
+
+  const togglePub = async (id, val) => {
+    await supabase.from('news').update({ is_published: val }).eq('id', id);
+    setRows(r => r.map(x => x.id === id ? { ...x, is_published: val } : x));
+  };
+
+  if (loading) return <div className="loading"><span className="spinner" /></div>;
+
+  return (
+    <>
+      <div className="section-head">
+        <div>
+          <div className="section-title">Новости</div>
+          <div className="section-sub">{rows.length} новостей</div>
+        </div>
+        <button className="btn btn-gold" onClick={openNew}>+ Добавить</button>
+      </div>
+
+      <div className="tbl-wrap">
+        <table>
+          <thead><tr><th>Фото</th><th>Название</th><th>Категория</th><th>Статус</th><th></th></tr></thead>
+          <tbody>
+            {rows.map(r => (
+              <tr key={r.id}>
+                <td>
+                  {r.image_url
+                    ? <img src={r.image_url} alt="" style={{ width: 56, height: 40, objectFit: 'cover', borderRadius: 6 }} />
+                    : <div style={{ width: 56, height: 40, background: 'var(--s3)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>📰</div>
+                  }
+                </td>
+                <td style={{ fontWeight: 600, maxWidth: 280 }}><div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 260 }}>{r.is_pinned ? '📌 ' : ''}{r.title}</div></td>
+                <td style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>{r.category || '—'}</td>
+                <td><Toggle checked={r.is_published} onChange={v => togglePub(r.id, v)} /></td>
+                <td>
+                  <div className="td-actions">
+                    <button className="btn btn-outline btn-sm" onClick={() => openEdit(r)}>Редактировать</button>
+                    <button className="btn btn-danger btn-sm" onClick={() => remove(r.id)}>Удалить</button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {rows.length === 0 && <div className="loading" style={{ color: 'var(--muted)' }}>Новости не добавлены</div>}
+      </div>
+
+      {modal !== null && (
+        <Modal title={modal === 'new' ? 'Новая новость' : 'Редактировать'} onClose={close} onSave={save} saving={saving}>
+          <input type="file" ref={fileRef} hidden accept="image/*" onChange={onFile} />
+          <div className="upload-area" onClick={() => fileRef.current.click()}>
+            {imagePreview
+              ? <img src={imagePreview} alt="" style={{ width: '100%', height: 160, objectFit: 'cover', borderRadius: 8, marginBottom: 8 }} />
+              : <div style={{ fontSize: 32, marginBottom: 8 }}>🖼</div>
+            }
+            <p>{imageFile ? imageFile.name : 'Нажмите чтобы выбрать обложку'}</p>
+          </div>
+          <div className="form-grid">
+            <div className="field full"><label>Название *</label><input type="text" value={form.title || ''} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} /></div>
+            <Field label="Категория"><input type="text" value={form.category || ''} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} placeholder="Клуб" /></Field>
+            <Field label="Закреплена"><Toggle checked={!!form.is_pinned} onChange={v => setForm(f => ({ ...f, is_pinned: v }))} /></Field>
+            <Field label="Опубликована"><Toggle checked={form.is_published !== false} onChange={v => setForm(f => ({ ...f, is_published: v }))} /></Field>
+            <div className="field full"><label>Краткое описание</label><textarea value={form.excerpt || ''} onChange={e => setForm(f => ({ ...f, excerpt: e.target.value }))} rows={2} /></div>
+            <div className="field full"><label>Текст новости</label><textarea value={form.body || ''} onChange={e => setForm(f => ({ ...f, body: e.target.value }))} rows={6} /></div>
+          </div>
+        </Modal>
+      )}
+    </>
+  );
+};
+
 // ─── PARTNERS TAB ─────────────────────────────────────────────────────────────
 
 const PartnersTab = () => {
@@ -1182,6 +1310,7 @@ const Admin = () => {
   const tabContent = {
     residents:       <ResidentsTab />,
     events:          <EventsTab />,
+    news:            <NewsTab />,
     partners:        <PartnersTab />,
     polls:           <PollsTab />,
     president:       <PresidentTab />,
