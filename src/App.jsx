@@ -73,6 +73,7 @@ const Navbar = () => {
         }}>
           <Link to="/" className="mobile-nav-link" style={{ fontSize: scrolled ? '12px' : '13px', textDecoration: 'none', color: 'inherit' }}>Главная</Link>
           <Link to="/events" className="mobile-nav-link" style={{ fontSize: scrolled ? '12px' : '13px', textDecoration: 'none', color: 'inherit' }}>Мероприятия</Link>
+          <a href="#footer-contacts" className="mobile-nav-link" style={{ fontSize: scrolled ? '12px' : '13px', textDecoration: 'none', color: 'inherit' }}>Контакты</a>
         </div>
       </nav>
       <style>{`
@@ -171,7 +172,7 @@ const Footer = () => {
   const location = useLocation();
   if (location.pathname === '/admin') return null;
   return (
-    <footer style={{ paddingTop: '80px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+    <footer id="footer-contacts" style={{ paddingTop: '80px', borderTop: '1px solid rgba(255,255,255,0.1)', scrollMarginTop: '120px' }}>
       <div className="container footer-grid" style={{
         display: 'grid',
         gridTemplateColumns: '1.3fr 0.7fr 1.3fr',
