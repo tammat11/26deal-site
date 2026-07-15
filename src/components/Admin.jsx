@@ -574,7 +574,7 @@ const EventsTab = () => {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase.from('site_events').select('*').order('date', { ascending: false });
+    const { data } = await supabase.from('events').select('*').order('date', { ascending: false });
     setRows(data || []);
     setLoading(false);
   }, []);
@@ -583,7 +583,7 @@ const EventsTab = () => {
 
   const blank = () => ({ title: '', description: '', date: '', is_published: true });
   const openNew = () => { setForm(blank()); setImageFile(null); setImagePreview(null); setModal('new'); };
-  const openEdit = r => { setForm({ ...r }); setImageFile(null); setImagePreview(r.photo_url || null); setModal(r); };
+  const openEdit = r => { setForm({ ...r }); setImageFile(null); setImagePreview(r.image_url || null); setModal(r); };
   const close = () => { setModal(null); setForm({}); };
 
   const onFile = e => {
@@ -597,11 +597,11 @@ const EventsTab = () => {
     if (!form.title?.trim()) return showToast('Введите название', 'err');
     setSaving(true);
     try {
-      let photo_url = form.photo_url || null;
-      if (imageFile) photo_url = await uploadImage(imageFile, 'events');
-      const payload = { title: form.title, description: form.description || null, date: form.date || null, photo_url, is_published: form.is_published !== false };
-      if (modal === 'new') await supabase.from('site_events').insert(payload);
-      else await supabase.from('site_events').update(payload).eq('id', form.id);
+      let image_url = form.image_url || null;
+      if (imageFile) image_url = await uploadImage(imageFile, 'events');
+      const payload = { title: form.title, description: form.description || null, date: form.date || null, image_url, is_published: form.is_published !== false };
+      if (modal === 'new') await supabase.from('events').insert(payload);
+      else await supabase.from('events').update(payload).eq('id', form.id);
       showToast(modal === 'new' ? 'Мероприятие добавлено' : 'Сохранено');
       close(); load();
     } catch (e) { showToast('Ошибка: ' + e.message, 'err'); }
@@ -610,12 +610,12 @@ const EventsTab = () => {
 
   const remove = async id => {
     if (!confirm('Удалить?')) return;
-    await supabase.from('site_events').delete().eq('id', id);
+    await supabase.from('events').delete().eq('id', id);
     showToast('Удалено'); load();
   };
 
   const togglePub = async (id, val) => {
-    await supabase.from('site_events').update({ is_published: val }).eq('id', id);
+    await supabase.from('events').update({ is_published: val }).eq('id', id);
     setRows(r => r.map(x => x.id === id ? { ...x, is_published: val } : x));
   };
 
@@ -638,8 +638,8 @@ const EventsTab = () => {
             {rows.map(r => (
               <tr key={r.id}>
                 <td>
-                  {r.photo_url
-                    ? <img src={r.photo_url} alt="" style={{ width: 56, height: 40, objectFit: 'cover', borderRadius: 6 }} />
+                  {r.image_url
+                    ? <img src={r.image_url} alt="" style={{ width: 56, height: 40, objectFit: 'cover', borderRadius: 6 }} />
                     : <div style={{ width: 56, height: 40, background: 'var(--s3)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>📅</div>
                   }
                 </td>
