@@ -913,7 +913,7 @@ const PartnersTab = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  const blank = () => ({ name: '', description: '', category: 'restaurant', discount: '', discount_conditions: '', address: '', website: '', phone: '', is_published: true, is_exclusive: false });
+  const blank = () => ({ name: '', description: '', category: 'restaurant', discount: '', discount_percent: '', discount_conditions: '', address: '', website: '', phone: '', is_published: true, is_exclusive: false });
   const openNew = () => { setForm(blank()); setImageFile(null); setImagePreview(null); setModal('new'); };
   const openEdit = r => { setForm({ ...r }); setImageFile(null); setImagePreview(r.logo_url || null); setModal(r); };
   const close = () => { setModal(null); setForm({}); };
@@ -929,7 +929,7 @@ const PartnersTab = () => {
     try {
       let logo_url = form.logo_url || null;
       if (imageFile) logo_url = await uploadImage(imageFile, 'partners');
-      const p = { name: form.name, description: form.description || null, category: form.category, discount: form.discount || null, discount_conditions: form.discount_conditions || null, address: form.address || null, website: form.website || null, phone: form.phone || null, logo_url, is_published: form.is_published !== false, is_exclusive: !!form.is_exclusive };
+      const p = { name: form.name, description: form.description || null, category: form.category, discount: form.discount || null, discount_percent: form.discount_percent || null, discount_conditions: form.discount_conditions || null, address: form.address || null, website: form.website || null, phone: form.phone || null, logo_url, is_published: form.is_published !== false, is_exclusive: !!form.is_exclusive };
       if (modal === 'new') await supabase.from('partners').insert(p);
       else await supabase.from('partners').update(p).eq('id', form.id);
       showToast(modal === 'new' ? 'Партнёр добавлен' : 'Сохранено');
@@ -997,6 +997,7 @@ const PartnersTab = () => {
             <div className="field full"><label>Описание</label><textarea value={form.description || ''} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} /></div>
             <Field label="Категория"><select value={form.category || 'restaurant'} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>{PARTNER_CATS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}</select></Field>
             <Field label="Скидка"><input type="text" value={form.discount || ''} onChange={e => setForm(f => ({ ...f, discount: e.target.value }))} placeholder="30% на всё" /></Field>
+            <Field label="Скидка, % (бейдж в приложении)"><input type="text" value={form.discount_percent || ''} onChange={e => setForm(f => ({ ...f, discount_percent: e.target.value }))} placeholder="15%" /></Field>
             <div className="field full"><label>Условия</label><textarea value={form.discount_conditions || ''} onChange={e => setForm(f => ({ ...f, discount_conditions: e.target.value }))} rows={2} /></div>
             <Field label="Адрес"><input type="text" value={form.address || ''} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} /></Field>
             <Field label="Сайт"><input type="url" value={form.website || ''} onChange={e => setForm(f => ({ ...f, website: e.target.value }))} /></Field>
