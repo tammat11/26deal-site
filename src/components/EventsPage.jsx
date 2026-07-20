@@ -10,6 +10,10 @@ const EventsPage = () => {
             .from('events')
             .select('*')
             .eq('is_published', true)
+            // Публичный сайт показывает мероприятие только после того, как
+            // оно состоялось; анонсы будущих видят только резиденты в
+            // приложении.
+            .lt('date', new Date().toISOString())
             .order('date', { ascending: false })
             .then(({ data, error }) => {
                 if (!error && data && data.length > 0) {

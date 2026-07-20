@@ -644,6 +644,14 @@ const EventsTab = () => {
     setRows(r => r.map(x => x.id === id ? { ...x, is_published: val } : x));
   };
 
+  // Отметка явки: пишем в event_rsvps.attended (null = не отмечено),
+  // счётчик «Мероприятий посещено» в приложении считается по этому полю.
+  const setAttended = async (rsvpId, val) => {
+    const { error } = await supabase.from('event_rsvps').update({ attended: val }).eq('id', rsvpId);
+    if (error) return showToast('Ошибка: ' + error.message, 'err');
+    setRsvps(list => (list || []).map(x => x.id === rsvpId ? { ...x, attended: val } : x));
+  };
+
   if (loading) return <div className="loading"><span className="spinner" /></div>;
 
   return (
@@ -723,11 +731,26 @@ const EventsTab = () => {
                       <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>
                         {RSVP_LABELS[status] || status} ({list.length})
                       </div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                         {list.map(r => (
-                          <span key={r.id} className="badge-gold" style={{ padding: '5px 10px', borderRadius: 8, fontSize: 12 }}>
-                            {r.name}{r.company ? ` · ${r.company}` : ''}
-                          </span>
+                          <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, background: 'var(--s2)', border: '1px solid var(--border)' }}>
+                            <span style={{ fontSize: 12, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {r.name}{r.company ? ` · ${r.company}` : ''}
+                            </span>
+                            <button
+                              type="button"
+                              className={r.attended === true ? 'btn btn-gold btn-sm' : 'btn btn-outline btn-sm'}
+                              onClick={() => setAttended(r.id, r.attended === true ? null : true)}
+                            >Пришёл</button>
+                            <button
+                              type="button"
+                              className="btn btn-sm"
+                              style={r.attended === false
+                                ? { background: 'rgba(255,80,80,.18)', border: '1px solid rgba(255,80,80,.5)', color: '#ff7b7b' }
+                                : { background: 'none', border: '1px solid var(--border)', color: 'var(--muted)' }}
+                              onClick={() => setAttended(r.id, r.attended === false ? null : false)}
+                            >Не пришёл</button>
+                          </div>
                         ))}
                       </div>
                     </div>
