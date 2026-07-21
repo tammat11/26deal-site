@@ -506,7 +506,9 @@ const ResidentsTab = () => {
       {cropSource && (
         <CropModal
           file={cropSource}
-          aspect={3 / 4}
+          /* Ровно соотношение карточки резидента в приложении (childAspectRatio
+             0.86) — что кадрируешь, то и видно в приложении. */
+          aspect={0.86}
           onCancel={() => setCropSource(null)}
           onDone={onCropDone}
         />
@@ -525,8 +527,11 @@ const ResidentsTab = () => {
               className="btn btn-outline btn-sm"
               style={{ marginTop: -8, marginBottom: 12 }}
               onClick={() => {
-                if (imageFile) setCropSource(imageFile);
-                else fetch(imagePreview).then(r => r.blob()).then(b => setCropSource(new File([b], 'photo.jpg', { type: b.type || 'image/jpeg' })));
+                if (imageFile) { setCropSource(imageFile); return; }
+                fetch(imagePreview)
+                  .then(r => r.blob())
+                  .then(b => setCropSource(new File([b], 'photo.jpg', { type: b.type || 'image/jpeg' })))
+                  .catch(() => showToast('Не удалось загрузить фото для кадрирования', 'err'));
               }}
             >
               ✂️ Перекадрировать
