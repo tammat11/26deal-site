@@ -1069,6 +1069,39 @@ const PollsTab = () => {
     setRows(r => r.map(x => x.id === id ? { ...x, is_active: val } : x));
   };
 
+  // ── Просмотр ответов ──
+  const [answersPoll, setAnswersPoll] = useState(null); // poll row | null
+  const [answers, setAnswers] = useState(null);         // null = загрузка
+
+  const openAnswers = async (r) => {
+    setAnswersPoll(r); setAnswers(null);
+    // Вью с именами резидентов; если её ещё нет в БД — падаем на сырую таблицу.
+    let { data, error } = await supabase.from('poll_answers_with_resident')
+      .select('*').eq('poll_id', r.id).order('created_at', { ascending: false });
+    if (error) {
+      const res = await supabase.from('poll_answers')
+        .select('id, answer, created_at').eq('poll_id', r.id).order('created_at', { ascending: false });
+      data = (res.data || []).map(a => ({ ...a, name: 'Резидент' }));
+    }
+    setAnswers(data || []);
+  };
+
+  // Ответ хранится как jsonb: {value: "<индекс варианта>"} / {values:[...]} /
+  // текст / рейтинг — приводим к читаемому виду по списку вариантов опроса.
+  const renderAnswer = (poll, ans) => {
+    const opts = Array.isArray(poll.options) ? poll.options : [];
+    const decode = v => {
+      const i = parseInt(v, 10);
+      return Number.isInteger(i) && opts[i] !== undefined ? opts[i] : String(v);
+    };
+    const a = ans.answer || {};
+    if (Array.isArray(a.values)) return a.values.map(decode).join(', ');
+    if (a.value === undefined || a.value === null) return '—';
+    if (poll.type === 'rating') return `${a.value} / 5`;
+    if (poll.type === 'text') return String(a.value);
+    return decode(a.value);
+  };
+
   if (loading) return <div className="loading"><span className="spinner" /></div>;
 
   return (
@@ -1086,7 +1119,13 @@ const PollsTab = () => {
               <tr key={r.id}>
                 <td style={{ maxWidth: 300 }}><div style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 280 }}>{r.question}</div></td>
                 <td><span className="badge badge-gray">{POLL_TYPES.find(t => t.value === r.type)?.label}</span></td>
-                <td><span className="stat-pill">💬 {r.poll_answers?.[0]?.count ?? 0}</span></td>
+                <td>
+                  <button type="button" className="stat-pill" title="Показать ответы"
+                    style={{ cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--s2)', color: 'var(--text)', font: 'inherit' }}
+                    onClick={() => openAnswers(r)}>
+                    💬 {r.poll_answers?.[0]?.count ?? 0}
+                  </button>
+                </td>
                 <td style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>{r.ends_at ? new Date(r.ends_at).toLocaleDateString('ru') : '∞'}</td>
                 <td><Toggle checked={r.is_active} onChange={v => toggleActive(r.id, v)} /></td>
                 <td>
@@ -1101,6 +1140,32 @@ const PollsTab = () => {
         </table>
         {rows.length === 0 && <div className="loading" style={{ color: 'var(--muted)' }}>Опросы не созданы</div>}
       </div>
+
+      {answersPoll !== null && (
+        <div className="overlay" onClick={e => e.target === e.currentTarget && setAnswersPoll(null)}>
+          <div className="modal">
+            <div className="modal-title">Ответы — {answersPoll.question}</div>
+            {answers === null ? (
+              <div style={{ color: 'var(--muted)', fontSize: 13 }}>Загрузка…</div>
+            ) : answers.length === 0 ? (
+              <div style={{ color: 'var(--muted)', fontSize: 13 }}>Ответов пока нет</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: '55vh', overflowY: 'auto' }}>
+                {answers.map(a => (
+                  <div key={a.id} style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '9px 12px', borderRadius: 10, background: 'var(--s2)', border: '1px solid var(--border)' }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>{a.name}{a.company ? ` · ${a.company}` : ''}</span>
+                    <span style={{ fontSize: 13, color: 'var(--gold)', flex: 1 }}>{renderAnswer(answersPoll, a)}</span>
+                    <span style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{new Date(a.created_at).toLocaleString('ru', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="modal-footer">
+              <button className="btn btn-outline" onClick={() => setAnswersPoll(null)}>Закрыть</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {modal !== null && (
         <Modal title={modal === 'new' ? 'Новый опрос' : 'Редактировать опрос'} onClose={close} onSave={save} saving={saving}>
