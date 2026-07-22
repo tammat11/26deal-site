@@ -393,7 +393,7 @@ const ResidentsTab = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  const blank = () => ({ name: '', company: '', niche: '', phone: '', website: '', brief: '', turnover: '', employees: '', member_since: '', partner_companies: '', achievements: '', is_president: false, is_published: true, sort_order: rows.length + 1 });
+  const blank = () => ({ name: '', company: '', niche: '', phone: '', login_password: '', website: '', brief: '', turnover: '', employees: '', member_since: '', partner_companies: '', achievements: '', is_president: false, is_published: true, sort_order: rows.length + 1 });
 
   const openNew = () => { setForm(blank()); setImageFile(null); setImagePreview(null); setModal('new'); };
   const openEdit = r => {
@@ -435,6 +435,7 @@ const ResidentsTab = () => {
       const payload = {
         name: form.name, company: form.company || null, niche: form.niche || null, photo_url,
         phone: form.phone || null,
+        login_password: form.login_password || null,
         website: form.website || null, brief: form.brief || null,
         turnover: form.turnover || null, employees: form.employees || null,
         member_since: form.member_since ? parseInt(form.member_since) : null,
@@ -542,6 +543,7 @@ const ResidentsTab = () => {
             <Field label="Компания"><input type="text" value={form.company || ''} onChange={e => setForm(f => ({ ...f, company: e.target.value }))} placeholder="TIMUS Development" /></Field>
             <Field label="Ниша"><input type="text" value={form.niche || ''} onChange={e => setForm(f => ({ ...f, niche: e.target.value }))} placeholder="Строительство" /></Field>
             <Field label="Телефон"><input type="tel" value={form.phone || ''} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+7 702 666 6113" /></Field>
+            <Field label="Пароль для входа"><input type="text" value={form.login_password || ''} onChange={e => setForm(f => ({ ...f, login_password: e.target.value }))} placeholder="пароль резидента для входа в приложение" /></Field>
             <div className="field full"><label>Сайт</label><input type="url" value={form.website || ''} onChange={e => setForm(f => ({ ...f, website: e.target.value }))} placeholder="https://example.kz" /></div>
             <div className="field full"><label>О резиденте</label><textarea value={form.brief || ''} onChange={e => setForm(f => ({ ...f, brief: e.target.value }))} rows={3} /></div>
 
