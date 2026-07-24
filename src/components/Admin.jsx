@@ -1034,8 +1034,11 @@ const PollsTab = () => {
   // ── Общий опрос ──
   const [surveyModal, setSurveyModal] = useState(null); // null | 'new' | row
   const [surveyForm, setSurveyForm] = useState({});
-  const [surveyQuestions, setSurveyQuestions] = useState([]);
+  const [surveyQuestions, setSurveyQuestions] = useState([]); // сохранённые вопросы
+  const [draftQuestions, setDraftQuestions] = useState([]);   // черновик (новый опросник)
   const [savingSurvey, setSavingSurvey] = useState(false);
+
+  const isDraftSurvey = surveyModal === 'new';
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1057,30 +1060,60 @@ const PollsTab = () => {
     setSurveyQuestions(data || []);
   };
 
-  // ── Одиночный опрос / вопрос анкеты ──
-  const blank = (surveyId = null, order = 0) => ({
+  // ── Вопрос / одиночный опрос ──
+  const blank = (extra = {}) => ({
     question: '', description: '', type: 'single', is_active: true, ends_at: '',
-    survey_id: surveyId, sort_order: order,
+    survey_id: null, sort_order: 0, ...extra,
   });
   const openNew = () => { setForm(blank()); setOptions(['', '']); setModal('new'); };
+
+  // Добавление вопроса: в черновик (новый опросник) или сразу в БД (сохранённый).
   const openNewQuestion = () => {
-    setForm(blank(surveyForm.id, surveyQuestions.length + 1));
+    if (isDraftSurvey) {
+      setForm(blank({ __draft: true, __idx: null, sort_order: draftQuestions.length + 1 }));
+    } else {
+      setForm(blank({ survey_id: surveyForm.id, sort_order: surveyQuestions.length + 1 }));
+    }
     setOptions(['', '']); setModal('new');
   };
+
   const openEdit = r => {
     setForm({ ...r, ends_at: r.ends_at ? new Date(r.ends_at).toISOString().slice(0, 16) : '' });
     const opts = Array.isArray(r.options) ? r.options : [];
     setOptions(opts.length ? opts : ['', '']);
     setModal(r);
   };
+  const openEditDraft = (q, i) => {
+    setForm({ ...q, __draft: true, __idx: i });
+    setOptions(q.options?.length ? q.options : ['', '']);
+    setModal(q);
+  };
   const close = () => { setModal(null); setForm({}); setOptions(['', '']); };
 
   const needsOptions = ['single', 'multiple'].includes(form.type);
-  const isQuestionOfSurvey = !!form.survey_id;
+  const isSurveyQuestion = !!form.survey_id || !!form.__draft;
 
   const save = async () => {
     if (!form.question?.trim()) return showToast('Введите вопрос', 'err');
     if (needsOptions && options.filter(o => o.trim()).length < 2) return showToast('Минимум 2 варианта', 'err');
+
+    // Черновик: ничего не пишем в БД, копим в памяти до сохранения опросника.
+    if (form.__draft) {
+      const q = {
+        question: form.question,
+        description: form.description || null,
+        type: form.type,
+        options: needsOptions ? options.filter(o => o.trim()) : [],
+        is_active: !!form.is_active,
+        sort_order: form.sort_order || 0,
+      };
+      setDraftQuestions(list => form.__idx === null || form.__idx === undefined
+        ? [...list, q]
+        : list.map((x, i) => i === form.__idx ? q : x));
+      close();
+      return;
+    }
+
     setSaving(true);
     try {
       const payload = {
@@ -1120,17 +1153,21 @@ const PollsTab = () => {
   // ── Общий опрос: CRUD ──
   const openSurveyNew = () => {
     setSurveyForm({ title: '', description: '', is_active: true, ends_at: '' });
-    setSurveyQuestions([]); setSurveyModal('new');
+    setSurveyQuestions([]); setDraftQuestions([]); setSurveyModal('new');
   };
   const openSurveyEdit = async (r) => {
     setSurveyForm({ ...r, ends_at: r.ends_at ? new Date(r.ends_at).toISOString().slice(0, 16) : '' });
-    setSurveyModal(r);
+    setDraftQuestions([]); setSurveyModal(r);
     await loadSurveyQuestions(r.id);
   };
-  const closeSurvey = () => { setSurveyModal(null); setSurveyForm({}); setSurveyQuestions([]); };
+  const closeSurvey = () => {
+    setSurveyModal(null); setSurveyForm({});
+    setSurveyQuestions([]); setDraftQuestions([]);
+  };
 
   const saveSurvey = async () => {
     if (!surveyForm.title?.trim()) return showToast('Введите название опросника', 'err');
+    if (isDraftSurvey && draftQuestions.length === 0) return showToast('Добавьте хотя бы один вопрос', 'err');
     setSavingSurvey(true);
     try {
       const payload = {
@@ -1139,20 +1176,21 @@ const PollsTab = () => {
         is_active: !!surveyForm.is_active,
         ends_at: surveyForm.ends_at ? new Date(surveyForm.ends_at).toISOString() : null,
       };
-      if (surveyModal === 'new') {
-        // Создаём и сразу открываем на редактирование, чтобы добавить вопросы.
-        const { data, error } = await supabase.from('surveys').insert(payload).select().single();
+      if (isDraftSurvey) {
+        // 1) создаём опросник, 2) пишем все вопросы разом, 3) «касаемся»
+        // опросника — это и отправляет ОДНО уведомление резидентам.
+        const { data: created, error } = await supabase.from('surveys').insert(payload).select().single();
         if (error) throw error;
-        showToast('Опросник создан — добавьте вопросы');
-        setSurveyForm({ ...data, ends_at: data.ends_at ? new Date(data.ends_at).toISOString().slice(0, 16) : '' });
-        setSurveyModal(data);
-        setSurveyQuestions([]);
-        load();
+        const qs = draftQuestions.map((q, i) => ({ ...q, survey_id: created.id, sort_order: q.sort_order || i + 1 }));
+        const { error: qErr } = await supabase.from('polls').insert(qs);
+        if (qErr) throw qErr;
+        await supabase.from('surveys').update({ title: created.title }).eq('id', created.id);
+        showToast('Опросник создан');
       } else {
         await supabase.from('surveys').update(payload).eq('id', surveyForm.id);
         showToast('Сохранено');
-        closeSurvey(); load();
       }
+      closeSurvey(); load();
     } catch (e) { showToast('Ошибка: ' + e.message, 'err'); }
     setSavingSurvey(false);
   };
@@ -1213,7 +1251,6 @@ const PollsTab = () => {
         </div>
       </div>
 
-      {/* ── Общие опросы ── */}
       <div className="tbl-wrap" style={{ marginBottom: 22 }}>
         <div style={{ padding: '10px 14px', fontSize: 12, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--muted)' }}>Общие опросы</div>
         <table>
@@ -1241,7 +1278,6 @@ const PollsTab = () => {
         {surveys.length === 0 && <div className="loading" style={{ color: 'var(--muted)' }}>Общие опросы не созданы</div>}
       </div>
 
-      {/* ── Одиночные опросы ── */}
       <div className="tbl-wrap">
         <div style={{ padding: '10px 14px', fontSize: 12, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--muted)' }}>Одиночные опросы</div>
         <table>
@@ -1273,10 +1309,9 @@ const PollsTab = () => {
         {rows.length === 0 && <div className="loading" style={{ color: 'var(--muted)' }}>Одиночные опросы не созданы</div>}
       </div>
 
-      {/* ── Модалка общего опроса ── */}
       {surveyModal !== null && (
         <Modal
-          title={surveyModal === 'new' ? 'Новый общий опрос' : 'Общий опрос'}
+          title={isDraftSurvey ? 'Новый общий опрос' : 'Общий опрос'}
           onClose={closeSurvey} onSave={saveSurvey} saving={savingSurvey}>
           <div className="form-grid">
             <div className="field full"><label>Название опросника *</label><input type="text" value={surveyForm.title || ''} onChange={e => setSurveyForm(f => ({ ...f, title: e.target.value }))} placeholder="Опрос удовлетворённости, июль 2026" /></div>
@@ -1285,31 +1320,41 @@ const PollsTab = () => {
             <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#aaa', cursor: 'pointer' }}><Toggle checked={!!surveyForm.is_active} onChange={v => setSurveyForm(f => ({ ...f, is_active: v }))} /> Активен</label>
           </div>
 
-          {surveyModal === 'new' ? (
-            <div style={{ marginTop: 12, fontSize: 13, color: 'var(--muted)' }}>
-              Сохраните опросник — после этого можно будет добавлять вопросы.
+          <div className="field" style={{ marginTop: 14 }}>
+            <label>Вопросы ({isDraftSurvey ? draftQuestions.length : surveyQuestions.length})</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {isDraftSurvey
+                ? draftQuestions.map((q, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 10, background: 'var(--s2)', border: '1px solid var(--border)' }}>
+                      <span style={{ color: 'var(--muted)', fontSize: 12, minWidth: 18 }}>{i + 1}.</span>
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{q.question}</span>
+                      <span className="badge badge-gray">{POLL_TYPES.find(t => t.value === q.type)?.label}</span>
+                      <button className="btn btn-outline btn-sm" onClick={() => openEditDraft(q, i)}>Изменить</button>
+                      <button className="btn btn-danger btn-sm" onClick={() => setDraftQuestions(l => l.filter((_, j) => j !== i))}>×</button>
+                    </div>
+                  ))
+                : surveyQuestions.map((q, i) => (
+                    <div key={q.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 10, background: 'var(--s2)', border: '1px solid var(--border)' }}>
+                      <span style={{ color: 'var(--muted)', fontSize: 12, minWidth: 18 }}>{i + 1}.</span>
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{q.question}</span>
+                      <span className="badge badge-gray">{POLL_TYPES.find(t => t.value === q.type)?.label}</span>
+                      <button type="button" className="stat-pill" title="Ответы"
+                        style={{ cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--s1)', color: 'var(--text)', font: 'inherit' }}
+                        onClick={() => openAnswers(q)}>💬 {q.poll_answers?.[0]?.count ?? 0}</button>
+                      <button className="btn btn-outline btn-sm" onClick={() => openEdit(q)}>Изменить</button>
+                      <button className="btn btn-danger btn-sm" onClick={() => remove(q.id, surveyForm.id)}>×</button>
+                    </div>
+                  ))}
+              {(isDraftSurvey ? draftQuestions : surveyQuestions).length === 0 &&
+                <div style={{ fontSize: 13, color: 'var(--muted)' }}>Вопросов пока нет</div>}
             </div>
-          ) : (
-            <div className="field" style={{ marginTop: 14 }}>
-              <label>Вопросы ({surveyQuestions.length})</label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {surveyQuestions.map((q, i) => (
-                  <div key={q.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 10, background: 'var(--s2)', border: '1px solid var(--border)' }}>
-                    <span style={{ color: 'var(--muted)', fontSize: 12, minWidth: 18 }}>{i + 1}.</span>
-                    <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{q.question}</span>
-                    <span className="badge badge-gray">{POLL_TYPES.find(t => t.value === q.type)?.label}</span>
-                    <button type="button" className="stat-pill" title="Ответы"
-                      style={{ cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--s1)', color: 'var(--text)', font: 'inherit' }}
-                      onClick={() => openAnswers(q)}>💬 {q.poll_answers?.[0]?.count ?? 0}</button>
-                    <button className="btn btn-outline btn-sm" onClick={() => openEdit(q)}>Изменить</button>
-                    <button className="btn btn-danger btn-sm" onClick={() => remove(q.id, surveyForm.id)}>×</button>
-                  </div>
-                ))}
-                {surveyQuestions.length === 0 && <div style={{ fontSize: 13, color: 'var(--muted)' }}>Вопросов пока нет</div>}
+            <button className="add-option" onClick={openNewQuestion}>+ Добавить вопрос</button>
+            {isDraftSurvey && (
+              <div style={{ marginTop: 8, fontSize: 12, color: 'var(--muted)' }}>
+                Вопросы сохранятся вместе с опросником — резиденты получат одно уведомление.
               </div>
-              <button className="add-option" onClick={openNewQuestion}>+ Добавить вопрос</button>
-            </div>
-          )}
+            )}
+          </div>
         </Modal>
       )}
 
@@ -1341,7 +1386,7 @@ const PollsTab = () => {
 
       {modal !== null && (
         <Modal
-          title={isQuestionOfSurvey
+          title={isSurveyQuestion
             ? (modal === 'new' ? 'Новый вопрос анкеты' : 'Редактировать вопрос')
             : (modal === 'new' ? 'Новый опрос' : 'Редактировать опрос')}
           onClose={close} onSave={save} saving={saving}>
@@ -1349,7 +1394,7 @@ const PollsTab = () => {
             <div className="field full"><label>Вопрос *</label><input type="text" value={form.question || ''} onChange={e => setForm(f => ({ ...f, question: e.target.value }))} /></div>
             <div className="field full"><label>Описание</label><textarea value={form.description || ''} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} /></div>
             <Field label="Тип ответа"><select value={form.type || 'single'} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>{POLL_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}</select></Field>
-            {isQuestionOfSurvey
+            {isSurveyQuestion
               ? <Field label="Порядок"><input type="number" value={form.sort_order ?? 0} onChange={e => setForm(f => ({ ...f, sort_order: parseInt(e.target.value) || 0 }))} /></Field>
               : <Field label="Активен до"><input type="datetime-local" value={form.ends_at || ''} onChange={e => setForm(f => ({ ...f, ends_at: e.target.value }))} /></Field>}
             <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#aaa', cursor: 'pointer' }}><Toggle checked={!!form.is_active} onChange={v => setForm(f => ({ ...f, is_active: v }))} /> Активен</label>
