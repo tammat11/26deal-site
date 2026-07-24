@@ -1023,24 +1023,50 @@ const PartnersTab = () => {
 // ─── POLLS TAB ────────────────────────────────────────────────────────────────
 
 const PollsTab = () => {
-  const [rows, setRows] = useState([]);
+  const [surveys, setSurveys] = useState([]);   // общие опросы (анкеты)
+  const [rows, setRows] = useState([]);         // одиночные опросы (survey_id = null)
   const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState(null);
+  const [modal, setModal] = useState(null);     // модалка вопроса / одиночного опроса
   const [form, setForm] = useState({});
   const [options, setOptions] = useState(['', '']);
   const [saving, setSaving] = useState(false);
 
+  // ── Общий опрос ──
+  const [surveyModal, setSurveyModal] = useState(null); // null | 'new' | row
+  const [surveyForm, setSurveyForm] = useState({});
+  const [surveyQuestions, setSurveyQuestions] = useState([]);
+  const [savingSurvey, setSavingSurvey] = useState(false);
+
   const load = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase.from('polls').select('*, poll_answers(count)').order('created_at', { ascending: false });
-    setRows(data || []);
+    const [s, p] = await Promise.all([
+      supabase.from('surveys').select('*, polls(count)').order('created_at', { ascending: false }),
+      supabase.from('polls').select('*, poll_answers(count)').is('survey_id', null).order('created_at', { ascending: false }),
+    ]);
+    setSurveys(s.data || []);
+    setRows(p.data || []);
     setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const blank = () => ({ question: '', description: '', type: 'single', is_active: true, ends_at: '' });
+  const loadSurveyQuestions = async (surveyId) => {
+    const { data } = await supabase.from('polls')
+      .select('*, poll_answers(count)').eq('survey_id', surveyId)
+      .order('sort_order', { ascending: true });
+    setSurveyQuestions(data || []);
+  };
+
+  // ── Одиночный опрос / вопрос анкеты ──
+  const blank = (surveyId = null, order = 0) => ({
+    question: '', description: '', type: 'single', is_active: true, ends_at: '',
+    survey_id: surveyId, sort_order: order,
+  });
   const openNew = () => { setForm(blank()); setOptions(['', '']); setModal('new'); };
+  const openNewQuestion = () => {
+    setForm(blank(surveyForm.id, surveyQuestions.length + 1));
+    setOptions(['', '']); setModal('new');
+  };
   const openEdit = r => {
     setForm({ ...r, ends_at: r.ends_at ? new Date(r.ends_at).toISOString().slice(0, 16) : '' });
     const opts = Array.isArray(r.options) ? r.options : [];
@@ -1050,25 +1076,40 @@ const PollsTab = () => {
   const close = () => { setModal(null); setForm({}); setOptions(['', '']); };
 
   const needsOptions = ['single', 'multiple'].includes(form.type);
+  const isQuestionOfSurvey = !!form.survey_id;
 
   const save = async () => {
     if (!form.question?.trim()) return showToast('Введите вопрос', 'err');
     if (needsOptions && options.filter(o => o.trim()).length < 2) return showToast('Минимум 2 варианта', 'err');
     setSaving(true);
     try {
-      const payload = { question: form.question, description: form.description || null, type: form.type, options: needsOptions ? options.filter(o => o.trim()) : [], is_active: !!form.is_active, ends_at: form.ends_at ? new Date(form.ends_at).toISOString() : null };
+      const payload = {
+        question: form.question,
+        description: form.description || null,
+        type: form.type,
+        options: needsOptions ? options.filter(o => o.trim()) : [],
+        is_active: !!form.is_active,
+        ends_at: form.ends_at ? new Date(form.ends_at).toISOString() : null,
+        survey_id: form.survey_id || null,
+        sort_order: form.sort_order || 0,
+      };
       if (modal === 'new') await supabase.from('polls').insert(payload);
       else await supabase.from('polls').update(payload).eq('id', form.id);
-      showToast(modal === 'new' ? 'Опрос создан' : 'Сохранено');
-      close(); load();
+      showToast(modal === 'new' ? 'Вопрос добавлен' : 'Сохранено');
+      const sid = form.survey_id;
+      close();
+      if (sid) await loadSurveyQuestions(sid);
+      load();
     } catch (e) { showToast('Ошибка: ' + e.message, 'err'); }
     setSaving(false);
   };
 
-  const remove = async id => {
-    if (!confirm('Удалить опрос и все ответы?')) return;
+  const remove = async (id, surveyId = null) => {
+    if (!confirm('Удалить и все ответы на него?')) return;
     await supabase.from('polls').delete().eq('id', id);
-    showToast('Удалено'); load();
+    showToast('Удалено');
+    if (surveyId) await loadSurveyQuestions(surveyId);
+    load();
   };
 
   const toggleActive = async (id, val) => {
@@ -1076,13 +1117,63 @@ const PollsTab = () => {
     setRows(r => r.map(x => x.id === id ? { ...x, is_active: val } : x));
   };
 
+  // ── Общий опрос: CRUD ──
+  const openSurveyNew = () => {
+    setSurveyForm({ title: '', description: '', is_active: true, ends_at: '' });
+    setSurveyQuestions([]); setSurveyModal('new');
+  };
+  const openSurveyEdit = async (r) => {
+    setSurveyForm({ ...r, ends_at: r.ends_at ? new Date(r.ends_at).toISOString().slice(0, 16) : '' });
+    setSurveyModal(r);
+    await loadSurveyQuestions(r.id);
+  };
+  const closeSurvey = () => { setSurveyModal(null); setSurveyForm({}); setSurveyQuestions([]); };
+
+  const saveSurvey = async () => {
+    if (!surveyForm.title?.trim()) return showToast('Введите название опросника', 'err');
+    setSavingSurvey(true);
+    try {
+      const payload = {
+        title: surveyForm.title,
+        description: surveyForm.description || null,
+        is_active: !!surveyForm.is_active,
+        ends_at: surveyForm.ends_at ? new Date(surveyForm.ends_at).toISOString() : null,
+      };
+      if (surveyModal === 'new') {
+        // Создаём и сразу открываем на редактирование, чтобы добавить вопросы.
+        const { data, error } = await supabase.from('surveys').insert(payload).select().single();
+        if (error) throw error;
+        showToast('Опросник создан — добавьте вопросы');
+        setSurveyForm({ ...data, ends_at: data.ends_at ? new Date(data.ends_at).toISOString().slice(0, 16) : '' });
+        setSurveyModal(data);
+        setSurveyQuestions([]);
+        load();
+      } else {
+        await supabase.from('surveys').update(payload).eq('id', surveyForm.id);
+        showToast('Сохранено');
+        closeSurvey(); load();
+      }
+    } catch (e) { showToast('Ошибка: ' + e.message, 'err'); }
+    setSavingSurvey(false);
+  };
+
+  const removeSurvey = async (id) => {
+    if (!confirm('Удалить опросник вместе со всеми вопросами и ответами?')) return;
+    await supabase.from('surveys').delete().eq('id', id);
+    showToast('Удалено'); load();
+  };
+
+  const toggleSurveyActive = async (id, val) => {
+    await supabase.from('surveys').update({ is_active: val }).eq('id', id);
+    setSurveys(s => s.map(x => x.id === id ? { ...x, is_active: val } : x));
+  };
+
   // ── Просмотр ответов ──
-  const [answersPoll, setAnswersPoll] = useState(null); // poll row | null
-  const [answers, setAnswers] = useState(null);         // null = загрузка
+  const [answersPoll, setAnswersPoll] = useState(null);
+  const [answers, setAnswers] = useState(null);
 
   const openAnswers = async (r) => {
     setAnswersPoll(r); setAnswers(null);
-    // Вью с именами резидентов; если её ещё нет в БД — падаем на сырую таблицу.
     let { data, error } = await supabase.from('poll_answers_with_resident')
       .select('*').eq('poll_id', r.id).order('created_at', { ascending: false });
     if (error) {
@@ -1093,8 +1184,6 @@ const PollsTab = () => {
     setAnswers(data || []);
   };
 
-  // Ответ хранится как jsonb: {value: "<индекс варианта>"} / {values:[...]} /
-  // текст / рейтинг — приводим к читаемому виду по списку вариантов опроса.
   const renderAnswer = (poll, ans) => {
     const opts = Array.isArray(poll.options) ? poll.options : [];
     const decode = v => {
@@ -1114,11 +1203,47 @@ const PollsTab = () => {
   return (
     <>
       <div className="section-head">
-        <div><div className="section-title">Опросы</div><div className="section-sub">{rows.length} опросов</div></div>
-        <button className="btn btn-gold" onClick={openNew}>+ Создать опрос</button>
+        <div>
+          <div className="section-title">Опросы</div>
+          <div className="section-sub">{surveys.length} общих · {rows.length} одиночных</div>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-gold" onClick={openSurveyNew}>+ Общий опрос</button>
+          <button className="btn btn-outline" onClick={openNew}>+ Одиночный опрос</button>
+        </div>
       </div>
 
+      {/* ── Общие опросы ── */}
+      <div className="tbl-wrap" style={{ marginBottom: 22 }}>
+        <div style={{ padding: '10px 14px', fontSize: 12, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--muted)' }}>Общие опросы</div>
+        <table>
+          <thead><tr><th>Название</th><th>Вопросов</th><th>Срок</th><th>Активен</th><th></th></tr></thead>
+          <tbody>
+            {surveys.map(s => (
+              <tr key={s.id}>
+                <td style={{ maxWidth: 320 }}>
+                  <div style={{ fontWeight: 600 }}>{s.title}</div>
+                  {s.description && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{s.description}</div>}
+                </td>
+                <td><span className="badge badge-gray">{s.polls?.[0]?.count ?? 0}</span></td>
+                <td style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>{s.ends_at ? new Date(s.ends_at).toLocaleDateString('ru') : '∞'}</td>
+                <td><Toggle checked={s.is_active} onChange={v => toggleSurveyActive(s.id, v)} /></td>
+                <td>
+                  <div className="td-actions">
+                    <button className="btn btn-outline btn-sm" onClick={() => openSurveyEdit(s)}>Вопросы</button>
+                    <button className="btn btn-danger btn-sm" onClick={() => removeSurvey(s.id)}>Удалить</button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {surveys.length === 0 && <div className="loading" style={{ color: 'var(--muted)' }}>Общие опросы не созданы</div>}
+      </div>
+
+      {/* ── Одиночные опросы ── */}
       <div className="tbl-wrap">
+        <div style={{ padding: '10px 14px', fontSize: 12, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--muted)' }}>Одиночные опросы</div>
         <table>
           <thead><tr><th>Вопрос</th><th>Тип</th><th>Ответов</th><th>Срок</th><th>Активен</th><th></th></tr></thead>
           <tbody>
@@ -1145,8 +1270,48 @@ const PollsTab = () => {
             ))}
           </tbody>
         </table>
-        {rows.length === 0 && <div className="loading" style={{ color: 'var(--muted)' }}>Опросы не созданы</div>}
+        {rows.length === 0 && <div className="loading" style={{ color: 'var(--muted)' }}>Одиночные опросы не созданы</div>}
       </div>
+
+      {/* ── Модалка общего опроса ── */}
+      {surveyModal !== null && (
+        <Modal
+          title={surveyModal === 'new' ? 'Новый общий опрос' : 'Общий опрос'}
+          onClose={closeSurvey} onSave={saveSurvey} saving={savingSurvey}>
+          <div className="form-grid">
+            <div className="field full"><label>Название опросника *</label><input type="text" value={surveyForm.title || ''} onChange={e => setSurveyForm(f => ({ ...f, title: e.target.value }))} placeholder="Опрос удовлетворённости, июль 2026" /></div>
+            <div className="field full"><label>Описание</label><textarea value={surveyForm.description || ''} onChange={e => setSurveyForm(f => ({ ...f, description: e.target.value }))} rows={2} placeholder="Короткое пояснение для резидентов" /></div>
+            <Field label="Активен до"><input type="datetime-local" value={surveyForm.ends_at || ''} onChange={e => setSurveyForm(f => ({ ...f, ends_at: e.target.value }))} /></Field>
+            <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#aaa', cursor: 'pointer' }}><Toggle checked={!!surveyForm.is_active} onChange={v => setSurveyForm(f => ({ ...f, is_active: v }))} /> Активен</label>
+          </div>
+
+          {surveyModal === 'new' ? (
+            <div style={{ marginTop: 12, fontSize: 13, color: 'var(--muted)' }}>
+              Сохраните опросник — после этого можно будет добавлять вопросы.
+            </div>
+          ) : (
+            <div className="field" style={{ marginTop: 14 }}>
+              <label>Вопросы ({surveyQuestions.length})</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {surveyQuestions.map((q, i) => (
+                  <div key={q.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 10, background: 'var(--s2)', border: '1px solid var(--border)' }}>
+                    <span style={{ color: 'var(--muted)', fontSize: 12, minWidth: 18 }}>{i + 1}.</span>
+                    <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{q.question}</span>
+                    <span className="badge badge-gray">{POLL_TYPES.find(t => t.value === q.type)?.label}</span>
+                    <button type="button" className="stat-pill" title="Ответы"
+                      style={{ cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--s1)', color: 'var(--text)', font: 'inherit' }}
+                      onClick={() => openAnswers(q)}>💬 {q.poll_answers?.[0]?.count ?? 0}</button>
+                    <button className="btn btn-outline btn-sm" onClick={() => openEdit(q)}>Изменить</button>
+                    <button className="btn btn-danger btn-sm" onClick={() => remove(q.id, surveyForm.id)}>×</button>
+                  </div>
+                ))}
+                {surveyQuestions.length === 0 && <div style={{ fontSize: 13, color: 'var(--muted)' }}>Вопросов пока нет</div>}
+              </div>
+              <button className="add-option" onClick={openNewQuestion}>+ Добавить вопрос</button>
+            </div>
+          )}
+        </Modal>
+      )}
 
       {answersPoll !== null && (
         <div className="overlay" onClick={e => e.target === e.currentTarget && setAnswersPoll(null)}>
@@ -1175,12 +1340,18 @@ const PollsTab = () => {
       )}
 
       {modal !== null && (
-        <Modal title={modal === 'new' ? 'Новый опрос' : 'Редактировать опрос'} onClose={close} onSave={save} saving={saving}>
+        <Modal
+          title={isQuestionOfSurvey
+            ? (modal === 'new' ? 'Новый вопрос анкеты' : 'Редактировать вопрос')
+            : (modal === 'new' ? 'Новый опрос' : 'Редактировать опрос')}
+          onClose={close} onSave={save} saving={saving}>
           <div className="form-grid">
             <div className="field full"><label>Вопрос *</label><input type="text" value={form.question || ''} onChange={e => setForm(f => ({ ...f, question: e.target.value }))} /></div>
             <div className="field full"><label>Описание</label><textarea value={form.description || ''} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} /></div>
             <Field label="Тип ответа"><select value={form.type || 'single'} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>{POLL_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}</select></Field>
-            <Field label="Активен до"><input type="datetime-local" value={form.ends_at || ''} onChange={e => setForm(f => ({ ...f, ends_at: e.target.value }))} /></Field>
+            {isQuestionOfSurvey
+              ? <Field label="Порядок"><input type="number" value={form.sort_order ?? 0} onChange={e => setForm(f => ({ ...f, sort_order: parseInt(e.target.value) || 0 }))} /></Field>
+              : <Field label="Активен до"><input type="datetime-local" value={form.ends_at || ''} onChange={e => setForm(f => ({ ...f, ends_at: e.target.value }))} /></Field>}
             <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#aaa', cursor: 'pointer' }}><Toggle checked={!!form.is_active} onChange={v => setForm(f => ({ ...f, is_active: v }))} /> Активен</label>
           </div>
           {needsOptions && (
