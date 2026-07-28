@@ -816,8 +816,10 @@ const NewsTab = () => {
         category: form.category || null, image_url,
         is_pinned: !!form.is_pinned, is_published: form.is_published !== false,
       };
-      if (modal === 'new') await supabase.from('news').insert(payload);
-      else await supabase.from('news').update(payload).eq('id', form.id);
+      const { error } = modal === 'new'
+        ? await supabase.from('news').insert(payload)
+        : await supabase.from('news').update(payload).eq('id', form.id);
+      if (error) throw error;
       showToast(modal === 'new' ? 'Новость добавлена' : 'Сохранено');
       close(); load();
     } catch (e) { showToast('Ошибка: ' + e.message, 'err'); }
@@ -826,12 +828,22 @@ const NewsTab = () => {
 
   const remove = async id => {
     if (!confirm('Удалить?')) return;
-    await supabase.from('news').delete().eq('id', id);
+    const { data, error } = await supabase
+      .from('news')
+      .delete()
+      .eq('id', id)
+      .select('id');
+    if (error) return showToast('Ошибка: ' + error.message, 'err');
+    if (!data?.length) return showToast('Новость не удалена: нет прав', 'err');
     showToast('Удалено'); load();
   };
 
   const togglePub = async (id, val) => {
-    await supabase.from('news').update({ is_published: val }).eq('id', id);
+    const { error } = await supabase
+      .from('news')
+      .update({ is_published: val })
+      .eq('id', id);
+    if (error) return showToast('Ошибка: ' + error.message, 'err');
     setRows(r => r.map(x => x.id === id ? { ...x, is_published: val } : x));
   };
 
