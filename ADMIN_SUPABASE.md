@@ -69,3 +69,7 @@ permissions for partners, polls or options.
 The existing website OTP flow still contains a `0000` bypass and a
 `localStorage` login flag. Remove both when the website receives proper
 server-side authentication.
+# Изменения админки
+
+- 2026-07-28: поле «Краткое описание» убрано из формы создания и
+  редактирования новостей. Основной контент вводится в «Текст новости».

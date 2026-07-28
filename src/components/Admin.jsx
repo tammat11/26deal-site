@@ -793,7 +793,7 @@ const NewsTab = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  const blank = () => ({ title: '', excerpt: '', body: '', category: '', is_pinned: false, is_published: true });
+  const blank = () => ({ title: '', body: '', category: '', is_pinned: false, is_published: true });
   const openNew = () => { setForm(blank()); setImageFile(null); setImagePreview(null); setModal('new'); };
   const openEdit = r => { setForm({ ...r }); setImageFile(null); setImagePreview(r.image_url || null); setModal(r); };
   const close = () => { setModal(null); setForm({}); };
@@ -916,7 +916,6 @@ const NewsTab = () => {
             <Field label="Категория"><input type="text" value={form.category || ''} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} placeholder="Клуб" /></Field>
             <Field label="Закреплена"><Toggle checked={!!form.is_pinned} onChange={v => setForm(f => ({ ...f, is_pinned: v }))} /></Field>
             <Field label="Опубликована"><Toggle checked={form.is_published !== false} onChange={v => setForm(f => ({ ...f, is_published: v }))} /></Field>
-            <div className="field full"><label>Краткое описание</label><textarea value={form.excerpt || ''} onChange={e => setForm(f => ({ ...f, excerpt: e.target.value }))} rows={2} /></div>
             <div className="field full"><label>Текст новости</label><textarea value={form.body || ''} onChange={e => setForm(f => ({ ...f, body: e.target.value }))} rows={6} /></div>
           </div>
         </Modal>
