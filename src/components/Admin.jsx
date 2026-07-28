@@ -816,11 +816,25 @@ const NewsTab = () => {
         category: form.category || null, image_url,
         is_pinned: !!form.is_pinned, is_published: form.is_published !== false,
       };
-      const { error } = modal === 'new'
+      const isNew = modal === 'new';
+      const { error } = isNew
         ? await supabase.from('news').insert(payload)
         : await supabase.from('news').update(payload).eq('id', form.id);
       if (error) throw error;
-      showToast(modal === 'new' ? 'Новость добавлена' : 'Сохранено');
+      if (isNew && payload.is_published) {
+        const pushResponse = await fetch('/api/news-push', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: payload.title }),
+        });
+        if (!pushResponse.ok) {
+          showToast('Новость добавлена, но push не отправлен', 'err');
+        } else {
+          showToast('Новость добавлена и уведомление отправлено');
+        }
+      } else {
+        showToast(isNew ? 'Новость добавлена' : 'Сохранено');
+      }
       close(); load();
     } catch (e) { showToast('Ошибка: ' + e.message, 'err'); }
     setSaving(false);
