@@ -92,6 +92,7 @@ const css = `
   .btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: 10px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity .15s, transform .1s; font-family: inherit; }
   .btn:hover { opacity: .85; }
   .btn:active { transform: scale(.97); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
   .btn-gold { background: var(--gold); color: #000; }
   .btn-outline { background: none; border: 1px solid var(--border); color: var(--text); }
   .btn-ghost { background: none; border: none; color: var(--muted); cursor: pointer; font-family: inherit; font-size: 12px; }
@@ -582,6 +583,7 @@ const EventsTab = () => {
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [rsvps, setRsvps] = useState(null); // null = not loaded, [] = loaded empty
+  const [sendingReminderId, setSendingReminderId] = useState(null);
   const fileRef = useRef();
 
   const load = useCallback(async () => {
@@ -651,6 +653,36 @@ const EventsTab = () => {
     setRows(r => r.map(x => x.id === id ? { ...x, is_published: val } : x));
   };
 
+  const reminderAvailableAt = event => {
+    const created = new Date(event.created_at).getTime();
+    return Number.isFinite(created) ? created + 48 * 60 * 60 * 1000 : Infinity;
+  };
+
+  const canSendReminder = event =>
+    event.is_published &&
+    event.date &&
+    new Date(event.date).getTime() > Date.now() &&
+    Date.now() >= reminderAvailableAt(event);
+
+  const sendReminder = async event => {
+    if (!canSendReminder(event)) return;
+    if (!confirm(`Отправить push-напоминание о мероприятии «${event.title}» всем резидентам?`)) return;
+    setSendingReminderId(event.id);
+    try {
+      const response = await fetch('/api/event-reminder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: event.title, date: event.date }),
+      });
+      if (!response.ok) throw new Error(await response.text());
+      showToast('Напоминание отправлено всем резидентам');
+    } catch (e) {
+      showToast('Не удалось отправить напоминание', 'err');
+    } finally {
+      setSendingReminderId(null);
+    }
+  };
+
   // Отметка явки: пишем в event_rsvps.attended (null = не отмечено),
   // счётчик «Мероприятий посещено» в приложении считается по этому полю.
   const setAttended = async (rsvpId, val) => {
@@ -688,6 +720,14 @@ const EventsTab = () => {
                 <td><Toggle checked={r.is_published} onChange={v => togglePub(r.id, v)} /></td>
                 <td>
                   <div className="td-actions">
+                    <button
+                      className="btn btn-gold btn-sm"
+                      disabled={!canSendReminder(r) || sendingReminderId === r.id}
+                      title={canSendReminder(r) ? 'Отправить push всем резидентам' : 'Доступно через 2 дня после публикации только для предстоящих событий'}
+                      onClick={() => sendReminder(r)}
+                    >
+                      {sendingReminderId === r.id ? 'Отправка…' : '🔔 Напомнить'}
+                    </button>
                     <button className="btn btn-outline btn-sm" onClick={() => openEdit(r)}>Редактировать</button>
                     <button className="btn btn-danger btn-sm" onClick={() => remove(r.id)}>Удалить</button>
                   </div>
