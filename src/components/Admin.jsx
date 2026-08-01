@@ -653,16 +653,10 @@ const EventsTab = () => {
     setRows(r => r.map(x => x.id === id ? { ...x, is_published: val } : x));
   };
 
-  const reminderAvailableAt = event => {
-    const created = new Date(event.created_at).getTime();
-    return Number.isFinite(created) ? created + 48 * 60 * 60 * 1000 : Infinity;
-  };
-
   const canSendReminder = event =>
     event.is_published &&
     event.date &&
-    new Date(event.date).getTime() > Date.now() &&
-    Date.now() >= reminderAvailableAt(event);
+    new Date(event.date).getTime() > Date.now();
 
   const sendReminder = async event => {
     if (!canSendReminder(event)) return;
@@ -723,7 +717,7 @@ const EventsTab = () => {
                     <button
                       className="btn btn-gold btn-sm"
                       disabled={!canSendReminder(r) || sendingReminderId === r.id}
-                      title={canSendReminder(r) ? 'Отправить push всем резидентам' : 'Доступно через 2 дня после публикации только для предстоящих событий'}
+                      title={canSendReminder(r) ? 'Отправить push всем резидентам' : 'Доступно для опубликованных предстоящих событий'}
                       onClick={() => sendReminder(r)}
                     >
                       {sendingReminderId === r.id ? 'Отправка…' : '🔔 Напомнить'}
