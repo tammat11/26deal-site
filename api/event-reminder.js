@@ -10,6 +10,9 @@ export default async function handler(req, res) {
 
   const title = String(req.body?.title || '').trim();
   const eventDate = new Date(req.body?.date);
+  const eventId = String(req.body?.eventId || '').trim();
+  const recipientMode = String(req.body?.recipientMode || 'all');
+  const residentIds = Array.isArray(req.body?.residentIds) ? req.body.residentIds : [];
   if (!title || Number.isNaN(eventDate.getTime())) {
     return res.status(400).json({ error: 'Title and date are required' });
   }
@@ -34,6 +37,9 @@ export default async function handler(req, res) {
     body: JSON.stringify({
       title: 'Напоминание о мероприятии',
       body: `«${title}» - ${dateText}`,
+      eventId,
+      recipientMode,
+      residentIds,
     }),
   });
 

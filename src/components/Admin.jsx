@@ -350,7 +350,7 @@ const Field = ({ label, children }) => (
   </div>
 );
 
-const Modal = ({ title, onClose, onSave, saving, children }) => (
+const Modal = ({ title, onClose, onSave, saving, saveLabel = 'Сохранить', children }) => (
   <div className="overlay" onClick={e => e.target === e.currentTarget && onClose()}>
     <div className="modal">
       <div className="modal-title">{title}</div>
@@ -358,7 +358,7 @@ const Modal = ({ title, onClose, onSave, saving, children }) => (
       <div className="modal-footer">
         <button className="btn btn-outline" onClick={onClose}>Отмена</button>
         <button className="btn btn-gold" onClick={onSave} disabled={saving}>
-          {saving ? <><span className="spinner" /> Сохранение…</> : 'Сохранить'}
+          {saving ? <><span className="spinner" /> Отправка…</> : saveLabel}
         </button>
       </div>
     </div>
@@ -584,6 +584,10 @@ const EventsTab = () => {
   const [imagePreview, setImagePreview] = useState(null);
   const [rsvps, setRsvps] = useState(null); // null = not loaded, [] = loaded empty
   const [sendingReminderId, setSendingReminderId] = useState(null);
+  const [reminderEvent, setReminderEvent] = useState(null);
+  const [recipientMode, setRecipientMode] = useState('all');
+  const [reminderResidents, setReminderResidents] = useState([]);
+  const [selectedResidentIds, setSelectedResidentIds] = useState([]);
   const fileRef = useRef();
 
   const load = useCallback(async () => {
@@ -658,18 +662,42 @@ const EventsTab = () => {
     event.date &&
     new Date(event.date).getTime() > Date.now();
 
-  const sendReminder = async event => {
+  const openReminder = async event => {
     if (!canSendReminder(event)) return;
-    if (!confirm(`Отправить push-напоминание о мероприятии «${event.title}» всем резидентам?`)) return;
+    setReminderEvent(event);
+    setRecipientMode('all');
+    setSelectedResidentIds([]);
+    const { data } = await supabase
+      .from('residents')
+      .select('id,name,company')
+      .eq('is_published', true)
+      .order('name');
+    setReminderResidents(data || []);
+  };
+
+  const sendReminder = async () => {
+    const event = reminderEvent;
+    if (!event || !canSendReminder(event)) return;
+    if (recipientMode === 'selected' && selectedResidentIds.length === 0) {
+      return showToast('Выберите хотя бы одного резидента', 'err');
+    }
     setSendingReminderId(event.id);
     try {
       const response = await fetch('/api/event-reminder', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: event.title, date: event.date }),
+        body: JSON.stringify({
+          title: event.title,
+          date: event.date,
+          eventId: event.id,
+          recipientMode,
+          residentIds: recipientMode === 'selected' ? selectedResidentIds : [],
+        }),
       });
       if (!response.ok) throw new Error(await response.text());
-      showToast('Напоминание отправлено всем резидентам');
+      const result = await response.json();
+      showToast(`Напоминание отправлено: ${result.sent || 0}`);
+      setReminderEvent(null);
     } catch (e) {
       showToast('Не удалось отправить напоминание', 'err');
     } finally {
@@ -718,7 +746,7 @@ const EventsTab = () => {
                       className="btn btn-gold btn-sm"
                       disabled={!canSendReminder(r) || sendingReminderId === r.id}
                       title={canSendReminder(r) ? 'Отправить push всем резидентам' : 'Доступно для опубликованных предстоящих событий'}
-                      onClick={() => sendReminder(r)}
+                      onClick={() => openReminder(r)}
                     >
                       {sendingReminderId === r.id ? 'Отправка…' : '🔔 Напомнить'}
                     </button>
@@ -798,6 +826,44 @@ const EventsTab = () => {
                   );
                 })
               )}
+            </div>
+          )}
+        </Modal>
+      )}
+
+      {reminderEvent && (
+        <Modal
+          title={`Напомнить: ${reminderEvent.title}`}
+          onClose={() => setReminderEvent(null)}
+          onSave={sendReminder}
+          saving={sendingReminderId === reminderEvent.id}
+          saveLabel="Отправить push"
+        >
+          <div style={{ display: 'grid', gap: 10 }}>
+            {[
+              ['going', 'Тем, кто идёт на мероприятие'],
+              ['not_going', 'Тем, кто не идёт'],
+              ['selected', 'Выборочно'],
+              ['all', 'Всем резидентам'],
+            ].map(([value, label]) => (
+              <label key={value} style={{ display: 'flex', gap: 10, alignItems: 'center', cursor: 'pointer' }}>
+                <input type="radio" name="recipientMode" value={value} checked={recipientMode === value} onChange={() => setRecipientMode(value)} />
+                <span>{label}</span>
+              </label>
+            ))}
+          </div>
+          {recipientMode === 'selected' && (
+            <div style={{ marginTop: 16, maxHeight: 260, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 10, padding: 10 }}>
+              {reminderResidents.map(resident => (
+                <label key={resident.id} style={{ display: 'flex', gap: 10, padding: '7px 4px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedResidentIds.includes(resident.id)}
+                    onChange={e => setSelectedResidentIds(ids => e.target.checked ? [...ids, resident.id] : ids.filter(id => id !== resident.id))}
+                  />
+                  <span>{resident.name}{resident.company ? ` - ${resident.company}` : ''}</span>
+                </label>
+              ))}
             </div>
           )}
         </Modal>
