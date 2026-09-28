@@ -1,6 +1,14 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Cropper from 'react-easy-crop';
 import { supabase } from '../lib/supabase';
+import { Toggle, Field, Modal, Empty } from './admin/ui';
+import { showToast } from './admin/helpers';
+import { RatingTab } from './admin/RatingTab';
+import { GroupsTab } from './admin/GroupsTab';
+import { AttendancePanel } from './admin/AttendancePanel';
+import { SurveyAnalytics } from './admin/SurveyAnalytics';
+import { answerText } from './admin/answers';
+import { EVENT_CATEGORIES, defaultPointsFor, categoryLabel } from './admin/points';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -12,6 +20,8 @@ const TABS = [
   { id: 'news',            label: 'Новости',         icon: '📰' },
   { id: 'partners',        label: 'Партнёры',        icon: '🤝' },
   { id: 'polls',           label: 'Опросы',          icon: '📊' },
+  { id: 'rating',          label: 'Рейтинг',         icon: '🏆' },
+  { id: 'groups',          label: 'Группы',          icon: '👥' },
   { id: 'president',       label: 'Президент',       icon: '👑' },
   { id: 'access-requests', label: 'Заявки на доступ', icon: '🔑' },
 ];
@@ -30,8 +40,33 @@ const POLL_TYPES = [
   { value: 'single',   label: 'Один вариант' },
   { value: 'multiple', label: 'Несколько вариантов' },
   { value: 'text',     label: 'Текстовый ответ' },
-  { value: 'rating',   label: 'Рейтинг 1–5' },
+  { value: 'rating',   label: 'Оценка по шкале' },
+  { value: 'nps',      label: 'NPS 0–10' },
 ];
+
+const SURVEY_KINDS = [
+  { value: 'poll',         label: 'Голосование' },
+  { value: 'pre_board',    label: 'Анкета перед СД' },
+  { value: 'pre_forum',    label: 'Анкета перед Форумом' },
+  { value: 'registration', label: 'Регистрация / подтверждение участия' },
+  { value: 'requests',     label: 'Сбор запросов на мероприятия' },
+  { value: 'nps',          label: 'NPS' },
+  { value: 'feedback',     label: 'Обратная связь после мероприятия' },
+  { value: 'other',        label: 'Другое' },
+];
+
+const AUDIENCES = [
+  { value: 'all',      label: 'Всем резидентам' },
+  { value: 'selected', label: 'Выбранным резидентам' },
+  { value: 'event',    label: 'Участникам мероприятия' },
+  { value: 'group',    label: 'Группе / Форуму' },
+];
+
+const toLocalInput = d => {
+  if (!d) return '';
+  const x = new Date(d);
+  return new Date(x.getTime() - x.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+};
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
@@ -224,16 +259,6 @@ const css = `
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-let toastTimer;
-function showToast(msg, type = 'ok') {
-  const t = document.getElementById('__toast');
-  if (!t) return;
-  t.textContent = msg;
-  t.className = `toast show ${type}`;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.className = 'toast'; }, 2800);
-}
-
 async function uploadImage(file, folder = 'misc') {
   const ext = file.name.split('.').pop();
   const path = `${folder}/${Date.now()}.${ext}`;
@@ -332,45 +357,6 @@ const CropModal = ({ file, aspect = 3 / 4, onCancel, onDone }) => {
     </div>
   );
 };
-
-// ─── Subcomponents ────────────────────────────────────────────────────────────
-
-const Toggle = ({ checked, onChange }) => (
-  <label className="toggle">
-    <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} />
-    <div className="toggle-track" />
-    <div className="toggle-thumb" />
-  </label>
-);
-
-const Field = ({ label, children }) => (
-  <div className="field">
-    <label>{label}</label>
-    {children}
-  </div>
-);
-
-const Modal = ({ title, onClose, onSave, saving, saveLabel = 'Сохранить', children }) => (
-  <div className="overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-    <div className="modal">
-      <div className="modal-title">{title}</div>
-      {children}
-      <div className="modal-footer">
-        <button className="btn btn-outline" onClick={onClose}>Отмена</button>
-        <button className="btn btn-gold" onClick={onSave} disabled={saving}>
-          {saving ? <><span className="spinner" /> Отправка…</> : saveLabel}
-        </button>
-      </div>
-    </div>
-  </div>
-);
-
-const Empty = ({ icon, text }) => (
-  <div className="empty">
-    <div className="empty-icon">{icon}</div>
-    <div>{text}</div>
-  </div>
-);
 
 // ─── RESIDENTS TAB ────────────────────────────────────────────────────────────
 
@@ -572,7 +558,6 @@ const ResidentsTab = () => {
 
 // ─── EVENTS TAB ───────────────────────────────────────────────────────────────
 
-const RSVP_LABELS = { going: 'Идут', maybe: 'Возможно', not_going: 'Не идут' };
 
 const EventsTab = () => {
   const [rows, setRows] = useState([]);
@@ -599,7 +584,7 @@ const EventsTab = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  const blank = () => ({ title: '', description: '', date: '', time: '', location: '', speaker_name: '', speaker_role: '', capacity: '', tags: '', is_published: true });
+  const blank = () => ({ title: '', description: '', date: '', time: '', location: '', speaker_name: '', speaker_role: '', capacity: '', tags: '', is_published: true, category: 'business', points: 100, champion_points: 300 });
   const openNew = () => { setForm(blank()); setImageFile(null); setImagePreview(null); setRsvps(null); setModal('new'); };
   const openEdit = r => {
     const d = r.date ? new Date(r.date) : null;
@@ -637,7 +622,14 @@ const EventsTab = () => {
         capacity: form.capacity ? parseInt(form.capacity) : null,
         tags,
         is_published: form.is_published !== false,
+        category: form.category || 'business',
+        points: parseInt(form.points) || 0,
+        champion_points: parseInt(form.champion_points) || 0,
       };
+      // До применения миграции баллов этих колонок нет — сохраняем без них.
+      if (!('category' in (rows[0] || { category: 1 }))) {
+        delete payload.category; delete payload.points; delete payload.champion_points;
+      }
       if (modal === 'new') await supabase.from('events').insert(payload);
       else await supabase.from('events').update(payload).eq('id', form.id);
       showToast(modal === 'new' ? 'Мероприятие добавлено' : 'Сохранено');
@@ -705,14 +697,6 @@ const EventsTab = () => {
     }
   };
 
-  // Отметка явки: пишем в event_rsvps.attended (null = не отмечено),
-  // счётчик «Мероприятий посещено» в приложении считается по этому полю.
-  const setAttended = async (rsvpId, val) => {
-    const { error } = await supabase.from('event_rsvps').update({ attended: val }).eq('id', rsvpId);
-    if (error) return showToast('Ошибка: ' + error.message, 'err');
-    setRsvps(list => (list || []).map(x => x.id === rsvpId ? { ...x, attended: val } : x));
-  };
-
   if (loading) return <div className="loading"><span className="spinner" /></div>;
 
   return (
@@ -727,7 +711,7 @@ const EventsTab = () => {
 
       <div className="tbl-wrap">
         <table>
-          <thead><tr><th>Фото</th><th>Название</th><th>Дата</th><th>Статус</th><th></th></tr></thead>
+          <thead><tr><th>Фото</th><th>Название</th><th>Дата</th><th>Баллы</th><th>Статус</th><th></th></tr></thead>
           <tbody>
             {rows.map(r => (
               <tr key={r.id}>
@@ -739,6 +723,7 @@ const EventsTab = () => {
                 </td>
                 <td style={{ fontWeight: 600, maxWidth: 280 }}><div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 260 }}>{r.title}</div></td>
                 <td style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>{r.date ? new Date(r.date).toLocaleString('ru', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}</td>
+                <td>{r.points != null ? <span className="badge badge-gold" title={categoryLabel(r.category)}>{r.points}</span> : '—'}</td>
                 <td><Toggle checked={r.is_published} onChange={v => togglePub(r.id, v)} /></td>
                 <td>
                   <div className="td-actions">
@@ -780,51 +765,25 @@ const EventsTab = () => {
             <Field label="Роль организатора"><input type="text" value={form.speaker_role || ''} onChange={e => setForm(f => ({ ...f, speaker_role: e.target.value }))} placeholder="Президент клуба" /></Field>
             <Field label="Вместимость (мест)"><input type="number" min="0" value={form.capacity || ''} onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))} placeholder="50" /></Field>
             <Field label="Опубликован"><Toggle checked={form.is_published !== false} onChange={v => setForm(f => ({ ...f, is_published: v }))} /></Field>
+            <div className="field full"><label>Категория (для рейтинга)</label>
+              <select value={form.category || 'business'} onChange={e => setForm(f => ({ ...f, category: e.target.value, points: defaultPointsFor(e.target.value) }))}>
+                {EVENT_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label} — {c.points} баллов</option>)}
+              </select>
+            </div>
+            <Field label="Баллы за посещение"><input type="number" min="0" value={form.points ?? ''} onChange={e => setForm(f => ({ ...f, points: e.target.value }))} /></Field>
+            <Field label="Баллы за чемпионство"><input type="number" min="0" value={form.champion_points ?? ''} onChange={e => setForm(f => ({ ...f, champion_points: e.target.value }))} /></Field>
             <div className="field full"><label>Участники (резиденты)</label><input type="text" value={form.tags || ''} onChange={e => setForm(f => ({ ...f, tags: e.target.value }))} placeholder="Через запятую: Ларион Лян, Тимур Нуртаев" /></div>
             <div className="field full"><label>Описание</label><textarea value={form.description || ''} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={4} /></div>
           </div>
 
           {modal !== 'new' && (
             <div style={{ marginTop: 18, paddingTop: 18, borderTop: '1px solid var(--border)' }}>
-              <label style={{ display: 'block', marginBottom: 10 }}>Кто идёт (из приложения)</label>
-              {rsvps === null ? (
-                <div style={{ color: 'var(--muted)', fontSize: 13 }}>Загрузка…</div>
-              ) : rsvps.length === 0 ? (
-                <div style={{ color: 'var(--muted)', fontSize: 13 }}>Пока никто не ответил</div>
-              ) : (
-                ['going', 'maybe', 'not_going'].map(status => {
-                  const list = rsvps.filter(r => r.status === status);
-                  if (list.length === 0) return null;
-                  return (
-                    <div key={status} style={{ marginBottom: 10 }}>
-                      <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>
-                        {RSVP_LABELS[status] || status} ({list.length})
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        {list.map(r => (
-                          <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, background: 'var(--s2)', border: '1px solid var(--border)' }}>
-                            <span style={{ fontSize: 12, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {r.name}{r.company ? ` · ${r.company}` : ''}
-                            </span>
-                            <button
-                              type="button"
-                              className={r.attended === true ? 'btn btn-gold btn-sm' : 'btn btn-outline btn-sm'}
-                              onClick={() => setAttended(r.id, r.attended === true ? null : true)}
-                            >Пришёл</button>
-                            <button
-                              type="button"
-                              className="btn btn-sm"
-                              style={r.attended === false
-                                ? { background: 'rgba(255,80,80,.18)', border: '1px solid rgba(255,80,80,.5)', color: '#ff7b7b' }
-                                : { background: 'none', border: '1px solid var(--border)', color: 'var(--muted)' }}
-                              onClick={() => setAttended(r.id, r.attended === false ? null : false)}
-                            >Не пришёл</button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })
+              <label style={{ display: 'block', marginBottom: 10 }}>Посещение и баллы</label>
+              <AttendancePanel event={modal} />
+              {rsvps && rsvps.length > 0 && (
+                <div style={{ marginTop: 8, fontSize: 12, color: 'var(--muted)' }}>
+                  Записались в приложении: {rsvps.filter(r => r.status === 'going' || r.status === 'with_family').length} идут · {rsvps.filter(r => r.status === 'maybe').length} возможно · {rsvps.filter(r => r.status === 'not_going').length} не идут
+                </div>
               )}
             </div>
           )}
@@ -1162,6 +1121,10 @@ const PollsTab = () => {
   const [surveyQuestions, setSurveyQuestions] = useState([]); // сохранённые вопросы
   const [draftQuestions, setDraftQuestions] = useState([]);   // черновик (новый опросник)
   const [savingSurvey, setSavingSurvey] = useState(false);
+  const [surveyTargets, setSurveyTargets] = useState([]);     // выбранные резиденты
+  const [audienceData, setAudienceData] = useState({ residents: [], events: [], groups: [] });
+  const [targetQuery, setTargetQuery] = useState('');
+  const [analyticsSurvey, setAnalyticsSurvey] = useState(null);
 
   const isDraftSurvey = surveyModal === 'new';
 
@@ -1188,10 +1151,8 @@ const PollsTab = () => {
   // ── Вопрос / одиночный опрос ──
   const blank = (extra = {}) => ({
     question: '', description: '', type: 'single', is_active: true, ends_at: '',
-    survey_id: null, sort_order: 0, ...extra,
+    survey_id: null, sort_order: 0, is_required: true, scale_max: 5, ...extra,
   });
-  const openNew = () => { setForm(blank()); setOptions(['', '']); setModal('new'); };
-
   // Добавление вопроса: в черновик (новый опросник) или сразу в БД (сохранённый).
   const openNewQuestion = () => {
     if (isDraftSurvey) {
@@ -1203,7 +1164,7 @@ const PollsTab = () => {
   };
 
   const openEdit = r => {
-    setForm({ ...r, ends_at: r.ends_at ? new Date(r.ends_at).toISOString().slice(0, 16) : '' });
+    setForm({ ...r, ends_at: toLocalInput(r.ends_at) });
     const opts = Array.isArray(r.options) ? r.options : [];
     setOptions(opts.length ? opts : ['', '']);
     setModal(r);
@@ -1231,6 +1192,8 @@ const PollsTab = () => {
         options: needsOptions ? options.filter(o => o.trim()) : [],
         is_active: !!form.is_active,
         sort_order: form.sort_order || 0,
+        is_required: form.is_required !== false,
+        scale_max: form.type === 'rating' ? (parseInt(form.scale_max) || 5) : 5,
       };
       setDraftQuestions(list => form.__idx === null || form.__idx === undefined
         ? [...list, q]
@@ -1250,9 +1213,13 @@ const PollsTab = () => {
         ends_at: form.ends_at ? new Date(form.ends_at).toISOString() : null,
         survey_id: form.survey_id || null,
         sort_order: form.sort_order || 0,
+        is_required: form.is_required !== false,
+        scale_max: form.type === 'rating' ? (parseInt(form.scale_max) || 5) : 5,
       };
-      if (modal === 'new') await supabase.from('polls').insert(payload);
-      else await supabase.from('polls').update(payload).eq('id', form.id);
+      const { error } = modal === 'new'
+        ? await supabase.from('polls').insert(payload)
+        : await supabase.from('polls').update(payload).eq('id', form.id);
+      if (error) throw error;
       showToast(modal === 'new' ? 'Вопрос добавлен' : 'Сохранено');
       const sid = form.survey_id;
       close();
@@ -1276,43 +1243,90 @@ const PollsTab = () => {
   };
 
   // ── Общий опрос: CRUD ──
+  const loadAudienceData = async () => {
+    const [r, e, g] = await Promise.all([
+      supabase.from('residents').select('id,name,company').eq('is_published', true).order('name'),
+      supabase.from('events').select('id,title,date').order('date', { ascending: false }).limit(60),
+      supabase.from('resident_groups').select('id,name').order('name'),
+    ]);
+    setAudienceData({ residents: r.data || [], events: e.data || [], groups: g.data || [] });
+  };
+
   const openSurveyNew = () => {
-    setSurveyForm({ title: '', description: '', is_active: true, ends_at: '' });
-    setSurveyQuestions([]); setDraftQuestions([]); setSurveyModal('new');
+    setSurveyForm({
+      title: '', description: '', is_active: true, ends_at: '', starts_at: '',
+      kind: 'poll', audience: 'all', audience_event_id: '', audience_group_id: '',
+      is_mandatory: false, is_anonymous: false,
+    });
+    setSurveyQuestions([]); setDraftQuestions([]); setSurveyTargets([]); setTargetQuery('');
+    setSurveyModal('new'); loadAudienceData();
   };
   const openSurveyEdit = async (r) => {
-    setSurveyForm({ ...r, ends_at: r.ends_at ? new Date(r.ends_at).toISOString().slice(0, 16) : '' });
-    setDraftQuestions([]); setSurveyModal(r);
+    setSurveyForm({
+      ...r,
+      ends_at: toLocalInput(r.ends_at), starts_at: toLocalInput(r.starts_at),
+      kind: r.kind || 'poll', audience: r.audience || 'all',
+      audience_event_id: r.audience_event_id || '', audience_group_id: r.audience_group_id || '',
+    });
+    setDraftQuestions([]); setSurveyTargets([]); setTargetQuery(''); setSurveyModal(r);
+    loadAudienceData();
+    supabase.from('survey_targets').select('resident_id').eq('survey_id', r.id)
+      .then(({ data }) => setSurveyTargets((data || []).map(x => x.resident_id)));
     await loadSurveyQuestions(r.id);
   };
   const closeSurvey = () => {
     setSurveyModal(null); setSurveyForm({});
-    setSurveyQuestions([]); setDraftQuestions([]);
+    setSurveyQuestions([]); setDraftQuestions([]); setSurveyTargets([]);
+  };
+
+  const saveTargets = async surveyId => {
+    const { error: delErr } = await supabase.from('survey_targets').delete().eq('survey_id', surveyId);
+    if (delErr) throw delErr;
+    if (surveyForm.audience === 'selected' && surveyTargets.length) {
+      const { error } = await supabase.from('survey_targets')
+        .insert(surveyTargets.map(resident_id => ({ survey_id: surveyId, resident_id })));
+      if (error) throw error;
+    }
   };
 
   const saveSurvey = async () => {
-    if (!surveyForm.title?.trim()) return showToast('Введите название опросника', 'err');
+    const f = surveyForm;
+    if (!f.title?.trim()) return showToast('Введите название опросника', 'err');
     if (isDraftSurvey && draftQuestions.length === 0) return showToast('Добавьте хотя бы один вопрос', 'err');
+    if (f.audience === 'selected' && surveyTargets.length === 0) return showToast('Выберите получателей', 'err');
+    if (f.audience === 'event' && !f.audience_event_id) return showToast('Выберите мероприятие', 'err');
+    if (f.audience === 'group' && !f.audience_group_id) return showToast('Выберите группу', 'err');
+    if (f.starts_at && f.ends_at && new Date(f.ends_at) <= new Date(f.starts_at)) return showToast('Дедлайн раньше даты начала', 'err');
     setSavingSurvey(true);
     try {
       const payload = {
-        title: surveyForm.title,
-        description: surveyForm.description || null,
-        is_active: !!surveyForm.is_active,
-        ends_at: surveyForm.ends_at ? new Date(surveyForm.ends_at).toISOString() : null,
+        title: f.title,
+        description: f.description || null,
+        is_active: !!f.is_active,
+        ends_at: f.ends_at ? new Date(f.ends_at).toISOString() : null,
+        starts_at: f.starts_at ? new Date(f.starts_at).toISOString() : null,
+        kind: f.kind || 'poll',
+        audience: f.audience || 'all',
+        audience_event_id: f.audience === 'event' ? f.audience_event_id : null,
+        audience_group_id: f.audience === 'group' ? f.audience_group_id : null,
+        is_mandatory: !!f.is_mandatory,
+        is_anonymous: !!f.is_anonymous,
       };
       if (isDraftSurvey) {
-        // 1) создаём опросник, 2) пишем все вопросы разом, 3) «касаемся»
-        // опросника — это и отправляет ОДНО уведомление резидентам.
+        // 1) создаём опросник, 2) вопросы и получателей, 3) «касаемся»
+        // опросника — это и отправляет ОДНО уведомление его аудитории.
         const { data: created, error } = await supabase.from('surveys').insert(payload).select().single();
         if (error) throw error;
         const qs = draftQuestions.map((q, i) => ({ ...q, survey_id: created.id, sort_order: q.sort_order || i + 1 }));
         const { error: qErr } = await supabase.from('polls').insert(qs);
         if (qErr) throw qErr;
+        await saveTargets(created.id);
         await supabase.from('surveys').update({ title: created.title }).eq('id', created.id);
-        showToast('Опросник создан');
+        showToast(payload.starts_at && new Date(payload.starts_at) > new Date() ? 'Опросник создан — уведомление уйдёт в дату старта' : 'Опросник создан');
       } else {
-        await supabase.from('surveys').update(payload).eq('id', surveyForm.id);
+        await saveTargets(f.id);
+        const { error } = await supabase.from('surveys').update(payload).eq('id', f.id);
+        if (error) throw error;
         showToast('Сохранено');
       }
       closeSurvey(); load();
@@ -1347,19 +1361,7 @@ const PollsTab = () => {
     setAnswers(data || []);
   };
 
-  const renderAnswer = (poll, ans) => {
-    const opts = Array.isArray(poll.options) ? poll.options : [];
-    const decode = v => {
-      const i = parseInt(v, 10);
-      return Number.isInteger(i) && opts[i] !== undefined ? opts[i] : String(v);
-    };
-    const a = ans.answer || {};
-    if (Array.isArray(a.values)) return a.values.map(decode).join(', ');
-    if (a.value === undefined || a.value === null) return '—';
-    if (poll.type === 'rating') return `${a.value} / 5`;
-    if (poll.type === 'text') return String(a.value);
-    return decode(a.value);
-  };
+  const renderAnswer = answerText;
 
   if (loading) return <div className="loading"><span className="spinner" /></div>;
 
@@ -1368,31 +1370,38 @@ const PollsTab = () => {
       <div className="section-head">
         <div>
           <div className="section-title">Опросы</div>
-          <div className="section-sub">{surveys.length} общих · {rows.length} одиночных</div>
+          <div className="section-sub">{surveys.length} анкет{rows.length ? ` · ${rows.length} одиночных (старый формат)` : ''}</div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-gold" onClick={openSurveyNew}>+ Общий опрос</button>
-          <button className="btn btn-outline" onClick={openNew}>+ Одиночный опрос</button>
+          <button className="btn btn-gold" onClick={openSurveyNew}>+ Опрос / анкета</button>
         </div>
       </div>
 
       <div className="tbl-wrap" style={{ marginBottom: 22 }}>
-        <div style={{ padding: '10px 14px', fontSize: 12, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--muted)' }}>Общие опросы</div>
+        <div style={{ padding: '10px 14px', fontSize: 12, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--muted)' }}>Опросы и анкеты</div>
         <table>
-          <thead><tr><th>Название</th><th>Вопросов</th><th>Срок</th><th>Активен</th><th></th></tr></thead>
+          <thead><tr><th>Название</th><th>Аудитория</th><th>Вопросов</th><th>Период</th><th>Активен</th><th></th></tr></thead>
           <tbody>
             {surveys.map(s => (
               <tr key={s.id}>
                 <td style={{ maxWidth: 320 }}>
                   <div style={{ fontWeight: 600 }}>{s.title}</div>
-                  {s.description && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{s.description}</div>}
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+                    <span className="badge badge-gray">{SURVEY_KINDS.find(k => k.value === (s.kind || 'poll'))?.label}</span>
+                    {s.is_mandatory && <span className="badge badge-red">Обязательный</span>}
+                    {s.is_anonymous && <span className="badge badge-gold">Анонимный</span>}
+                  </div>
                 </td>
+                <td style={{ color: 'var(--muted)', fontSize: 12 }}>{AUDIENCES.find(a => a.value === (s.audience || 'all'))?.label}</td>
                 <td><span className="badge badge-gray">{s.polls?.[0]?.count ?? 0}</span></td>
-                <td style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>{s.ends_at ? new Date(s.ends_at).toLocaleDateString('ru') : '∞'}</td>
+                <td style={{ color: 'var(--muted)', whiteSpace: 'nowrap', fontSize: 12 }}>
+                  {s.starts_at ? new Date(s.starts_at).toLocaleDateString('ru') : 'сразу'} → {s.ends_at ? new Date(s.ends_at).toLocaleDateString('ru') : '∞'}
+                </td>
                 <td><Toggle checked={s.is_active} onChange={v => toggleSurveyActive(s.id, v)} /></td>
                 <td>
                   <div className="td-actions">
-                    <button className="btn btn-outline btn-sm" onClick={() => openSurveyEdit(s)}>Вопросы</button>
+                    <button className="btn btn-gold btn-sm" onClick={() => setAnalyticsSurvey(s)}>📊 Аналитика</button>
+                    <button className="btn btn-outline btn-sm" onClick={() => openSurveyEdit(s)}>Изменить</button>
                     <button className="btn btn-danger btn-sm" onClick={() => removeSurvey(s.id)}>Удалить</button>
                   </div>
                 </td>
@@ -1404,7 +1413,7 @@ const PollsTab = () => {
       </div>
 
       <div className="tbl-wrap">
-        <div style={{ padding: '10px 14px', fontSize: 12, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--muted)' }}>Одиночные опросы</div>
+        <div style={{ padding: '10px 14px', fontSize: 12, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--muted)' }}>Одиночные опросы (старый формат)</div>
         <table>
           <thead><tr><th>Вопрос</th><th>Тип</th><th>Ответов</th><th>Срок</th><th>Активен</th><th></th></tr></thead>
           <tbody>
@@ -1441,9 +1450,50 @@ const PollsTab = () => {
           <div className="form-grid">
             <div className="field full"><label>Название опросника *</label><input type="text" value={surveyForm.title || ''} onChange={e => setSurveyForm(f => ({ ...f, title: e.target.value }))} placeholder="Опрос удовлетворённости, июль 2026" /></div>
             <div className="field full"><label>Описание</label><textarea value={surveyForm.description || ''} onChange={e => setSurveyForm(f => ({ ...f, description: e.target.value }))} rows={2} placeholder="Короткое пояснение для резидентов" /></div>
-            <Field label="Активен до"><input type="datetime-local" value={surveyForm.ends_at || ''} onChange={e => setSurveyForm(f => ({ ...f, ends_at: e.target.value }))} /></Field>
+            <Field label="Вид"><select value={surveyForm.kind || 'poll'} onChange={e => setSurveyForm(f => ({ ...f, kind: e.target.value, is_anonymous: e.target.value === 'nps' ? true : f.is_anonymous }))}>{SURVEY_KINDS.map(k => <option key={k.value} value={k.value}>{k.label}</option>)}</select></Field>
+            <Field label="Аудитория"><select value={surveyForm.audience || 'all'} onChange={e => setSurveyForm(f => ({ ...f, audience: e.target.value }))}>{AUDIENCES.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}</select></Field>
+            {surveyForm.audience === 'event' && (
+              <div className="field full"><label>Мероприятие</label>
+                <select value={surveyForm.audience_event_id || ''} onChange={e => setSurveyForm(f => ({ ...f, audience_event_id: e.target.value }))}>
+                  <option value="">— выберите —</option>
+                  {audienceData.events.map(ev => <option key={ev.id} value={ev.id}>{ev.date ? new Date(ev.date).toLocaleDateString('ru') + ' · ' : ''}{ev.title.slice(0, 80)}</option>)}
+                </select>
+              </div>
+            )}
+            {surveyForm.audience === 'group' && (
+              <div className="field full"><label>Группа / Форум</label>
+                <select value={surveyForm.audience_group_id || ''} onChange={e => setSurveyForm(f => ({ ...f, audience_group_id: e.target.value }))}>
+                  <option value="">— выберите —</option>
+                  {audienceData.groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                </select>
+                {audienceData.groups.length === 0 && <div style={{ fontSize: 12, color: 'var(--muted)' }}>Групп нет — создайте их в разделе «Группы»</div>}
+              </div>
+            )}
+            {surveyForm.audience === 'selected' && (
+              <div className="field full"><label>Получатели ({surveyTargets.length})</label>
+                <input type="text" placeholder="Поиск" value={targetQuery} onChange={e => setTargetQuery(e.target.value)} />
+                <div style={{ maxHeight: 200, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 10, padding: 8, marginTop: 6 }}>
+                  {audienceData.residents
+                    .filter(r => !targetQuery.trim() || `${r.name} ${r.company || ''}`.toLowerCase().includes(targetQuery.trim().toLowerCase()))
+                    .map(r => (
+                      <label key={r.id} style={{ display: 'flex', gap: 10, padding: '5px 4px', cursor: 'pointer', fontSize: 13 }}>
+                        <input type="checkbox" checked={surveyTargets.includes(r.id)}
+                          onChange={e => setSurveyTargets(ids => e.target.checked ? [...ids, r.id] : ids.filter(x => x !== r.id))} />
+                        <span>{r.name}{r.company ? ` · ${r.company}` : ''}</span>
+                      </label>
+                    ))}
+                </div>
+              </div>
+            )}
+            <Field label="Дата начала"><input type="datetime-local" value={surveyForm.starts_at || ''} onChange={e => setSurveyForm(f => ({ ...f, starts_at: e.target.value }))} /></Field>
+            <Field label="Дедлайн"><input type="datetime-local" value={surveyForm.ends_at || ''} onChange={e => setSurveyForm(f => ({ ...f, ends_at: e.target.value }))} /></Field>
+            <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#aaa', cursor: 'pointer' }}><Toggle checked={!!surveyForm.is_mandatory} onChange={v => setSurveyForm(f => ({ ...f, is_mandatory: v }))} /> Обязательный</label>
+            <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#aaa', cursor: 'pointer' }} title="Ответы сохраняются без привязки к резиденту. Видно только, кто прошёл опрос."><Toggle checked={!!surveyForm.is_anonymous} onChange={v => setSurveyForm(f => ({ ...f, is_anonymous: v }))} /> Анонимный</label>
             <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#aaa', cursor: 'pointer' }}><Toggle checked={!!surveyForm.is_active} onChange={v => setSurveyForm(f => ({ ...f, is_active: v }))} /> Активен</label>
           </div>
+          {!isDraftSurvey && surveyForm.notified_at && surveyForm.is_anonymous !== surveyModal.is_anonymous && (
+            <div style={{ fontSize: 12, color: 'var(--danger)' }}>Анонимность меняется только для новых ответов — уже полученные ответы не изменятся.</div>
+          )}
 
           <div className="field" style={{ marginTop: 14 }}>
             <label>Вопросы ({isDraftSurvey ? draftQuestions.length : surveyQuestions.length})</label>
@@ -1452,7 +1502,7 @@ const PollsTab = () => {
                 ? draftQuestions.map((q, i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 10, background: 'var(--s2)', border: '1px solid var(--border)' }}>
                       <span style={{ color: 'var(--muted)', fontSize: 12, minWidth: 18 }}>{i + 1}.</span>
-                      <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{q.question}</span>
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{q.question}{q.is_required !== false && <span style={{ color: 'var(--danger)' }}> *</span>}</span>
                       <span className="badge badge-gray">{POLL_TYPES.find(t => t.value === q.type)?.label}</span>
                       <button className="btn btn-outline btn-sm" onClick={() => openEditDraft(q, i)}>Изменить</button>
                       <button className="btn btn-danger btn-sm" onClick={() => setDraftQuestions(l => l.filter((_, j) => j !== i))}>×</button>
@@ -1461,7 +1511,7 @@ const PollsTab = () => {
                 : surveyQuestions.map((q, i) => (
                     <div key={q.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 10, background: 'var(--s2)', border: '1px solid var(--border)' }}>
                       <span style={{ color: 'var(--muted)', fontSize: 12, minWidth: 18 }}>{i + 1}.</span>
-                      <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{q.question}</span>
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{q.question}{q.is_required !== false && <span style={{ color: 'var(--danger)' }}> *</span>}</span>
                       <span className="badge badge-gray">{POLL_TYPES.find(t => t.value === q.type)?.label}</span>
                       <button type="button" className="stat-pill" title="Ответы"
                         style={{ cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--s1)', color: 'var(--text)', font: 'inherit' }}
@@ -1482,6 +1532,8 @@ const PollsTab = () => {
           </div>
         </Modal>
       )}
+
+      {analyticsSurvey && <SurveyAnalytics survey={analyticsSurvey} onClose={() => setAnalyticsSurvey(null)} />}
 
       {answersPoll !== null && (
         <div className="overlay" onClick={e => e.target === e.currentTarget && setAnswersPoll(null)}>
@@ -1522,6 +1574,14 @@ const PollsTab = () => {
             {isSurveyQuestion
               ? <Field label="Порядок"><input type="number" value={form.sort_order ?? 0} onChange={e => setForm(f => ({ ...f, sort_order: parseInt(e.target.value) || 0 }))} /></Field>
               : <Field label="Активен до"><input type="datetime-local" value={form.ends_at || ''} onChange={e => setForm(f => ({ ...f, ends_at: e.target.value }))} /></Field>}
+            {form.type === 'rating' && (
+              <Field label="Шкала"><select value={form.scale_max || 5} onChange={e => setForm(f => ({ ...f, scale_max: parseInt(e.target.value) }))}>
+                <option value={5}>1–5</option><option value={10}>1–10</option>
+              </select></Field>
+            )}
+            {isSurveyQuestion && (
+              <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#aaa', cursor: 'pointer' }}><Toggle checked={form.is_required !== false} onChange={v => setForm(f => ({ ...f, is_required: v }))} /> Обязательный вопрос</label>
+            )}
             <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#aaa', cursor: 'pointer' }}><Toggle checked={!!form.is_active} onChange={v => setForm(f => ({ ...f, is_active: v }))} /> Активен</label>
           </div>
           {needsOptions && (
@@ -1786,6 +1846,8 @@ const Admin = () => {
     news:            <NewsTab />,
     partners:        <PartnersTab />,
     polls:           <PollsTab />,
+    rating:          <RatingTab />,
+    groups:          <GroupsTab />,
     president:       <PresidentTab />,
     'access-requests': <AccessRequestsTab />,
   };
