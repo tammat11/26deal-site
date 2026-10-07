@@ -55,6 +55,18 @@ const SURVEY_KINDS = [
   { value: 'other',        label: 'Другое' },
 ];
 
+// Вопрос-подтверждение анкеты «Регистрация»: порядок вариантов важен —
+// submit_survey превращает 0/1/2 в going / not_going / maybe.
+const RSVP_QUESTION = {
+  question: 'Подтверждаете участие?',
+  type: 'single',
+  options: ['Иду', 'Не иду', 'Возможно'],
+  is_required: true,
+  is_active: true,
+  rsvp_link: true,
+  sort_order: 0,
+};
+
 const AUDIENCES = [
   { value: 'all',      label: 'Всем резидентам' },
   { value: 'selected', label: 'Выбранным резидентам' },
@@ -1256,7 +1268,7 @@ const PollsTab = () => {
     setSurveyForm({
       title: '', description: '', is_active: true, ends_at: '', starts_at: '',
       kind: 'poll', audience: 'all', audience_event_id: '', audience_group_id: '',
-      is_mandatory: false, is_anonymous: false,
+      rsvp_event_id: '', is_mandatory: false, is_anonymous: false,
     });
     setSurveyQuestions([]); setDraftQuestions([]); setSurveyTargets([]); setTargetQuery('');
     setSurveyModal('new'); loadAudienceData();
@@ -1267,6 +1279,7 @@ const PollsTab = () => {
       ends_at: toLocalInput(r.ends_at), starts_at: toLocalInput(r.starts_at),
       kind: r.kind || 'poll', audience: r.audience || 'all',
       audience_event_id: r.audience_event_id || '', audience_group_id: r.audience_group_id || '',
+      rsvp_event_id: r.rsvp_event_id || '',
     });
     setDraftQuestions([]); setSurveyTargets([]); setTargetQuery(''); setSurveyModal(r);
     loadAudienceData();
@@ -1292,11 +1305,13 @@ const PollsTab = () => {
   const saveSurvey = async () => {
     const f = surveyForm;
     if (!f.title?.trim()) return showToast('Введите название опросника', 'err');
-    if (isDraftSurvey && draftQuestions.length === 0) return showToast('Добавьте хотя бы один вопрос', 'err');
+    if (isDraftSurvey && draftQuestions.length === 0 && f.kind !== 'registration') return showToast('Добавьте хотя бы один вопрос', 'err');
     if (f.audience === 'selected' && surveyTargets.length === 0) return showToast('Выберите получателей', 'err');
     if (f.audience === 'event' && !f.audience_event_id) return showToast('Выберите мероприятие', 'err');
     if (f.audience === 'group' && !f.audience_group_id) return showToast('Выберите группу', 'err');
     if (f.starts_at && f.ends_at && new Date(f.ends_at) <= new Date(f.starts_at)) return showToast('Дедлайн раньше даты начала', 'err');
+    const isRegistration = f.kind === 'registration';
+    if (isRegistration && !f.rsvp_event_id) return showToast('Выберите мероприятие для записи', 'err');
     setSavingSurvey(true);
     try {
       const payload = {
@@ -1310,7 +1325,9 @@ const PollsTab = () => {
         audience_event_id: f.audience === 'event' ? f.audience_event_id : null,
         audience_group_id: f.audience === 'group' ? f.audience_group_id : null,
         is_mandatory: !!f.is_mandatory,
-        is_anonymous: !!f.is_anonymous,
+        // Регистрация пишет запись на мероприятие от имени резидента — анонимной быть не может.
+        is_anonymous: isRegistration ? false : !!f.is_anonymous,
+        rsvp_event_id: isRegistration ? f.rsvp_event_id : null,
       };
       if (isDraftSurvey) {
         // 1) создаём опросник, 2) вопросы и получателей, 3) «касаемся»
@@ -1318,6 +1335,7 @@ const PollsTab = () => {
         const { data: created, error } = await supabase.from('surveys').insert(payload).select().single();
         if (error) throw error;
         const qs = draftQuestions.map((q, i) => ({ ...q, survey_id: created.id, sort_order: q.sort_order || i + 1 }));
+        if (isRegistration && !qs.some(q => q.rsvp_link)) qs.unshift({ ...RSVP_QUESTION, survey_id: created.id });
         const { error: qErr } = await supabase.from('polls').insert(qs);
         if (qErr) throw qErr;
         await saveTargets(created.id);
@@ -1325,6 +1343,10 @@ const PollsTab = () => {
         showToast(payload.starts_at && new Date(payload.starts_at) > new Date() ? 'Опросник создан — уведомление уйдёт в дату старта' : 'Опросник создан');
       } else {
         await saveTargets(f.id);
+        if (isRegistration && !surveyQuestions.some(q => q.rsvp_link)) {
+          const { error: qErr } = await supabase.from('polls').insert({ ...RSVP_QUESTION, survey_id: f.id });
+          if (qErr) throw qErr;
+        }
         const { error } = await supabase.from('surveys').update(payload).eq('id', f.id);
         if (error) throw error;
         showToast('Сохранено');
@@ -1450,7 +1472,16 @@ const PollsTab = () => {
           <div className="form-grid">
             <div className="field full"><label>Название опросника *</label><input type="text" value={surveyForm.title || ''} onChange={e => setSurveyForm(f => ({ ...f, title: e.target.value }))} placeholder="Опрос удовлетворённости, июль 2026" /></div>
             <div className="field full"><label>Описание</label><textarea value={surveyForm.description || ''} onChange={e => setSurveyForm(f => ({ ...f, description: e.target.value }))} rows={2} placeholder="Короткое пояснение для резидентов" /></div>
-            <Field label="Вид"><select value={surveyForm.kind || 'poll'} onChange={e => setSurveyForm(f => ({ ...f, kind: e.target.value, is_anonymous: e.target.value === 'nps' ? true : f.is_anonymous }))}>{SURVEY_KINDS.map(k => <option key={k.value} value={k.value}>{k.label}</option>)}</select></Field>
+            <Field label="Вид"><select value={surveyForm.kind || 'poll'} onChange={e => setSurveyForm(f => ({ ...f, kind: e.target.value, is_anonymous: e.target.value === 'nps' ? true : e.target.value === 'registration' ? false : f.is_anonymous }))}>{SURVEY_KINDS.map(k => <option key={k.value} value={k.value}>{k.label}</option>)}</select></Field>
+            {surveyForm.kind === 'registration' && (
+              <div className="field full"><label>Мероприятие для записи *</label>
+                <select value={surveyForm.rsvp_event_id || ''} onChange={e => setSurveyForm(f => ({ ...f, rsvp_event_id: e.target.value }))}>
+                  <option value="">— выберите —</option>
+                  {audienceData.events.map(ev => <option key={ev.id} value={ev.id}>{ev.date ? new Date(ev.date).toLocaleDateString('ru') + ' · ' : ''}{ev.title.slice(0, 80)}</option>)}
+                </select>
+                <div style={{ fontSize: 12, color: 'var(--muted)' }}>В анкету добавится вопрос «Подтверждаете участие? — Иду / Не иду / Возможно». Ответ сразу записывает резидента на мероприятие.</div>
+              </div>
+            )}
             <Field label="Аудитория"><select value={surveyForm.audience || 'all'} onChange={e => setSurveyForm(f => ({ ...f, audience: e.target.value }))}>{AUDIENCES.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}</select></Field>
             {surveyForm.audience === 'event' && (
               <div className="field full"><label>Мероприятие</label>
