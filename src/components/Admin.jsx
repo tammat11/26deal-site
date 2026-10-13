@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { Toggle, Field, Modal, Empty } from './admin/ui';
 import { showToast } from './admin/helpers';
 import { RatingTab } from './admin/RatingTab';
+import { PointsTab } from './admin/PointsTab';
 import { GroupsTab } from './admin/GroupsTab';
 import { AttendancePanel } from './admin/AttendancePanel';
 import { SurveyAnalytics } from './admin/SurveyAnalytics';
@@ -21,6 +22,7 @@ const TABS = [
   { id: 'partners',        label: 'Партнёры',        icon: '🤝' },
   { id: 'polls',           label: 'Опросы',          icon: '📊' },
   { id: 'rating',          label: 'Рейтинг',         icon: '🏆' },
+  { id: 'points',          label: 'Баллы',           icon: '±' },
   { id: 'groups',          label: 'Группы',          icon: '👥' },
   { id: 'president',       label: 'Президент',       icon: '👑' },
   { id: 'access-requests', label: 'Заявки на доступ', icon: '🔑' },
@@ -1878,6 +1880,7 @@ const Admin = () => {
     partners:        <PartnersTab />,
     polls:           <PollsTab />,
     rating:          <RatingTab />,
+    points:          <PointsTab />,
     groups:          <GroupsTab />,
     president:       <PresidentTab />,
     'access-requests': <AccessRequestsTab />,
