@@ -5,6 +5,7 @@ import { Toggle, Field, Modal, Empty } from './admin/ui';
 import { showToast } from './admin/helpers';
 import { RatingTab } from './admin/RatingTab';
 import { PointsTab } from './admin/PointsTab';
+import { PointsRulesTab } from './admin/PointsRulesTab';
 import { GroupsTab } from './admin/GroupsTab';
 import { AttendancePanel } from './admin/AttendancePanel';
 import { SurveyAnalytics } from './admin/SurveyAnalytics';
@@ -23,6 +24,7 @@ const TABS = [
   { id: 'polls',           label: 'Опросы',          icon: '📊' },
   { id: 'rating',          label: 'Рейтинг',         icon: '🏆' },
   { id: 'points',          label: 'Баллы',           icon: '±' },
+  { id: 'points-rules',    label: 'Правила баллов',  icon: '📋' },
   { id: 'groups',          label: 'Группы',          icon: '👥' },
   { id: 'president',       label: 'Президент',       icon: '👑' },
   { id: 'access-requests', label: 'Заявки на доступ', icon: '🔑' },
@@ -1881,6 +1883,7 @@ const Admin = () => {
     polls:           <PollsTab />,
     rating:          <RatingTab />,
     points:          <PointsTab />,
+    'points-rules':  <PointsRulesTab />,
     groups:          <GroupsTab />,
     president:       <PresidentTab />,
     'access-requests': <AccessRequestsTab />,
