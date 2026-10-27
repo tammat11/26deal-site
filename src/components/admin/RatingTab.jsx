@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Modal, Field, Avatar } from './ui';
 import { showToast, fmtDate, exportXlsx } from './helpers';
-import { LEDGER_KINDS, REFERRAL_POINTS } from './points';
+import { LEDGER_KINDS, loadPointsSettings } from './points';
 
 const THIS_YEAR = new Date().getFullYear();
 
@@ -158,10 +158,14 @@ const HistoryModal = ({ resident, onClose, onChanged }) => {
 const AddPointsModal = ({ mode, residents, onClose, onSaved }) => {
   const isReferral = mode === 'referral';
   const [form, setForm] = useState({
-    resident_id: '', points: isReferral ? REFERRAL_POINTS : '', candidate: '', comment: '',
+    resident_id: '', points: '', candidate: '', comment: '',
     date: new Date().toISOString().slice(0, 10),
   });
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (isReferral) loadPointsSettings().then(r => setForm(f => (f.points ? f : { ...f, points: r.referral })));
+  }, [isReferral]);
 
   const save = async () => {
     const points = parseInt(form.points);

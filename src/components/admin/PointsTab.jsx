@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Field, Avatar } from './ui';
 import { showToast, fmtDate, fmtDateTime } from './helpers';
-import { LEDGER_KINDS, REFERRAL_POINTS } from './points';
+import { LEDGER_KINDS, FALLBACK_RULES, loadPointsSettings } from './points';
 
 const THIS_YEAR = new Date().getFullYear();
 const QUICK = [100, 300, 500, -100, -300];
@@ -23,6 +23,9 @@ export const PointsTab = () => {
   const [recent, setRecent] = useState([]);
   const [form, setForm] = useState({ kind: 'adjustment', points: '', comment: '', candidate: '', date: today() });
   const [saving, setSaving] = useState(false);
+  const [referralPoints, setReferralPoints] = useState(FALLBACK_RULES.referral);
+
+  useEffect(() => { loadPointsSettings().then(r => setReferralPoints(r.referral)); }, []);
 
   const loadBalances = useCallback(async () => {
     const [all, year] = await Promise.all([
@@ -170,7 +173,7 @@ export const PointsTab = () => {
                   {[['adjustment', 'Корректировка'], ['referral', 'Рекомендация кандидата']].map(([v, l]) => (
                     <button key={v} type="button"
                       className={form.kind === v ? 'btn btn-gold btn-sm' : 'btn btn-outline btn-sm'}
-                      onClick={() => setForm(f => ({ ...f, kind: v, points: v === 'referral' && !f.points ? String(REFERRAL_POINTS) : f.points }))}>
+                      onClick={() => setForm(f => ({ ...f, kind: v, points: v === 'referral' && !f.points ? String(referralPoints) : f.points }))}>
                       {l}
                     </button>
                   ))}

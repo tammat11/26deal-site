@@ -10,7 +10,7 @@ import { GroupsTab } from './admin/GroupsTab';
 import { AttendancePanel } from './admin/AttendancePanel';
 import { SurveyAnalytics } from './admin/SurveyAnalytics';
 import { answerText } from './admin/answers';
-import { EVENT_CATEGORIES, PENALTIES, defaultPointsFor, categoryLabel } from './admin/points';
+import { EVENT_CATEGORIES, PENALTIES, FALLBACK_RULES, loadPointsSettings, defaultPointsFor, categoryLabel } from './admin/points';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -589,7 +589,10 @@ const EventsTab = () => {
   const [recipientMode, setRecipientMode] = useState('all');
   const [reminderResidents, setReminderResidents] = useState([]);
   const [selectedResidentIds, setSelectedResidentIds] = useState([]);
+  const [rules, setRules] = useState(FALLBACK_RULES);   // правила баллов из «Правил баллов»
   const fileRef = useRef();
+
+  useEffect(() => { loadPointsSettings().then(setRules); }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -600,7 +603,7 @@ const EventsTab = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  const blank = () => ({ title: '', description: '', date: '', time: '', location: '', speaker_name: '', speaker_role: '', capacity: '', tags: '', is_published: true, category: 'business', points: 100, champion_points: 300, no_show_penalty: 100, late_penalty: 50, left_early_penalty: 50 });
+  const blank = () => ({ title: '', description: '', date: '', time: '', location: '', speaker_name: '', speaker_role: '', capacity: '', tags: '', is_published: true, category: 'business', points: rules.business, champion_points: rules.champion, no_show_penalty: rules.no_show, late_penalty: rules.late, left_early_penalty: rules.left_early });
   const openNew = () => { setForm(blank()); setImageFile(null); setImagePreview(null); setRsvps(null); setModal('new'); };
   const openEdit = r => {
     const d = r.date ? new Date(r.date) : null;
@@ -786,15 +789,15 @@ const EventsTab = () => {
             <Field label="Вместимость (мест)"><input type="number" min="0" value={form.capacity || ''} onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))} placeholder="50" /></Field>
             <Field label="Опубликован"><Toggle checked={form.is_published !== false} onChange={v => setForm(f => ({ ...f, is_published: v }))} /></Field>
             <div className="field full"><label>Категория (для рейтинга)</label>
-              <select value={form.category || 'business'} onChange={e => setForm(f => ({ ...f, category: e.target.value, points: defaultPointsFor(e.target.value) }))}>
-                {EVENT_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label} — {c.points} баллов</option>)}
+              <select value={form.category || 'business'} onChange={e => setForm(f => ({ ...f, category: e.target.value, points: defaultPointsFor(e.target.value, rules) }))}>
+                {EVENT_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label} — {rules[c.value]} баллов</option>)}
               </select>
             </div>
             <Field label="Баллы за посещение"><input type="number" min="0" value={form.points ?? ''} onChange={e => setForm(f => ({ ...f, points: e.target.value }))} /></Field>
             <Field label="Баллы за чемпионство"><input type="number" min="0" value={form.champion_points ?? ''} onChange={e => setForm(f => ({ ...f, champion_points: e.target.value }))} /></Field>
             {PENALTIES.map(p => (
               <Field key={p.key} label={`Антибаллы: ${p.label.toLowerCase()}`}>
-                <input type="number" min="0" value={form[p.key] ?? ''} placeholder={String(p.points)}
+                <input type="number" min="0" value={form[p.key] ?? ''} placeholder={String(rules[p.rule])}
                   onChange={e => setForm(f => ({ ...f, [p.key]: e.target.value }))} />
               </Field>
             ))}
