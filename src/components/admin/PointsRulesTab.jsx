@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { fmtDate } from './helpers';
-import { EVENT_CATEGORIES, CHAMPION_POINTS, REFERRAL_POINTS } from './points';
+import { EVENT_CATEGORIES, CHAMPION_POINTS, REFERRAL_POINTS, PENALTIES } from './points';
 
 /**
  * Правила начисления баллов (только просмотр): шкала из ТЗ и реальные
@@ -28,6 +28,7 @@ export const PointsRulesTab = () => {
     ...EVENT_CATEGORIES.map(c => ({ label: c.label, points: c.points, note: 'за посещение' })),
     { label: 'Чемпионство мероприятия', points: CHAMPION_POINTS, note: 'сверху к баллам за посещение', plus: true },
     { label: 'Рекомендация кандидата, вступившего в клуб', points: REFERRAL_POINTS, note: 'начисляется вручную в разделе «Баллы»' },
+    ...PENALTIES.map(p => ({ label: p.label, points: -p.points, note: 'антибаллы — по отметке в карточке мероприятия (с 27.10.2026)', penalty: true })),
   ];
 
   return (
@@ -46,7 +47,7 @@ export const PointsRulesTab = () => {
             {rules.map(r => (
               <tr key={r.label}>
                 <td style={{ fontWeight: 600 }}>{r.label}</td>
-                <td><span className="badge badge-gold" style={{ fontSize: 13 }}>{r.plus ? '+' : ''}{r.points}</span></td>
+                <td><span className={r.penalty ? 'badge badge-red' : 'badge badge-gold'} style={{ fontSize: 13 }}>{r.plus ? '+' : ''}{r.points}</span></td>
                 <td style={{ color: 'var(--muted)', fontSize: 13 }}>{r.note}</td>
               </tr>
             ))}
@@ -58,6 +59,7 @@ export const PointsRulesTab = () => {
         • Баллы начисляются только за <b style={{ color: 'var(--text)' }}>фактическое посещение</b> — после отметки «Посетил» в карточке мероприятия, не за регистрацию.<br />
         • Количество баллов можно изменить для каждого мероприятия отдельно — уже начисленные баллы пересчитаются сами.<br />
         • Ошибки исправляются в разделе «Баллы»: корректировка с причиной, история сохраняется.<br />
+        • Антибаллы: «Не посетил» у записавшегося «Иду» — списание автоматически; «Опоздал» и «Ушёл раньше» — баллы за посещение остаются, штраф вычитается. Суммы меняются в карточке мероприятия. Баланс может быть отрицательным.<br />
         • Рейтинг считается за текущий год (по дате мероприятия) и за всё время.
       </div>
 

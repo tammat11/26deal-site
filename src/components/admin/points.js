@@ -10,6 +10,14 @@ export const EVENT_CATEGORIES = [
 ];
 
 export const CHAMPION_POINTS = 300;
+
+// Антибаллы (с 27.10.2026): списываются автоматически по отметкам явки,
+// суммы настраиваются на каждое мероприятие.
+export const PENALTIES = [
+  { key: 'no_show_penalty',    label: 'Записался «Иду», но не пришёл', points: 100 },
+  { key: 'late_penalty',       label: 'Опоздал',                       points: 50 },
+  { key: 'left_early_penalty', label: 'Ушёл раньше',                   points: 50 },
+];
 export const REFERRAL_POINTS = 500;
 
 export const defaultPointsFor = category =>
@@ -23,4 +31,7 @@ export const LEDGER_KINDS = {
   champion:   'Чемпионство',
   referral:   'Рекомендация',
   adjustment: 'Корректировка',
+  no_show:    'Неявка после записи',
+  late:       'Опоздание',
+  left_early: 'Ранний уход',
 };

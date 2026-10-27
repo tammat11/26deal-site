@@ -23,7 +23,7 @@ export const AttendancePanel = ({ event }) => {
     Promise.all([
       supabase.from('residents').select('id,name,company,photo_url').eq('is_published', true).order('name'),
       supabase.from('event_rsvps_with_resident').select('resident_id,status').eq('event_id', event.id),
-      supabase.from('event_attendance').select('resident_id,attended,is_champion').eq('event_id', event.id),
+      supabase.from('event_attendance').select('resident_id,attended,is_champion,is_late,left_early').eq('event_id', event.id),
     ]).then(([r, v, a]) => {
       if (!alive) return;
       if (a.error) showToast('Таблица явки не найдена — примените миграцию 2026-09-28', 'err');
@@ -37,16 +37,19 @@ export const AttendancePanel = ({ event }) => {
   }, [event.id]);
 
   const save = async (residentId, patch) => {
-    const prev = marks[residentId] || { attended: null, is_champion: false };
+    const prev = marks[residentId] || { attended: null, is_champion: false, is_late: false, left_early: false };
     const next = { ...prev, ...patch };
-    if (next.is_champion) next.attended = true;          // чемпион всегда присутствовал
-    if (next.attended !== true) next.is_champion = false;
+    // Чемпион, опоздавший и ушедший раньше — все присутствовали.
+    if (next.is_champion || next.is_late || next.left_early) next.attended = true;
+    if (next.attended !== true) { next.is_champion = false; next.is_late = false; next.left_early = false; }
     setBusyId(residentId);
     const { error } = await supabase.from('event_attendance').upsert({
       event_id: event.id,
       resident_id: residentId,
       attended: next.attended,
       is_champion: next.is_champion,
+      is_late: !!next.is_late,
+      left_early: !!next.left_early,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'event_id,resident_id' });
     setBusyId(null);
@@ -64,6 +67,9 @@ export const AttendancePanel = ({ event }) => {
 
   const attendedCount = Object.values(marks).filter(m => m.attended === true).length;
   const championCount = Object.values(marks).filter(m => m.is_champion).length;
+  const isGoing = id => rsvps[id] === 'going' || rsvps[id] === 'with_family';
+  const noShowCount = Object.entries(marks).filter(([id, m]) => m.attended === false && isGoing(id)).length;
+  const penaltiesActive = event.date && new Date(event.date) >= new Date('2026-10-27T00:00:00+05:00');
 
   if (residents === null) return <div style={{ color: 'var(--muted)', fontSize: 13 }}>Загрузка…</div>;
 
@@ -73,6 +79,9 @@ export const AttendancePanel = ({ event }) => {
         <span className="stat-pill">✅ Посетили: {attendedCount}</span>
         <span className="stat-pill">🏆 Чемпионы: {championCount}</span>
         <span className="stat-pill">+{event.points ?? 0} за посещение · +{event.champion_points ?? 0} за чемпионство</span>
+        {penaltiesActive
+          ? <span className="stat-pill">−{event.no_show_penalty ?? 100} неявка после записи ({noShowCount}) · −{event.late_penalty ?? 50} опоздание · −{event.left_early_penalty ?? 50} ранний уход</span>
+          : <span className="stat-pill">Антибаллы действуют для мероприятий с 27.10.2026</span>}
       </div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
         <input type="text" placeholder="Поиск резидента" value={query} onChange={e => setQuery(e.target.value)} />
@@ -103,6 +112,21 @@ export const AttendancePanel = ({ event }) => {
               <button type="button" disabled={busy} title="Чемпион мероприятия"
                 className={m.is_champion ? 'btn btn-gold btn-xs' : 'btn btn-outline btn-xs'}
                 onClick={() => save(r.id, { is_champion: !m.is_champion })}>🏆</button>
+              <button type="button" disabled={busy} title={`Опоздал: −${event.late_penalty ?? 50}`}
+                className="btn btn-xs"
+                style={m.is_late
+                  ? { background: 'rgba(255,170,60,.18)', border: '1px solid rgba(255,170,60,.5)', color: '#ffb35c' }
+                  : { background: 'none', border: '1px solid var(--border)', color: 'var(--muted)' }}
+                onClick={() => save(r.id, { is_late: !m.is_late })}>Опоздал</button>
+              <button type="button" disabled={busy} title={`Ушёл раньше: −${event.left_early_penalty ?? 50}`}
+                className="btn btn-xs"
+                style={m.left_early
+                  ? { background: 'rgba(255,170,60,.18)', border: '1px solid rgba(255,170,60,.5)', color: '#ffb35c' }
+                  : { background: 'none', border: '1px solid var(--border)', color: 'var(--muted)' }}
+                onClick={() => save(r.id, { left_early: !m.left_early })}>Ушёл раньше</button>
+              {m.attended === false && isGoing(r.id) && penaltiesActive && (
+                <span className="badge badge-red" title="Записался «Иду», но не пришёл">−{event.no_show_penalty ?? 100}</span>
+              )}
             </div>
           );
         })}

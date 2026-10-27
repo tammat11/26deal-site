@@ -10,7 +10,7 @@ import { GroupsTab } from './admin/GroupsTab';
 import { AttendancePanel } from './admin/AttendancePanel';
 import { SurveyAnalytics } from './admin/SurveyAnalytics';
 import { answerText } from './admin/answers';
-import { EVENT_CATEGORIES, defaultPointsFor, categoryLabel } from './admin/points';
+import { EVENT_CATEGORIES, PENALTIES, defaultPointsFor, categoryLabel } from './admin/points';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -600,7 +600,7 @@ const EventsTab = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  const blank = () => ({ title: '', description: '', date: '', time: '', location: '', speaker_name: '', speaker_role: '', capacity: '', tags: '', is_published: true, category: 'business', points: 100, champion_points: 300 });
+  const blank = () => ({ title: '', description: '', date: '', time: '', location: '', speaker_name: '', speaker_role: '', capacity: '', tags: '', is_published: true, category: 'business', points: 100, champion_points: 300, no_show_penalty: 100, late_penalty: 50, left_early_penalty: 50 });
   const openNew = () => { setForm(blank()); setImageFile(null); setImagePreview(null); setRsvps(null); setModal('new'); };
   const openEdit = r => {
     const d = r.date ? new Date(r.date) : null;
@@ -641,10 +641,14 @@ const EventsTab = () => {
         category: form.category || 'business',
         points: parseInt(form.points) || 0,
         champion_points: parseInt(form.champion_points) || 0,
+        no_show_penalty: parseInt(form.no_show_penalty) || 0,
+        late_penalty: parseInt(form.late_penalty) || 0,
+        left_early_penalty: parseInt(form.left_early_penalty) || 0,
       };
       // До применения миграции баллов этих колонок нет — сохраняем без них.
       if (!('category' in (rows[0] || { category: 1 }))) {
         delete payload.category; delete payload.points; delete payload.champion_points;
+        delete payload.no_show_penalty; delete payload.late_penalty; delete payload.left_early_penalty;
       }
       if (modal === 'new') await supabase.from('events').insert(payload);
       else await supabase.from('events').update(payload).eq('id', form.id);
@@ -788,6 +792,12 @@ const EventsTab = () => {
             </div>
             <Field label="Баллы за посещение"><input type="number" min="0" value={form.points ?? ''} onChange={e => setForm(f => ({ ...f, points: e.target.value }))} /></Field>
             <Field label="Баллы за чемпионство"><input type="number" min="0" value={form.champion_points ?? ''} onChange={e => setForm(f => ({ ...f, champion_points: e.target.value }))} /></Field>
+            {PENALTIES.map(p => (
+              <Field key={p.key} label={`Антибаллы: ${p.label.toLowerCase()}`}>
+                <input type="number" min="0" value={form[p.key] ?? ''} placeholder={String(p.points)}
+                  onChange={e => setForm(f => ({ ...f, [p.key]: e.target.value }))} />
+              </Field>
+            ))}
             <div className="field full"><label>Участники (резиденты)</label><input type="text" value={form.tags || ''} onChange={e => setForm(f => ({ ...f, tags: e.target.value }))} placeholder="Через запятую: Ларион Лян, Тимур Нуртаев" /></div>
             <div className="field full"><label>Описание</label><textarea value={form.description || ''} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={4} /></div>
           </div>
