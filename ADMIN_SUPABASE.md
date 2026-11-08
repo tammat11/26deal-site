@@ -25,17 +25,21 @@ in the application service.
 
 ## Server-side admin API
 
-Partners and polls use `/api/admin-data`. The browser no longer writes these
-tables through the public Supabase client.
+The admin signs in with Supabase Auth (email + password); access is checked by
+`rpc('is_admin')` (table `public.admin_users`) and the same `is_admin()` RLS
+policies. Partners and polls are written directly through the Supabase client
+under those policies (the old `/api/admin-data` + `ADMIN_API_TOKEN` was removed).
+
+`/api/news-push` and `/api/event-reminder` require
+`Authorization: Bearer <supabase access token>` of a signed-in admin
+(`api/_lib/requireAdmin.js`: `auth.getUser(token)` + `rpc('is_admin')`).
 
 Configure these environment variables in Vercel:
 
-- `SUPABASE_URL`: optional, defaults to the current project URL;
-- `SUPABASE_SECRET_KEY`: required server-side Supabase secret key;
-- `ADMIN_API_TOKEN`: required private token entered by an administrator in the
-  admin UI.
-
-Never expose `SUPABASE_SECRET_KEY` through a `VITE_*` variable.
+- `SUPABASE_URL`, `SUPABASE_ANON_KEY` (or `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`);
+- `PUSH_FN_KEY`: shared key of the `push-broadcast` Edge Function (server-only,
+  never a `VITE_*` variable);
+- `PUSH_FN_URL`: optional, defaults to `$SUPABASE_URL/functions/v1/push-broadcast`.
 
 ## Shared tables
 
@@ -66,9 +70,8 @@ Keep Row Level Security enabled. Public application users may read published
 content and write only their own answers. They must not receive admin write
 permissions for partners, polls or options.
 
-The existing website OTP flow still contains a `0000` bypass and a
-`localStorage` login flag. Remove both when the website receives proper
-server-side authentication.
+The website OTP flow (`0000` bypass, `localStorage` flag, `admin_otp` Telegram
+branch) was removed: the admin uses Supabase Auth.
 # Изменения админки
 
 - 2026-07-28: поле «Краткое описание» убрано из формы создания и

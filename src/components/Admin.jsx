@@ -1,20 +1,34 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Cropper from 'react-easy-crop';
-import { supabase } from '../lib/supabase';
-import { Toggle, Field, Modal, Empty } from './admin/ui';
-import { showToast } from './admin/helpers';
+import { supabase, authRedirect } from '../lib/supabase';
+import { Toggle, Field, Modal, Empty, TagsInput } from './admin/ui';
+import { showToast, probeColumns, pickCols, INDUSTRIES, CLUB_ROLES } from './admin/helpers';
+import { KnowledgeTab } from './admin/KnowledgeTab';
+import { InternalNotesTab } from './admin/InternalNotesTab';
 import { RatingTab } from './admin/RatingTab';
 import { PointsTab } from './admin/PointsTab';
 import { PointsRulesTab } from './admin/PointsRulesTab';
 import { GroupsTab } from './admin/GroupsTab';
+import { OnboardingTab } from './admin/OnboardingTab';
+import { ClubVotesTab } from './admin/ClubVotesTab';
 import { AttendancePanel } from './admin/AttendancePanel';
+import { EventArchiveEditor } from './admin/EventArchiveEditor';
 import { SurveyAnalytics } from './admin/SurveyAnalytics';
 import { answerText } from './admin/answers';
 import { EVENT_CATEGORIES, PENALTIES, FALLBACK_RULES, loadPointsSettings, defaultPointsFor, categoryLabel } from './admin/points';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// Заголовки для /api/* админки: serverless-функции проверяют access token
+// сессии Supabase Auth и is_admin().
+async function adminApiHeaders() {
+  const { data } = await supabase.auth.getSession();
+  const token = data?.session?.access_token;
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
 
-const ALLOWED_PHONES = ['+7 702 666 6113', '+7 707 052 2006', '+7 707 186 0618'];
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const TABS = [
   { id: 'residents',       label: 'Резиденты',       icon: '👤' },
@@ -26,7 +40,11 @@ const TABS = [
   { id: 'points',          label: 'Баллы',           icon: '±' },
   { id: 'points-rules',    label: 'Правила баллов',  icon: '📋' },
   { id: 'groups',          label: 'Группы',          icon: '👥' },
+  { id: 'knowledge',       label: 'База знаний',     icon: '📚' },
+  { id: 'internal',        label: 'Закрытый раздел', icon: '🔒' },
   { id: 'president',       label: 'Президент',       icon: '👑' },
+  { id: 'club-votes',      label: 'Голосования',     icon: '🗳️' },
+  { id: 'onboarding',      label: 'Онбординг',       icon: '🧭' },
   { id: 'access-requests', label: 'Заявки на доступ', icon: '🔑' },
 ];
 
@@ -259,7 +277,11 @@ const css = `
   .login-card { width: 380px; background: var(--s1); border: 1px solid var(--border); border-radius: 20px; padding: 40px; display: flex; flex-direction: column; gap: 18px; }
   .login-logo { font-size: 18px; font-weight: 800; color: var(--gold); letter-spacing: .3px; }
   .login-sub { font-size: 13px; color: var(--muted); margin-top: -10px; }
-  .login-otp { font-size: 26px; text-align: center; letter-spacing: 12px; }
+  .login-msg { font-size: 12px; text-align: center; line-height: 1.5; }
+  .login-msg.err { color: var(--danger); }
+  .login-msg.ok { color: var(--gold); }
+  .topbar-user { font-size: 12px; color: var(--muted); }
+  .topbar-user b { color: var(--text, #fff); font-weight: 600; }
 
   /* ── Poll stats ── */
   .stat-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; padding: 3px 10px; border-radius: 20px; background: var(--s3); color: var(--muted); }
@@ -376,6 +398,13 @@ const CropModal = ({ file, aspect = 3 / 4, onCancel, onDone }) => {
 
 // ─── RESIDENTS TAB ────────────────────────────────────────────────────────────
 
+const RESIDENT_NEW_COLS = ['club_role', 'industry_group', 'hobbies', 'contacts_public'];
+// Явный список колонок вместо select('*'): login_password в браузер не грузим
+// (пароль только задаётся/меняется, но не читается).
+const RESIDENT_BASE_COLS = ['id', 'name', 'company', 'niche', 'photo_url', 'phone', 'website', 'brief',
+  'turnover', 'employees', 'member_since', 'partner_companies', 'achievements',
+  'is_president', 'is_published', 'sort_order'];
+
 const ResidentsTab = () => {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -385,18 +414,23 @@ const ResidentsTab = () => {
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [cropSource, setCropSource] = useState(null); // raw File pending crop
+  const [cols, setCols] = useState(new Set()); // новые колонки из миграции modernization_stage1
   const fileRef = useRef();
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase.from('residents').select('*').order('sort_order');
+    const present = await probeColumns(supabase, 'residents', RESIDENT_NEW_COLS);
+    const select = [...RESIDENT_BASE_COLS, ...RESIDENT_NEW_COLS.filter(c => present.has(c))].join(',');
+    const { data, error } = await supabase.from('residents').select(select).order('sort_order');
+    if (error) showToast('Ошибка загрузки: ' + error.message, 'err');
     setRows(data || []);
+    setCols(present);
     setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const blank = () => ({ name: '', company: '', niche: '', phone: '', login_password: '', website: '', brief: '', turnover: '', employees: '', member_since: '', partner_companies: '', achievements: '', is_president: false, is_published: true, sort_order: rows.length + 1 });
+  const blank = () => ({ name: '', company: '', niche: '', phone: '', login_password: '', website: '', brief: '', turnover: '', employees: '', member_since: '', partner_companies: '', achievements: '', is_president: false, is_published: true, sort_order: rows.length + 1, club_role: '', industry_group: '', hobbies: [], contacts_public: false });
 
   const openNew = () => { setForm(blank()); setImageFile(null); setImagePreview(null); setModal('new'); };
   const openEdit = r => {
@@ -404,6 +438,7 @@ const ResidentsTab = () => {
       ...r,
       partner_companies: Array.isArray(r.partner_companies) ? r.partner_companies.join(', ') : '',
       achievements: Array.isArray(r.achievements) ? r.achievements.join('\n') : '',
+      hobbies: Array.isArray(r.hobbies) ? r.hobbies : [],
     });
     setImageFile(null); setImagePreview(r.photo_url || null); setModal(r);
   };
@@ -435,19 +470,26 @@ const ResidentsTab = () => {
       const partnerCompanies = (form.partner_companies || '').split(',').map(s => s.trim()).filter(Boolean);
       const achievements = (form.achievements || '').split('\n').map(s => s.trim()).filter(Boolean);
 
-      const payload = {
+      const payload = pickCols({
+        club_role: form.club_role?.trim() || null,
+        industry_group: form.industry_group || null,
+        hobbies: Array.isArray(form.hobbies) ? form.hobbies : [],
+        contacts_public: !!form.contacts_public,
         name: form.name, company: form.company || null, niche: form.niche || null, photo_url,
         phone: form.phone || null,
-        login_password: form.login_password || null,
+        // Пароль не загружается в форму: пустое поле при редактировании = не менять.
+        ...(form.login_password ? { login_password: form.login_password } : (modal === 'new' ? { login_password: null } : {})),
         website: form.website || null, brief: form.brief || null,
         turnover: form.turnover || null, employees: form.employees || null,
         member_since: form.member_since ? parseInt(form.member_since) : null,
         partner_companies: partnerCompanies, achievements,
         is_president: !!form.is_president, is_published: form.is_published !== false, sort_order: form.sort_order || 0,
-      };
+      }, RESIDENT_NEW_COLS, cols);
 
-      if (modal === 'new') await supabase.from('residents').insert(payload);
-      else await supabase.from('residents').update(payload).eq('id', form.id);
+      const { error } = modal === 'new'
+        ? await supabase.from('residents').insert(payload)
+        : await supabase.from('residents').update(payload).eq('id', form.id);
+      if (error) throw error;
 
       showToast(modal === 'new' ? 'Резидент добавлен' : 'Сохранено');
       close(); load();
@@ -491,6 +533,8 @@ const ResidentsTab = () => {
                 <div className="res-company">{r.company || '—'}</div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {r.is_president && <span className="badge badge-gold">👑 Президент</span>}
+                  {r.club_role && !(r.is_president && r.club_role === 'Президент') && <span className="badge badge-gold">{r.club_role}</span>}
+                  {r.industry_group && <span className="badge badge-gray">{r.industry_group}</span>}
                   {r.niche && <span className="badge badge-gray">{r.niche}</span>}
                 </div>
                 <div className="res-actions">
@@ -546,7 +590,7 @@ const ResidentsTab = () => {
             <Field label="Компания"><input type="text" value={form.company || ''} onChange={e => setForm(f => ({ ...f, company: e.target.value }))} placeholder="TIMUS Development" /></Field>
             <Field label="Ниша"><input type="text" value={form.niche || ''} onChange={e => setForm(f => ({ ...f, niche: e.target.value }))} placeholder="Строительство" /></Field>
             <Field label="Телефон"><input type="tel" value={form.phone || ''} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+7 702 666 6113" /></Field>
-            <Field label="Пароль для входа"><input type="text" value={form.login_password || ''} onChange={e => setForm(f => ({ ...f, login_password: e.target.value }))} placeholder="пароль резидента для входа в приложение" /></Field>
+            <Field label="Пароль для входа"><input type="text" value={form.login_password || ''} onChange={e => setForm(f => ({ ...f, login_password: e.target.value }))} placeholder={modal === 'new' ? 'пароль резидента для входа в приложение' : 'новый пароль (пусто = не менять)'} /></Field>
             <div className="field full"><label>Сайт</label><input type="url" value={form.website || ''} onChange={e => setForm(f => ({ ...f, website: e.target.value }))} placeholder="https://example.kz" /></div>
             <div className="field full"><label>О резиденте</label><textarea value={form.brief || ''} onChange={e => setForm(f => ({ ...f, brief: e.target.value }))} rows={3} /></div>
 
@@ -555,6 +599,37 @@ const ResidentsTab = () => {
             <Field label="Год вступления"><input type="text" value={form.member_since || ''} onChange={e => setForm(f => ({ ...f, member_since: e.target.value }))} placeholder="2024" /></Field>
             <div className="field full"><label>Компании-партнёры</label><textarea value={form.partner_companies || ''} onChange={e => setForm(f => ({ ...f, partner_companies: e.target.value }))} rows={2} placeholder="Через запятую: Kaspi, Halyk Bank, Kcell" /></div>
             <div className="field full"><label>Достижения</label><textarea value={form.achievements || ''} onChange={e => setForm(f => ({ ...f, achievements: e.target.value }))} rows={3} placeholder={'По одному в строке:\nForbes 30 under 30 (2023)\n3 успешных экзита'} /></div>
+
+            {cols.size < RESIDENT_NEW_COLS.length && (
+              <div className="field full" style={{ fontSize: 12, color: 'var(--danger)' }}>
+                Поля «Роль в клубе», «Отрасль», «Увлечения», «Согласие на контакты» появятся после миграции 2026-11-09_modernization_stage1.sql.
+              </div>
+            )}
+            {cols.has('club_role') && (
+              <Field label="Роль в клубе">
+                <input type="text" list="club-roles" value={form.club_role || ''} onChange={e => setForm(f => ({ ...f, club_role: e.target.value }))} placeholder="Офицер по мероприятиям" />
+                <datalist id="club-roles">{CLUB_ROLES.map(r => <option key={r} value={r} />)}</datalist>
+              </Field>
+            )}
+            {cols.has('industry_group') && (
+              <Field label="Отрасль (для фильтра в приложении)">
+                <select value={form.industry_group || ''} onChange={e => setForm(f => ({ ...f, industry_group: e.target.value }))}>
+                  <option value="">— не выбрана (определится по нише) —</option>
+                  {INDUSTRIES.map(i => <option key={i} value={i}>{i}</option>)}
+                </select>
+              </Field>
+            )}
+            {cols.has('hobbies') && (
+              <div className="field full"><label>Увлечения</label>
+                <TagsInput value={form.hobbies} onChange={v => setForm(f => ({ ...f, hobbies: v }))} placeholder="Гольф, теннис… — Enter или запятая" />
+              </div>
+            )}
+            {cols.has('contacts_public') && (
+              <label className="full" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#aaa', cursor: 'pointer', gridColumn: '1/-1' }}>
+                <input type="checkbox" checked={!!form.contacts_public} onChange={e => setForm(f => ({ ...f, contacts_public: e.target.checked }))} />
+                Согласие показывать контакты резидентам
+              </label>
+            )}
 
             <Field label="Порядок сортировки"><input type="text" value={form.sort_order || ''} onChange={e => setForm(f => ({ ...f, sort_order: parseInt(e.target.value) || 0 }))} /></Field>
             <div style={{ display: 'flex', gap: 20, alignItems: 'center', padding: '8px 0' }}>
@@ -590,20 +665,28 @@ const EventsTab = () => {
   const [reminderResidents, setReminderResidents] = useState([]);
   const [selectedResidentIds, setSelectedResidentIds] = useState([]);
   const [rules, setRules] = useState(FALLBACK_RULES);   // правила баллов из «Правил баллов»
+  const [groups, setGroups] = useState([]);              // resident_groups для group_id
+  const [hasGroupCol, setHasGroupCol] = useState(false); // events.group_id (modernization_stage1)
   const fileRef = useRef();
 
   useEffect(() => { loadPointsSettings().then(setRules); }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase.from('events').select('*').order('date', { ascending: false });
+    const [{ data }, g, present] = await Promise.all([
+      supabase.from('events').select('*').order('date', { ascending: false }),
+      supabase.from('resident_groups').select('id,name').order('sort_order').order('name'),
+      probeColumns(supabase, 'events', ['group_id']),
+    ]);
     setRows(data || []);
+    setGroups(g.error ? [] : (g.data || []));
+    setHasGroupCol(present.has('group_id'));
     setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const blank = () => ({ title: '', description: '', date: '', time: '', location: '', speaker_name: '', speaker_role: '', capacity: '', tags: '', is_published: true, category: 'business', points: rules.business, champion_points: rules.champion, no_show_penalty: rules.no_show, late_penalty: rules.late, left_early_penalty: rules.left_early });
+  const blank = () => ({ title: '', description: '', date: '', time: '', location: '', speaker_name: '', speaker_role: '', capacity: '', tags: '', is_published: true, category: 'business', points: rules.business, champion_points: rules.champion, co_champion_points: rules.co_champion, no_show_penalty: rules.no_show, late_cancel_penalty: rules.late_cancel, late_penalty: rules.late, left_early_penalty: rules.left_early });
   const openNew = () => { setForm(blank()); setImageFile(null); setImagePreview(null); setRsvps(null); setModal('new'); };
   const openEdit = r => {
     const d = r.date ? new Date(r.date) : null;
@@ -644,17 +727,24 @@ const EventsTab = () => {
         category: form.category || 'business',
         points: parseInt(form.points) || 0,
         champion_points: parseInt(form.champion_points) || 0,
+        co_champion_points: parseInt(form.co_champion_points) || 0,
         no_show_penalty: parseInt(form.no_show_penalty) || 0,
+        late_cancel_penalty: parseInt(form.late_cancel_penalty) || 0,
         late_penalty: parseInt(form.late_penalty) || 0,
         left_early_penalty: parseInt(form.left_early_penalty) || 0,
+        group_id: form.group_id || null,
       };
+      if (!hasGroupCol) delete payload.group_id;
       // До применения миграции баллов этих колонок нет — сохраняем без них.
       if (!('category' in (rows[0] || { category: 1 }))) {
         delete payload.category; delete payload.points; delete payload.champion_points;
         delete payload.no_show_penalty; delete payload.late_penalty; delete payload.left_early_penalty;
+        delete payload.co_champion_points; delete payload.late_cancel_penalty;
       }
-      if (modal === 'new') await supabase.from('events').insert(payload);
-      else await supabase.from('events').update(payload).eq('id', form.id);
+      const { error } = modal === 'new'
+        ? await supabase.from('events').insert(payload)
+        : await supabase.from('events').update(payload).eq('id', form.id);
+      if (error) throw error;
       showToast(modal === 'new' ? 'Мероприятие добавлено' : 'Сохранено');
       close(); load();
     } catch (e) { showToast('Ошибка: ' + e.message, 'err'); }
@@ -700,7 +790,7 @@ const EventsTab = () => {
     try {
       const response = await fetch('/api/event-reminder', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await adminApiHeaders(),
         body: JSON.stringify({
           title: event.title,
           date: event.date,
@@ -744,7 +834,10 @@ const EventsTab = () => {
                     : <div style={{ width: 56, height: 40, background: 'var(--s3)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>📅</div>
                   }
                 </td>
-                <td style={{ fontWeight: 600, maxWidth: 280 }}><div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 260 }}>{r.title}</div></td>
+                <td style={{ fontWeight: 600, maxWidth: 280 }}>
+                  <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 260 }}>{r.title}</div>
+                  {r.group_id && <span className="badge badge-gold" style={{ marginTop: 4 }}>👥 {groups.find(g => g.id === r.group_id)?.name || 'Группа'}</span>}
+                </td>
                 <td style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>{r.date ? new Date(r.date).toLocaleString('ru', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}</td>
                 <td>{r.points != null ? <span className="badge badge-gold" title={categoryLabel(r.category)}>{r.points}</span> : '—'}</td>
                 <td><Toggle checked={r.is_published} onChange={v => togglePub(r.id, v)} /></td>
@@ -788,6 +881,19 @@ const EventsTab = () => {
             <Field label="Роль организатора"><input type="text" value={form.speaker_role || ''} onChange={e => setForm(f => ({ ...f, speaker_role: e.target.value }))} placeholder="Президент клуба" /></Field>
             <Field label="Вместимость (мест)"><input type="number" min="0" value={form.capacity || ''} onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))} placeholder="50" /></Field>
             <Field label="Опубликован"><Toggle checked={form.is_published !== false} onChange={v => setForm(f => ({ ...f, is_published: v }))} /></Field>
+            <div className="field full"><label>Аудитория</label>
+              {hasGroupCol ? (
+                <>
+                  <select value={form.group_id || ''} onChange={e => setForm(f => ({ ...f, group_id: e.target.value }))}>
+                    <option value="">Для всех резидентов</option>
+                    {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                  </select>
+                  <div style={{ fontSize: 12, color: 'var(--muted)' }}>Событие форум-группы видят только её участники.</div>
+                </>
+              ) : (
+                <div style={{ fontSize: 12, color: 'var(--danger)' }}>Выбор группы появится после миграции 2026-11-09_modernization_stage1.sql.</div>
+              )}
+            </div>
             <div className="field full"><label>Категория (для рейтинга)</label>
               <select value={form.category || 'business'} onChange={e => setForm(f => ({ ...f, category: e.target.value, points: defaultPointsFor(e.target.value, rules) }))}>
                 {EVENT_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label} — {rules[c.value]} баллов</option>)}
@@ -795,6 +901,7 @@ const EventsTab = () => {
             </div>
             <Field label="Баллы за посещение"><input type="number" min="0" value={form.points ?? ''} onChange={e => setForm(f => ({ ...f, points: e.target.value }))} /></Field>
             <Field label="Баллы за чемпионство"><input type="number" min="0" value={form.champion_points ?? ''} onChange={e => setForm(f => ({ ...f, champion_points: e.target.value }))} /></Field>
+            <Field label="Баллы за со-чемпионство"><input type="number" min="0" value={form.co_champion_points ?? ''} placeholder={String(rules.co_champion)} onChange={e => setForm(f => ({ ...f, co_champion_points: e.target.value }))} /></Field>
             {PENALTIES.map(p => (
               <Field key={p.key} label={`Антибаллы: ${p.label.toLowerCase()}`}>
                 <input type="number" min="0" value={form[p.key] ?? ''} placeholder={String(rules[p.rule])}
@@ -814,6 +921,13 @@ const EventsTab = () => {
                   Записались в приложении: {rsvps.filter(r => r.status === 'going' || r.status === 'with_family').length} идут · {rsvps.filter(r => r.status === 'maybe').length} возможно · {rsvps.filter(r => r.status === 'not_going').length} не идут
                 </div>
               )}
+            </div>
+          )}
+
+          {modal !== 'new' && (
+            <div style={{ marginTop: 18, paddingTop: 18, borderTop: '1px solid var(--border)' }}>
+              <label style={{ display: 'block', marginBottom: 10 }}>Архив мероприятия</label>
+              <EventArchiveEditor event={modal} />
             </div>
           )}
         </Modal>
@@ -912,7 +1026,7 @@ const NewsTab = () => {
       if (isNew && payload.is_published) {
         const pushResponse = await fetch('/api/news-push', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: await adminApiHeaders(),
           body: JSON.stringify({ title: payload.title }),
         });
         if (!pushResponse.ok) {
@@ -1014,6 +1128,8 @@ const NewsTab = () => {
 
 // ─── PARTNERS TAB ─────────────────────────────────────────────────────────────
 
+const PARTNER_NEW_COLS = ['valid_until', 'how_to_get'];
+
 const PartnersTab = () => {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1022,12 +1138,17 @@ const PartnersTab = () => {
   const [saving, setSaving] = useState(false);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [cols, setCols] = useState(new Set()); // valid_until / how_to_get (modernization_stage1)
   const fileRef = useRef();
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase.from('partners').select('*').order('created_at', { ascending: false });
+    const [{ data }, present] = await Promise.all([
+      supabase.from('partners').select('*').order('created_at', { ascending: false }),
+      probeColumns(supabase, 'partners', PARTNER_NEW_COLS),
+    ]);
     setRows(data || []);
+    setCols(present);
     setLoading(false);
   }, []);
 
@@ -1049,9 +1170,12 @@ const PartnersTab = () => {
     try {
       let logo_url = form.logo_url || null;
       if (imageFile) logo_url = await uploadImage(imageFile, 'partners');
-      const p = { name: form.name, description: form.description || null, category: form.category, discount: form.discount || null, discount_percent: form.discount_percent || null, discount_conditions: form.discount_conditions || null, address: form.address || null, website: form.website || null, phone: form.phone || null, logo_url, is_published: form.is_published !== false, is_exclusive: !!form.is_exclusive };
-      if (modal === 'new') await supabase.from('partners').insert(p);
-      else await supabase.from('partners').update(p).eq('id', form.id);
+      const p = { name: form.name, description: form.description || null, category: form.category, discount: form.discount || null, discount_percent: form.discount_percent || null, discount_conditions: form.discount_conditions || null, address: form.address || null, website: form.website || null, phone: form.phone || null, logo_url, is_published: form.is_published !== false, is_exclusive: !!form.is_exclusive, valid_until: form.valid_until || null, how_to_get: form.how_to_get?.trim() || null };
+      const payload = pickCols(p, PARTNER_NEW_COLS, cols);
+      const { error } = modal === 'new'
+        ? await supabase.from('partners').insert(payload)
+        : await supabase.from('partners').update(payload).eq('id', form.id);
+      if (error) throw error;
       showToast(modal === 'new' ? 'Партнёр добавлен' : 'Сохранено');
       close(); load();
     } catch (e) { showToast('Ошибка: ' + e.message, 'err'); }
@@ -1090,6 +1214,11 @@ const PartnersTab = () => {
                 <div style={{ fontWeight: 700, marginBottom: 2 }}>{r.name}</div>
                 <div style={{ fontSize: 11, color: 'var(--muted)' }}>{PARTNER_CATS.find(c => c.value === r.category)?.label}</div>
                 {r.discount && <div style={{ fontSize: 12, color: 'var(--gold)', marginTop: 4 }}>{r.discount}</div>}
+                {r.valid_until && (
+                  <div style={{ fontSize: 11, marginTop: 4, color: new Date(r.valid_until + 'T23:59:59') < new Date() ? 'var(--danger)' : 'var(--muted)' }}>
+                    {new Date(r.valid_until + 'T23:59:59') < new Date() ? 'Истекло ' : 'До '}{new Date(r.valid_until).toLocaleDateString('ru')}
+                  </div>
+                )}
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -1122,6 +1251,15 @@ const PartnersTab = () => {
             <Field label="Адрес"><input type="text" value={form.address || ''} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} /></Field>
             <Field label="Сайт"><input type="url" value={form.website || ''} onChange={e => setForm(f => ({ ...f, website: e.target.value }))} /></Field>
             <Field label="Телефон"><input type="tel" value={form.phone || ''} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} /></Field>
+            {cols.has('valid_until') && (
+              <Field label="Действует до"><input type="date" value={form.valid_until || ''} onChange={e => setForm(f => ({ ...f, valid_until: e.target.value }))} /></Field>
+            )}
+            {cols.has('how_to_get') && (
+              <div className="field full"><label>Как получить привилегию</label><textarea value={form.how_to_get || ''} onChange={e => setForm(f => ({ ...f, how_to_get: e.target.value }))} rows={3} placeholder="Покажите карту резидента в приложении на кассе" /></div>
+            )}
+            {cols.size < PARTNER_NEW_COLS.length && (
+              <div className="field full" style={{ fontSize: 12, color: 'var(--danger)' }}>Поля «Действует до» и «Как получить привилегию» появятся после миграции 2026-11-09_modernization_stage1.sql.</div>
+            )}
             <div style={{ display: 'flex', gap: 20, padding: '4px 0' }}>
               <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#aaa', cursor: 'pointer' }}><Toggle checked={form.is_published !== false} onChange={v => setForm(f => ({ ...f, is_published: v }))} /> Опубликован</label>
               <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#aaa', cursor: 'pointer' }}><Toggle checked={!!form.is_exclusive} onChange={v => setForm(f => ({ ...f, is_exclusive: v }))} /> Эксклюзив</label>
@@ -1134,6 +1272,9 @@ const PartnersTab = () => {
 };
 
 // ─── POLLS TAB ────────────────────────────────────────────────────────────────
+
+// Тестовые опросы — приглушены и с полосой слева, чтобы не путать с боевыми.
+const TEST_ROW_STYLE = { opacity: 0.6, boxShadow: 'inset 3px 0 0 var(--danger)' };
 
 const PollsTab = () => {
   const [surveys, setSurveys] = useState([]);   // общие опросы (анкеты)
@@ -1154,17 +1295,22 @@ const PollsTab = () => {
   const [audienceData, setAudienceData] = useState({ residents: [], events: [], groups: [] });
   const [targetQuery, setTargetQuery] = useState('');
   const [analyticsSurvey, setAnalyticsSurvey] = useState(null);
+  // is_test (миграция modernization_stage1): тестовые опросы не показываются в приложении.
+  const [testCols, setTestCols] = useState({ polls: false, surveys: false });
 
   const isDraftSurvey = surveyModal === 'new';
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [s, p] = await Promise.all([
+    const [s, p, pc, sc] = await Promise.all([
       supabase.from('surveys').select('*, polls(count)').order('created_at', { ascending: false }),
       supabase.from('polls').select('*, poll_answers(count)').is('survey_id', null).order('created_at', { ascending: false }),
+      probeColumns(supabase, 'polls', ['is_test']),
+      probeColumns(supabase, 'surveys', ['is_test']),
     ]);
     setSurveys(s.data || []);
     setRows(p.data || []);
+    setTestCols({ polls: pc.has('is_test'), surveys: sc.has('is_test') });
     setLoading(false);
   }, []);
 
@@ -1245,6 +1391,8 @@ const PollsTab = () => {
         is_required: form.is_required !== false,
         scale_max: form.type === 'rating' ? (parseInt(form.scale_max) || 5) : 5,
       };
+      // «Тестовый» — только у одиночных опросов; вопросы анкеты наследуют его от анкеты.
+      if (testCols.polls && !form.survey_id) payload.is_test = !!form.is_test;
       const { error } = modal === 'new'
         ? await supabase.from('polls').insert(payload)
         : await supabase.from('polls').update(payload).eq('id', form.id);
@@ -1285,7 +1433,7 @@ const PollsTab = () => {
     setSurveyForm({
       title: '', description: '', is_active: true, ends_at: '', starts_at: '',
       kind: 'poll', audience: 'all', audience_event_id: '', audience_group_id: '',
-      rsvp_event_id: '', is_mandatory: false, is_anonymous: false,
+      rsvp_event_id: '', is_mandatory: false, is_anonymous: false, is_test: false,
     });
     setSurveyQuestions([]); setDraftQuestions([]); setSurveyTargets([]); setTargetQuery('');
     setSurveyModal('new'); loadAudienceData();
@@ -1346,6 +1494,7 @@ const PollsTab = () => {
         is_anonymous: isRegistration ? false : !!f.is_anonymous,
         rsvp_event_id: isRegistration ? f.rsvp_event_id : null,
       };
+      if (testCols.surveys) payload.is_test = !!f.is_test;
       if (isDraftSurvey) {
         // 1) создаём опросник, 2) вопросы и получателей, 3) «касаемся»
         // опросника — это и отправляет ОДНО уведомление его аудитории.
@@ -1422,10 +1571,11 @@ const PollsTab = () => {
           <thead><tr><th>Название</th><th>Аудитория</th><th>Вопросов</th><th>Период</th><th>Активен</th><th></th></tr></thead>
           <tbody>
             {surveys.map(s => (
-              <tr key={s.id}>
+              <tr key={s.id} style={s.is_test ? TEST_ROW_STYLE : undefined}>
                 <td style={{ maxWidth: 320 }}>
                   <div style={{ fontWeight: 600 }}>{s.title}</div>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+                    {s.is_test && <span className="badge badge-red" title="Не показывается в приложении">🧪 Тестовый</span>}
                     <span className="badge badge-gray">{SURVEY_KINDS.find(k => k.value === (s.kind || 'poll'))?.label}</span>
                     {s.is_mandatory && <span className="badge badge-red">Обязательный</span>}
                     {s.is_anonymous && <span className="badge badge-gold">Анонимный</span>}
@@ -1457,8 +1607,11 @@ const PollsTab = () => {
           <thead><tr><th>Вопрос</th><th>Тип</th><th>Ответов</th><th>Срок</th><th>Активен</th><th></th></tr></thead>
           <tbody>
             {rows.map(r => (
-              <tr key={r.id}>
-                <td style={{ maxWidth: 300 }}><div style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 280 }}>{r.question}</div></td>
+              <tr key={r.id} style={r.is_test ? TEST_ROW_STYLE : undefined}>
+                <td style={{ maxWidth: 300 }}>
+                  <div style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 280 }}>{r.question}</div>
+                  {r.is_test && <span className="badge badge-red" style={{ marginTop: 4 }} title="Не показывается в приложении">🧪 Тестовый</span>}
+                </td>
                 <td><span className="badge badge-gray">{POLL_TYPES.find(t => t.value === r.type)?.label}</span></td>
                 <td>
                   <button type="button" className="stat-pill" title="Показать ответы"
@@ -1538,6 +1691,12 @@ const PollsTab = () => {
             <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#aaa', cursor: 'pointer' }}><Toggle checked={!!surveyForm.is_mandatory} onChange={v => setSurveyForm(f => ({ ...f, is_mandatory: v }))} /> Обязательный</label>
             <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#aaa', cursor: 'pointer' }} title="Ответы сохраняются без привязки к резиденту. Видно только, кто прошёл опрос."><Toggle checked={!!surveyForm.is_anonymous} onChange={v => setSurveyForm(f => ({ ...f, is_anonymous: v }))} /> Анонимный</label>
             <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#aaa', cursor: 'pointer' }}><Toggle checked={!!surveyForm.is_active} onChange={v => setSurveyForm(f => ({ ...f, is_active: v }))} /> Активен</label>
+            {testCols.surveys && (
+              <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#aaa', cursor: 'pointer' }}>
+                <input type="checkbox" checked={!!surveyForm.is_test} onChange={e => setSurveyForm(f => ({ ...f, is_test: e.target.checked }))} />
+                Тестовый (не показывать в приложении)
+              </label>
+            )}
           </div>
           {!isDraftSurvey && surveyForm.notified_at && surveyForm.is_anonymous !== surveyModal.is_anonymous && (
             <div style={{ fontSize: 12, color: 'var(--danger)' }}>Анонимность меняется только для новых ответов — уже полученные ответы не изменятся.</div>
@@ -1631,6 +1790,12 @@ const PollsTab = () => {
               <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#aaa', cursor: 'pointer' }}><Toggle checked={form.is_required !== false} onChange={v => setForm(f => ({ ...f, is_required: v }))} /> Обязательный вопрос</label>
             )}
             <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#aaa', cursor: 'pointer' }}><Toggle checked={!!form.is_active} onChange={v => setForm(f => ({ ...f, is_active: v }))} /> Активен</label>
+            {testCols.polls && !isSurveyQuestion && (
+              <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#aaa', cursor: 'pointer' }}>
+                <input type="checkbox" checked={!!form.is_test} onChange={e => setForm(f => ({ ...f, is_test: e.target.checked }))} />
+                Тестовый (не показывать в приложении)
+              </label>
+            )}
           </div>
           {needsOptions && (
             <div className="field">
@@ -1800,47 +1965,65 @@ const AccessRequestsTab = () => {
 };
 
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
+// Вход — Supabase Auth (email + пароль). Сессию хранит и обновляет supabase-js.
+// Права проверяются на сервере: rpc('is_admin') смотрит в public.admin_users,
+// и те же is_admin()-политики RLS ограничивают все таблицы админки.
 
-const Login = ({ onAuth }) => {
-  const [step, setStep] = useState('phone');
-  const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
-  const [generatedOtp, setGeneratedOtp] = useState('');
-  const [error, setError] = useState('');
+const authErrorText = error => {
+  const msg = String(error?.message || error || '');
+  if (/invalid login credentials/i.test(msg)) return 'Неверный email или пароль';
+  if (/email not confirmed/i.test(msg)) return 'Email не подтверждён';
+  if (/rate limit|too many/i.test(msg)) return 'Слишком много попыток, попробуйте позже';
+  if (/password should be at least/i.test(msg)) return 'Пароль слишком короткий';
+  return msg || 'Ошибка входа';
+};
+
+const wideBtn = { width: '100%', justifyContent: 'center', padding: 14 };
+const formCol = { display: 'flex', flexDirection: 'column', gap: 12 };
+
+const Login = ({ initialError = '', recovery = false, onRecovered }) => {
+  const [mode, setMode] = useState(recovery ? 'recovery' : 'login'); // login | forgot | recovery
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [password2, setPassword2] = useState('');
+  const [error, setError] = useState(initialError);
+  const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const fmt = v => {
-    let d = v.replace(/\D/g, '');
-    if (!d) return '';
-    if (['7','8','9'].includes(d[0])) {
-      if (d[0] === '9') d = '7' + d;
-      if (d[0] === '8') d = '7' + d.slice(1);
-      let r = '+7';
-      if (d.length > 1) r += ' ' + d.substring(1, 4);
-      if (d.length > 4) r += ' ' + d.substring(4, 7);
-      if (d.length > 7) r += ' ' + d.substring(7, 11);
-      return r;
-    }
-    return '+' + d;
-  };
+  const go = m => { setMode(m); setError(''); setInfo(''); };
 
-  const sendCode = async e => {
-    e.preventDefault(); setError('');
-    const norm = phone.replace(/\s/g, '');
-    if (!ALLOWED_PHONES.some(p => p.replace(/\s/g, '') === norm)) { setError('Доступ запрещён'); return; }
-    const code = Math.floor(1000 + Math.random() * 9000).toString();
-    setGeneratedOtp(code); setLoading(true);
-    try {
-      await fetch('/api/telegram', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'admin_otp', code, phone }) });
-      setStep('otp');
-    } catch { setError('Ошибка сети'); }
+  const signIn = async e => {
+    e.preventDefault(); setError(''); setInfo('');
+    if (!email.trim() || !password) { setError('Введите email и пароль'); return; }
+    setLoading(true);
+    const { error: err } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     setLoading(false);
+    if (err) setError(authErrorText(err));
+    // Успех обрабатывает onAuthStateChange в Admin (проверка is_admin()).
   };
 
-  const verify = e => {
-    e.preventDefault();
-    if (otp === generatedOtp || otp === '0000') { localStorage.setItem('admin_auth', 'true'); onAuth(); }
-    else setError('Неверный код');
+  const sendReset = async e => {
+    e.preventDefault(); setError(''); setInfo('');
+    if (!email.trim()) { setError('Введите email'); return; }
+    setLoading(true);
+    const { error: err } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/admin`,
+    });
+    setLoading(false);
+    if (err) setError(authErrorText(err));
+    else setInfo('Если такой администратор есть, на почту придёт ссылка для смены пароля.');
+  };
+
+  const setNewPassword = async e => {
+    e.preventDefault(); setError(''); setInfo('');
+    if (password.length < 8) { setError('Пароль — не короче 8 символов'); return; }
+    if (password !== password2) { setError('Пароли не совпадают'); return; }
+    setLoading(true);
+    const { error: err } = await supabase.auth.updateUser({ password });
+    setLoading(false);
+    if (err) { setError(authErrorText(err)); return; }
+    setPassword(''); setPassword2('');
+    onRecovered?.();
   };
 
   return (
@@ -1848,25 +2031,50 @@ const Login = ({ onAuth }) => {
       <div className="login-card">
         <div className="login-logo">26 Business Club</div>
         <div className="login-sub">Панель администратора</div>
-        {step === 'phone' ? (
-          <form onSubmit={sendCode} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <Field label="Номер телефона">
-              <input type="tel" value={phone} onChange={e => setPhone(fmt(e.target.value))} placeholder="+7 777 000 0000" style={{ textAlign: 'center', fontSize: 18 }} />
+
+        {mode === 'login' && (
+          <form onSubmit={signIn} style={formCol}>
+            <Field label="Email">
+              <input type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} placeholder="admin@example.com" autoFocus />
             </Field>
-            <button className="btn btn-gold" type="submit" style={{ width: '100%', justifyContent: 'center', padding: 14 }} disabled={loading}>
-              {loading ? <span className="spinner" /> : 'Получить код'}
+            <Field label="Пароль">
+              <input type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} />
+            </Field>
+            <button className="btn btn-gold" type="submit" style={wideBtn} disabled={loading}>
+              {loading ? <span className="spinner" /> : 'Войти'}
             </button>
-          </form>
-        ) : (
-          <form onSubmit={verify} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <Field label="Код из Telegram">
-              <input className="login-otp" type="text" value={otp} onChange={e => setOtp(e.target.value)} placeholder="0000" maxLength={4} />
-            </Field>
-            <button className="btn btn-gold" type="submit" style={{ width: '100%', justifyContent: 'center', padding: 14 }}>Войти</button>
-            <button type="button" className="btn-ghost" style={{ textAlign: 'center' }} onClick={() => setStep('phone')}>← Изменить номер</button>
+            <button type="button" className="btn-ghost" style={{ textAlign: 'center' }} onClick={() => go('forgot')}>Забыли пароль?</button>
           </form>
         )}
-        {error && <div style={{ color: 'var(--danger)', fontSize: 12, textAlign: 'center' }}>{error}</div>}
+
+        {mode === 'forgot' && (
+          <form onSubmit={sendReset} style={formCol}>
+            <Field label="Email администратора">
+              <input type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} placeholder="admin@example.com" autoFocus />
+            </Field>
+            <button className="btn btn-gold" type="submit" style={wideBtn} disabled={loading}>
+              {loading ? <span className="spinner" /> : 'Отправить ссылку'}
+            </button>
+            <button type="button" className="btn-ghost" style={{ textAlign: 'center' }} onClick={() => go('login')}>← Ко входу</button>
+          </form>
+        )}
+
+        {mode === 'recovery' && (
+          <form onSubmit={setNewPassword} style={formCol}>
+            <Field label="Новый пароль">
+              <input type="password" autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)} autoFocus />
+            </Field>
+            <Field label="Повторите пароль">
+              <input type="password" autoComplete="new-password" value={password2} onChange={e => setPassword2(e.target.value)} />
+            </Field>
+            <button className="btn btn-gold" type="submit" style={wideBtn} disabled={loading}>
+              {loading ? <span className="spinner" /> : 'Сохранить пароль'}
+            </button>
+          </form>
+        )}
+
+        {error && <div className="login-msg err">{error}</div>}
+        {info && <div className="login-msg ok">{info}</div>}
       </div>
     </div>
   );
@@ -1875,15 +2083,84 @@ const Login = ({ onAuth }) => {
 // ─── MAIN ADMIN ───────────────────────────────────────────────────────────────
 
 const Admin = () => {
-  const [authed, setAuthed] = useState(() => localStorage.getItem('admin_auth') === 'true');
+  const [admin, setAdmin] = useState(null);        // { id, name, email } — только после is_admin() = true
+  const [checking, setChecking] = useState(true);  // идёт проверка сессии/прав
+  const [authError, setAuthError] = useState(authRedirect.error || '');
+  const [recovery, setRecovery] = useState(authRedirect.type === 'recovery'); // пришли по ссылке «Забыли пароль?»
   const [tab, setTab] = useState('residents');
+  const checkedUser = useRef(null);                // id пользователя, для которого права уже проверены
+  const recoveryRef = useRef(authRedirect.type === 'recovery');
 
-  const logout = () => { localStorage.removeItem('admin_auth'); setAuthed(false); };
+  const verify = useCallback(async session => {
+    const user = session?.user;
+    if (!user) { checkedUser.current = null; setAdmin(null); setChecking(false); return; }
+    if (checkedUser.current === user.id) { setChecking(false); return; }
+    setChecking(true);
+    const { data: ok, error } = await supabase.rpc('is_admin');
+    if (error || ok !== true) {
+      checkedUser.current = null;
+      setAdmin(null);
+      setAuthError(error ? `Не удалось проверить права: ${error.message}` : 'Нет прав администратора');
+      await supabase.auth.signOut({ scope: 'local' });
+      setChecking(false);
+      return;
+    }
+    // Своя строка admin_users доступна по политике admin_users_select_own (2026-11-10_admin_auth.sql).
+    const { data: me } = await supabase.from('admin_users').select('name').eq('user_id', user.id).maybeSingle();
+    checkedUser.current = user.id;
+    setAuthError('');
+    setAdmin({ id: user.id, name: me?.name || user.email, email: user.email });
+    setChecking(false);
+  }, []);
 
-  if (!authed) return (
+  useEffect(() => {
+    // onAuthStateChange сразу присылает INITIAL_SESSION (сохранённая сессия supabase-js).
+    // Запросы к Supabase внутри колбэка не ждём — откладываем через setTimeout (рекомендация supabase-js).
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        recoveryRef.current = true;
+        setRecovery(true);
+        setChecking(false);
+        return;
+      }
+      if (event === 'SIGNED_OUT') {
+        checkedUser.current = null;
+        recoveryRef.current = false;
+        setRecovery(false);
+        setAdmin(null);
+        setChecking(false);
+        return;
+      }
+      if (recoveryRef.current) return; // сначала новый пароль, потом проверка прав
+      setTimeout(() => { verify(session); }, 0);
+    });
+    return () => subscription.unsubscribe();
+  }, [verify]);
+
+  const onRecovered = async () => {
+    recoveryRef.current = false;
+    setRecovery(false);
+    if (window.location.hash) window.history.replaceState(null, '', window.location.pathname);
+    const { data } = await supabase.auth.getSession();
+    verify(data.session);
+  };
+
+  const logout = async () => {
+    await supabase.auth.signOut();
+    setAuthError('');
+  };
+
+  if (checking && !recovery) return (
     <>
       <style>{css}</style>
-      <Login onAuth={() => setAuthed(true)} />
+      <div className="login-wrap"><span className="spinner" /></div>
+    </>
+  );
+
+  if (!admin || recovery) return (
+    <>
+      <style>{css}</style>
+      <Login key={recovery ? 'recovery' : 'login'} initialError={authError} recovery={recovery} onRecovered={onRecovered} />
       <div id="__toast" className="toast" />
     </>
   );
@@ -1898,6 +2175,10 @@ const Admin = () => {
     points:          <PointsTab />,
     'points-rules':  <PointsRulesTab />,
     groups:          <GroupsTab />,
+    onboarding:      <OnboardingTab />,
+    'club-votes':    <ClubVotesTab />,
+    knowledge:       <KnowledgeTab />,
+    internal:        <InternalNotesTab />,
     president:       <PresidentTab />,
     'access-requests': <AccessRequestsTab />,
   };
@@ -1909,6 +2190,7 @@ const Admin = () => {
         <div className="topbar">
           <div className="topbar-brand">26 Business Club — Admin</div>
           <div className="topbar-right">
+            <span className="topbar-user" title={admin.email}><b>{admin.name}</b></span>
             <a href="/" style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none' }}>← На сайт</a>
             <button className="btn btn-outline btn-sm" onClick={logout}>Выйти</button>
           </div>

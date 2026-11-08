@@ -65,32 +65,6 @@ export default async function handler(req, res) {
 📧 <b>Email:</b> ${escapeHtml(email)}
 🏢 <b>Компания:</b> ${escapeHtml(company)}
         `.trim();
-    } else if (kind === 'admin_otp') {
-        const phone = (body.phone ?? '').toString();
-        const code = (body.code ?? '').toString();
-
-        if (!phone || !code) {
-            res.statusCode = 400;
-            res.setHeader('content-type', 'application/json; charset=utf-8');
-            res.end(JSON.stringify({ ok: false, error: 'Missing fields' }));
-            return;
-        }
-
-        // Optional server-side allowlist: comma-separated phones in env.
-        const envAllowlist = (process.env.ADMIN_ALLOWED_PHONES || '').split(',').map(s => s.trim()).filter(Boolean);
-        if (envAllowlist.length > 0) {
-            const normalizedInput = phone.replace(/\s/g, '');
-            const allowed = envAllowlist.some(p => p.replace(/\s/g, '') === normalizedInput);
-            if (!allowed) {
-                res.statusCode = 403;
-                res.setHeader('content-type', 'application/json; charset=utf-8');
-                res.end(JSON.stringify({ ok: false, error: 'Forbidden' }));
-                return;
-            }
-        }
-
-        text = `🔑 Код админки: ${code}\nНомер: ${phone}`;
-        parseMode = undefined;
     } else {
         res.statusCode = 400;
         res.setHeader('content-type', 'application/json; charset=utf-8');

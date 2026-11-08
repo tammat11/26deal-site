@@ -23,7 +23,7 @@ export const AttendancePanel = ({ event }) => {
     Promise.all([
       supabase.from('residents').select('id,name,company,photo_url').eq('is_published', true).order('name'),
       supabase.from('event_rsvps_with_resident').select('resident_id,status').eq('event_id', event.id),
-      supabase.from('event_attendance').select('resident_id,attended,is_champion,is_late,left_early').eq('event_id', event.id),
+      supabase.from('event_attendance').select('resident_id,attended,is_champion,is_co_champion,is_late,left_early').eq('event_id', event.id),
     ]).then(([r, v, a]) => {
       if (!alive) return;
       if (a.error) showToast('Таблица явки не найдена — примените миграцию 2026-09-28', 'err');
@@ -37,17 +37,21 @@ export const AttendancePanel = ({ event }) => {
   }, [event.id]);
 
   const save = async (residentId, patch) => {
-    const prev = marks[residentId] || { attended: null, is_champion: false, is_late: false, left_early: false };
+    const prev = marks[residentId] || { attended: null, is_champion: false, is_co_champion: false, is_late: false, left_early: false };
     const next = { ...prev, ...patch };
+    // Чемпион и со-чемпион — взаимоисключающие отметки.
+    if (patch.is_champion) next.is_co_champion = false;
+    if (patch.is_co_champion) next.is_champion = false;
     // Чемпион, опоздавший и ушедший раньше — все присутствовали.
-    if (next.is_champion || next.is_late || next.left_early) next.attended = true;
-    if (next.attended !== true) { next.is_champion = false; next.is_late = false; next.left_early = false; }
+    if (next.is_champion || next.is_co_champion || next.is_late || next.left_early) next.attended = true;
+    if (next.attended !== true) { next.is_champion = false; next.is_co_champion = false; next.is_late = false; next.left_early = false; }
     setBusyId(residentId);
     const { error } = await supabase.from('event_attendance').upsert({
       event_id: event.id,
       resident_id: residentId,
       attended: next.attended,
       is_champion: next.is_champion,
+      is_co_champion: !!next.is_co_champion,
       is_late: !!next.is_late,
       left_early: !!next.left_early,
       updated_at: new Date().toISOString(),
@@ -67,6 +71,7 @@ export const AttendancePanel = ({ event }) => {
 
   const attendedCount = Object.values(marks).filter(m => m.attended === true).length;
   const championCount = Object.values(marks).filter(m => m.is_champion).length;
+  const coChampionCount = Object.values(marks).filter(m => m.is_co_champion).length;
   const isGoing = id => rsvps[id] === 'going' || rsvps[id] === 'with_family';
   const noShowCount = Object.entries(marks).filter(([id, m]) => m.attended === false && isGoing(id)).length;
   const penaltiesActive = event.date && new Date(event.date) >= new Date('2026-10-27T00:00:00+05:00');
@@ -78,9 +83,10 @@ export const AttendancePanel = ({ event }) => {
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
         <span className="stat-pill">✅ Посетили: {attendedCount}</span>
         <span className="stat-pill">🏆 Чемпионы: {championCount}</span>
-        <span className="stat-pill">+{event.points ?? 0} за посещение · +{event.champion_points ?? 0} за чемпионство</span>
+        <span className="stat-pill">🥈 Со-чемпионы: {coChampionCount}</span>
+        <span className="stat-pill">+{event.points ?? 0} за посещение · +{event.champion_points ?? 0} чемпион · +{event.co_champion_points ?? 150} со-чемпион</span>
         {penaltiesActive
-          ? <span className="stat-pill">−{event.no_show_penalty ?? 100} неявка после записи ({noShowCount}) · −{event.late_penalty ?? 50} опоздание · −{event.left_early_penalty ?? 50} ранний уход</span>
+          ? <span className="stat-pill">−{event.no_show_penalty ?? 400} неявка после подтверждения ({noShowCount}) · −{event.late_cancel_penalty ?? 200} поздняя отмена · −{event.late_penalty ?? 50} опоздание · −{event.left_early_penalty ?? 50} ранний уход</span>
           : <span className="stat-pill">Антибаллы действуют для мероприятий с 27.10.2026</span>}
       </div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
@@ -112,6 +118,9 @@ export const AttendancePanel = ({ event }) => {
               <button type="button" disabled={busy} title="Чемпион мероприятия"
                 className={m.is_champion ? 'btn btn-gold btn-xs' : 'btn btn-outline btn-xs'}
                 onClick={() => save(r.id, { is_champion: !m.is_champion })}>🏆</button>
+              <button type="button" disabled={busy} title="Со-чемпион мероприятия"
+                className={m.is_co_champion ? 'btn btn-gold btn-xs' : 'btn btn-outline btn-xs'}
+                onClick={() => save(r.id, { is_co_champion: !m.is_co_champion })}>🥈</button>
               <button type="button" disabled={busy} title={`Опоздал: −${event.late_penalty ?? 50}`}
                 className="btn btn-xs"
                 style={m.is_late
@@ -125,7 +134,7 @@ export const AttendancePanel = ({ event }) => {
                   : { background: 'none', border: '1px solid var(--border)', color: 'var(--muted)' }}
                 onClick={() => save(r.id, { left_early: !m.left_early })}>Ушёл раньше</button>
               {m.attended === false && isGoing(r.id) && penaltiesActive && (
-                <span className="badge badge-red" title="Записался «Иду», но не пришёл">−{event.no_show_penalty ?? 100}</span>
+                <span className="badge badge-red" title="Подтвердил участие, но не пришёл">−{event.no_show_penalty ?? 400}</span>
               )}
             </div>
           );

@@ -1,13 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { fmtDate, showToast } from './helpers';
-import { EVENT_CATEGORIES, PENALTIES, loadPointsSettings } from './points';
+import { EVENT_CATEGORIES, PENALTIES, MANUAL_AWARDS, loadPointsSettings } from './points';
 
 // Строки шкалы: ключ в points_settings, подпись, как начисляется.
 const RULES = [
   ...EVENT_CATEGORIES.map(c => ({ key: c.value, label: c.label, note: 'за посещение' })),
-  { key: 'champion', label: 'Чемпионство мероприятия', note: 'сверху к баллам за посещение', plus: true },
-  { key: 'referral', label: 'Рекомендация кандидата, вступившего в клуб', note: 'начисляется вручную в разделе «Баллы»' },
+  { key: 'champion', label: 'Чемпион мероприятия', note: 'сверху к баллам за посещение — 🏆 в явке', plus: true },
+  { key: 'co_champion', label: 'Со-чемпион мероприятия', note: 'сверху к баллам за посещение — 🥈 в явке', plus: true },
+  ...MANUAL_AWARDS.map(a => ({ key: a.kind, label: a.label, note: 'начисляется вручную в разделе «Баллы»', manual: true })),
   ...PENALTIES.map(p => ({ key: p.rule, label: p.label, note: 'антибаллы — по отметке в карточке мероприятия (с 27.10.2026)', penalty: true })),
 ];
 
@@ -29,7 +30,7 @@ export const PointsRulesTab = () => {
     const [s, e] = await Promise.all([
       loadPointsSettings(),
       supabase.from('events')
-        .select('id, title, date, category, points, champion_points, no_show_penalty, late_penalty, left_early_penalty, is_published')
+        .select('id, title, date, category, points, champion_points, co_champion_points, no_show_penalty, late_cancel_penalty, late_penalty, left_early_penalty, is_published')
         .order('date', { ascending: false }),
     ]);
     setSettings(s);
@@ -47,7 +48,7 @@ export const PointsRulesTab = () => {
   // Сколько мероприятий затронет правка и сколько из них с ручным значением.
   const impact = key => {
     const cur = settings?.[key];
-    const field = { champion: 'champion_points', no_show: 'no_show_penalty', late: 'late_penalty', left_early: 'left_early_penalty' }[key] || 'points';
+    const field = { champion: 'champion_points', co_champion: 'co_champion_points', no_show: 'no_show_penalty', late_cancel: 'late_cancel_penalty', late: 'late_penalty', left_early: 'left_early_penalty' }[key] || 'points';
     const list = (events || []).filter(e => field !== 'points' || e.category === key);
     return { total: list.length, custom: list.filter(e => e[field] !== cur).length };
   };
@@ -60,8 +61,8 @@ export const PointsRulesTab = () => {
     if (value === settings[editKey]) { setEditKey(null); return; }
     const rule = RULES.find(r => r.key === editKey);
     const { custom } = impact(editKey);
-    const scope = editKey === 'referral'
-      ? 'Прошлые рекомендации не пересчитываются — новое значение подставится для будущих.'
+    const scope = rule.manual
+      ? 'Прошлые ручные начисления не пересчитываются — новое значение подставится для будущих.'
       : `Баллы резидентов будут пересчитаны по всем мероприятиям${custom && !overwrite ? ` (кроме ${custom} с ручным значением)` : ''}.`;
     if (!confirm(`«${rule.label}»: ${settings[editKey]} → ${value}.\n${scope}\nПродолжить?`)) return;
     setSaving(true);
@@ -70,7 +71,7 @@ export const PointsRulesTab = () => {
     });
     setSaving(false);
     if (error) return showToast('Ошибка: ' + error.message, 'err');
-    showToast(editKey === 'referral' ? 'Сохранено' : `Сохранено, пересчитано мероприятий: ${data ?? 0}`);
+    showToast(rule.manual ? 'Сохранено' : `Сохранено, пересчитано мероприятий: ${data ?? 0}`);
     setEditKey(null);
     load();
   };
@@ -106,7 +107,7 @@ export const PointsRulesTab = () => {
                             onChange={e => setDraft(e.target.value)}
                             onKeyDown={e => { if (e.key === 'Enter') apply(); if (e.key === 'Escape') setEditKey(null); }} />
                         </div>
-                        {r.key !== 'referral' && custom > 0 && (
+                        {!r.manual && custom > 0 && (
                           <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 11, color: 'var(--muted)', cursor: 'pointer' }}>
                             <input type="checkbox" checked={overwrite} onChange={e => setOverwrite(e.target.checked)} />
                             и {custom} мероприятий с ручным значением
@@ -141,7 +142,7 @@ export const PointsRulesTab = () => {
         • Баллы начисляются только за <b style={{ color: 'var(--text)' }}>фактическое посещение</b> — после отметки «Посетил» в карточке мероприятия, не за регистрацию.<br />
         • При изменении правила новое значение получают все мероприятия этой категории (кроме тех, где баллы меняли вручную — их можно включить галочкой), и баланс каждого резидента пересчитывается: разница видна строкой в его истории.<br />
         • Баллы одного мероприятия можно изменить отдельно — в его карточке.<br />
-        • Антибаллы: «Не посетил» у записавшегося «Иду» — списание автоматически; «Опоздал» и «Ушёл раньше» — баллы за посещение остаются, штраф вычитается. Баланс может быть отрицательным.<br />
+        • Антибаллы: «Не посетил» у подтвердившего участие — списание автоматически; снял «Иду» менее чем за 3 календарных дня — списание автоматически (снимается, если снова записался или пришёл); «Опоздал» и «Ушёл раньше» — баллы за посещение остаются, штраф вычитается. Баланс может быть отрицательным.<br />
         • Рейтинг считается за текущий год (по дате мероприятия) и за всё время.
       </div>
 

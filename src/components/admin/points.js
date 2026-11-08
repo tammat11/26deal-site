@@ -1,24 +1,33 @@
 import { supabase } from '../../lib/supabase';
 
-// Базовое начисление по ТЗ. Значение подставляется при выборе категории,
-// но админ может поменять баллы для конкретного мероприятия.
+// Шкала клуба (v3). Текущие значения — в таблице points_settings
+// («Правила баллов»); здесь — только запасные, если таблица недоступна.
 export const EVENT_CATEGORIES = [
-  { value: 'board',    label: 'Совет директоров',                     points: 100 },
-  { value: 'forum',    label: 'Форум',                                points: 150 },
-  { value: 'training', label: 'Обучение / тренинг',                   points: 300 },
+  { value: 'board',    label: 'Совет директоров',                     points: 200 },
+  { value: 'forum',    label: 'Форум',                                points: 200 },
+  { value: 'training', label: 'Обучение / тренинг',                   points: 250 },
   { value: 'family',   label: 'Family-мероприятие',                   points: 200 },
-  { value: 'sport',    label: 'Спортивное мероприятие',               points: 200 },
+  { value: 'sport',    label: 'Спортивное мероприятие',               points: 100 },
   { value: 'business', label: 'Партнёрское / networking / business', points: 100 },
 ];
 
 export const CHAMPION_POINTS = 300;
+export const CO_CHAMPION_POINTS = 150;
+
+// Начисляются вручную на странице «Баллы».
+export const MANUAL_AWARDS = [
+  { kind: 'referral',          label: 'Рекомендация кандидата, вступившего в клуб', points: 500, title: 'Рекомендация', needsName: 'Кандидат, вступивший в клуб' },
+  { kind: 'site_visit',        label: 'Организация визита на своё предприятие',     points: 300, title: 'Визит на предприятие', needsName: 'Предприятие / тема визита' },
+  { kind: 'informal_champion', label: 'Чемпион по неформальной встрече',            points: 200, title: 'Чемпион неформальной встречи', needsName: 'Встреча' },
+];
 
 // Антибаллы (с 27.10.2026): списываются автоматически по отметкам явки,
 // суммы настраиваются на каждое мероприятие.
 export const PENALTIES = [
-  { key: 'no_show_penalty',    rule: 'no_show',    label: 'Записался «Иду», но не пришёл', points: 100 },
-  { key: 'late_penalty',       rule: 'late',       label: 'Опоздал',                       points: 50 },
-  { key: 'left_early_penalty', rule: 'left_early', label: 'Ушёл раньше',                   points: 50 },
+  { key: 'no_show_penalty',     rule: 'no_show',     label: 'Подтвердил участие, но не пришёл',                 points: 400 },
+  { key: 'late_cancel_penalty', rule: 'late_cancel', label: 'Отменил участие менее чем за 3 календарных дня', points: 200 },
+  { key: 'late_penalty',        rule: 'late',        label: 'Опоздал на мероприятие',                          points: 50 },
+  { key: 'left_early_penalty',  rule: 'left_early',  label: 'Ушёл до завершения мероприятия',                  points: 50 },
 ];
 export const REFERRAL_POINTS = 500;
 
@@ -26,7 +35,8 @@ export const REFERRAL_POINTS = 500;
 export const FALLBACK_RULES = {
   ...Object.fromEntries(EVENT_CATEGORIES.map(c => [c.value, c.points])),
   champion: CHAMPION_POINTS,
-  referral: REFERRAL_POINTS,
+  co_champion: CO_CHAMPION_POINTS,
+  ...Object.fromEntries(MANUAL_AWARDS.map(a => [a.kind, a.points])),
   ...Object.fromEntries(PENALTIES.map(p => [p.rule, p.points])),
 };
 
@@ -45,10 +55,14 @@ export const categoryLabel = category =>
 
 export const LEDGER_KINDS = {
   attendance: 'Посещение',
-  champion:   'Чемпионство',
-  referral:   'Рекомендация',
-  adjustment: 'Корректировка',
-  no_show:    'Неявка после записи',
-  late:       'Опоздание',
-  left_early: 'Ранний уход',
+  champion:    'Чемпионство',
+  co_champion: 'Со-чемпионство',
+  referral:    'Рекомендация',
+  site_visit:  'Визит на предприятие',
+  informal_champion: 'Чемпион неформальной встречи',
+  adjustment:  'Корректировка',
+  no_show:     'Неявка после подтверждения',
+  late_cancel: 'Поздняя отмена участия',
+  late:        'Опоздание',
+  left_early:  'Ранний уход',
 };

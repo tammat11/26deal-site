@@ -1,21 +1,26 @@
-const PUSH_URL =
-  'https://xhsyvdflxfkywkuhwfwk.supabase.co/functions/v1/push-broadcast';
-const PUSH_KEY =
-  '05b92e067ea0c603e86e2b47b5d42b96d223c2d32b02c701';
+import { requireAdmin, pushConfig } from './_lib/requireAdmin.js';
 
+// Push «Новая новость» всем резидентам. Вызывает только вошедший админ
+// (Authorization: Bearer <supabase access token>, is_admin() = true).
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const title = String(req.body?.title || '').trim();
+  const auth = await requireAdmin(req);
+  if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
+
+  const { url, key } = pushConfig();
+  if (!url || !key) return res.status(500).json({ error: 'Push is not configured' });
+
+  const title = String(req.body?.title || '').trim().slice(0, 300);
   if (!title) return res.status(400).json({ error: 'Title is required' });
 
-  const response = await fetch(PUSH_URL, {
+  const response = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${PUSH_KEY}`,
+      Authorization: `Bearer ${key}`,
     },
     body: JSON.stringify({ title: 'Новая новость', body: title }),
   });

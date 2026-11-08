@@ -2,7 +2,9 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Field, Avatar } from './ui';
 import { showToast, fmtDate, fmtDateTime } from './helpers';
-import { LEDGER_KINDS, FALLBACK_RULES, loadPointsSettings } from './points';
+import { LEDGER_KINDS, MANUAL_AWARDS, FALLBACK_RULES, loadPointsSettings } from './points';
+
+const MANUAL_KINDS = ['adjustment', ...MANUAL_AWARDS.map(a => a.kind)];
 
 const THIS_YEAR = new Date().getFullYear();
 const QUICK = [100, 300, 500, -100, -300];
@@ -23,9 +25,9 @@ export const PointsTab = () => {
   const [recent, setRecent] = useState([]);
   const [form, setForm] = useState({ kind: 'adjustment', points: '', comment: '', candidate: '', date: today() });
   const [saving, setSaving] = useState(false);
-  const [referralPoints, setReferralPoints] = useState(FALLBACK_RULES.referral);
+  const [rules, setRules] = useState(FALLBACK_RULES);
 
-  useEffect(() => { loadPointsSettings().then(r => setReferralPoints(r.referral)); }, []);
+  useEffect(() => { loadPointsSettings().then(setRules); }, []);
 
   const loadBalances = useCallback(async () => {
     const [all, year] = await Promise.all([
@@ -42,7 +44,7 @@ export const PointsTab = () => {
   const loadRecent = useCallback(async () => {
     const { data } = await supabase.from('points_ledger')
       .select('*, residents(name)')
-      .in('kind', ['adjustment', 'referral'])
+      .in('kind', MANUAL_KINDS)
       .order('created_at', { ascending: false })
       .limit(30);
     setRecent(data || []);
@@ -79,17 +81,17 @@ export const PointsTab = () => {
 
   const save = async () => {
     const points = parseInt(form.points, 10);
-    const isReferral = form.kind === 'referral';
+    const award = MANUAL_AWARDS.find(a => a.kind === form.kind);
     if (!selected) return showToast('Выберите резидента', 'err');
     if (!points) return showToast('Укажите количество баллов', 'err');
-    if (isReferral && !form.candidate.trim()) return showToast('Укажите вступившего кандидата', 'err');
-    if (!isReferral && !form.comment.trim()) return showToast('Укажите причину', 'err');
+    if (award && !form.candidate.trim()) return showToast(`Заполните поле «${award.needsName}»`, 'err');
+    if (!award && !form.comment.trim()) return showToast('Укажите причину', 'err');
     setSaving(true);
     const { error } = await supabase.from('points_ledger').insert({
       resident_id: selected.resident_id,
       kind: form.kind,
       points,
-      title: isReferral ? `Рекомендация: ${form.candidate.trim()}` : 'Корректировка',
+      title: award ? `${award.title}: ${form.candidate.trim()}` : 'Корректировка',
       comment: form.comment.trim() || null,
       occurred_at: new Date(`${form.date}T12:00:00`).toISOString(),
     });
@@ -112,7 +114,7 @@ export const PointsTab = () => {
     refreshAll();
   };
 
-  const canReverse = i => (i.kind === 'referral' || i.kind === 'adjustment') && !i.reverses && !reversedIds.has(i.id);
+  const canReverse = i => MANUAL_KINDS.includes(i.kind) && !i.reverses && !reversedIds.has(i.id);
 
   if (residents === null) return <div className="loading"><span className="spinner" /></div>;
 
@@ -170,10 +172,10 @@ export const PointsTab = () => {
                 </div>
 
                 <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-                  {[['adjustment', 'Корректировка'], ['referral', 'Рекомендация кандидата']].map(([v, l]) => (
+                  {[['adjustment', 'Корректировка'], ...MANUAL_AWARDS.map(a => [a.kind, `${a.label} (+${rules[a.kind]})`])].map(([v, l]) => (
                     <button key={v} type="button"
                       className={form.kind === v ? 'btn btn-gold btn-sm' : 'btn btn-outline btn-sm'}
-                      onClick={() => setForm(f => ({ ...f, kind: v, points: v === 'referral' && !f.points ? String(referralPoints) : f.points }))}>
+                      onClick={() => setForm(f => ({ ...f, kind: v, points: v === 'adjustment' ? f.points : String(rules[v]) }))}>
                       {l}
                     </button>
                   ))}
@@ -192,14 +194,14 @@ export const PointsTab = () => {
                         onClick={() => setForm(f => ({ ...f, points: String(q) }))}>{pointsText(q)}</button>
                     ))}
                   </div>
-                  {form.kind === 'referral' && (
-                    <div className="field full"><label>Кандидат, вступивший в клуб *</label>
-                      <input type="text" value={form.candidate} placeholder="ФИО нового резидента"
+                  {form.kind !== 'adjustment' && (
+                    <div className="field full"><label>{MANUAL_AWARDS.find(a => a.kind === form.kind)?.needsName} *</label>
+                      <input type="text" value={form.candidate} placeholder={MANUAL_AWARDS.find(a => a.kind === form.kind)?.needsName}
                         onChange={e => setForm(f => ({ ...f, candidate: e.target.value }))} />
                     </div>
                   )}
-                  <div className="field full"><label>{form.kind === 'referral' ? 'Комментарий' : 'Причина *'}</label>
-                    <textarea rows={2} value={form.comment} placeholder={form.kind === 'referral' ? '' : 'Например: ошибочно отмечено посещение СД 12.10'}
+                  <div className="field full"><label>{form.kind !== 'adjustment' ? 'Комментарий' : 'Причина *'}</label>
+                    <textarea rows={2} value={form.comment} placeholder={form.kind !== 'adjustment' ? '' : 'Например: ошибочно отмечено посещение СД 12.10'}
                       onChange={e => setForm(f => ({ ...f, comment: e.target.value }))} />
                   </div>
                 </div>

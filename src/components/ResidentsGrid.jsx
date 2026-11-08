@@ -9,7 +9,8 @@ const ResidentsGrid = () => {
         let active = true;
         supabase
             .from('residents')
-            .select('*')
+            // Только публичные поля карточки (без phone, login_password и пр.).
+            .select('id,name,company,niche,photo_url,website,brief,is_president,sort_order')
             .eq('is_published', true)
             .order('sort_order')
             .then(({ data }) => {
