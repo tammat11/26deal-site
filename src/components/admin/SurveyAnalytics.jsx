@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Modal, Avatar } from './ui';
+import { Download } from 'lucide-react';
+import { Modal, Avatar, Ico } from './ui';
 import { fmtDateTime, exportXlsx } from './helpers';
 import { optionIndex, answerText, npsOf } from './answers';
 
@@ -28,16 +29,16 @@ function summarize(poll, answers) {
 }
 
 const Bars = ({ rows, total }) => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+  <div className="bars">
     {rows.map((r, i) => {
       const pct = total ? Math.round((r.count / total) * 100) : 0;
       return (
-        <div key={i} style={{ display: 'grid', gridTemplateColumns: 'minmax(80px, 38%) 1fr 70px', gap: 10, alignItems: 'center', fontSize: 12 }}>
-          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.label}>{r.label}</span>
-          <div style={{ height: 8, borderRadius: 4, background: 'var(--s3)', overflow: 'hidden' }}>
-            <div style={{ width: `${pct}%`, height: '100%', background: 'var(--gold)' }} />
+        <div key={i} className="bar-row">
+          <span className="truncate" style={{ color: 'var(--text-2)' }} title={r.label}>{r.label}</span>
+          <div className="bar-track">
+            <div className="bar-fill" style={{ width: `${pct}%` }} />
           </div>
-          <span style={{ color: 'var(--muted)', textAlign: 'right' }}>{r.count} · {pct}%</span>
+          <span className="bar-num">{r.count} · {pct}%</span>
         </div>
       );
     })}
@@ -110,72 +111,75 @@ export const SurveyAnalytics = ({ survey, onClose }) => {
 
   return (
     <Modal title={`Аналитика — ${survey.title}`} onClose={onClose} wide>
-      {error && <div style={{ color: 'var(--danger)', fontSize: 13 }}>Ошибка: {error}. Примените миграцию 2026-09-28.</div>}
+      {error && <div className="hint err">Ошибка: {error}. Примените миграцию 2026-09-28</div>}
       {recipients === null ? <div className="loading"><span className="spinner" /></div> : (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${surveyNps ? 5 : 4}, 1fr)`, gap: 10 }}>
+          <div className="stat-grid" style={{ gridTemplateColumns: `repeat(auto-fit, minmax(140px, 1fr))` }}>
             {[
+              ['Заполнение', `${stats.pct}%`],
               ['Получателей', stats.total],
               ['Ответили', stats.responded],
               ['Не ответили', stats.pending],
-              ['Заполнение', `${stats.pct}%`],
               ...(surveyNps ? [['NPS', surveyNps.score]] : []),
             ].map(([label, value]) => (
-              <div key={label} className="card" style={{ padding: 14 }}>
-                <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.05em' }}>{label}</div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: label === 'NPS' ? 'var(--gold)' : 'var(--text)' }}>{value}</div>
+              <div key={label} className="card">
+                <div className="stat-label">{label}</div>
+                {/* Латунью — одна ключевая цифра: NPS, а без него — заполнение. */}
+                <div className={`stat-value${(surveyNps ? label === 'NPS' : label === 'Заполнение') ? ' key' : ''}`} style={{ marginTop: 4 }}>{value}</div>
               </div>
             ))}
           </div>
 
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <button className={listTab === 'pending' ? 'btn btn-gold btn-sm' : 'btn btn-outline btn-sm'} onClick={() => setListTab('pending')}>Не ответили ({stats.pending})</button>
-            <button className={listTab === 'done' ? 'btn btn-gold btn-sm' : 'btn btn-outline btn-sm'} onClick={() => setListTab('done')}>Ответили ({stats.responded})</button>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div className="seg">
+              <button className={`seg-btn${listTab === 'pending' ? ' on' : ''}`} onClick={() => setListTab('pending')}>Не ответили <span className="mono">{stats.pending}</span></button>
+              <button className={`seg-btn${listTab === 'done' ? ' on' : ''}`} onClick={() => setListTab('done')}>Ответили <span className="mono">{stats.responded}</span></button>
+            </div>
             <div style={{ flex: 1 }} />
-            <button className="btn btn-outline btn-sm" onClick={doExport}>⬇ Выгрузить в Excel</button>
+            <button className="btn btn-outline btn-sm" onClick={doExport}><Ico i={Download} /> Выгрузить в Excel</button>
           </div>
-          <div style={{ maxHeight: 220, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {shown.length === 0 && <div style={{ color: 'var(--muted)', fontSize: 13 }}>Пусто</div>}
+          <div className="picker" style={{ maxHeight: 220 }}>
+            {shown.length === 0 && <div className="hint" style={{ padding: 8 }}>Пусто</div>}
             {shown.map(r => (
-              <div key={r.resident_id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', borderRadius: 8, background: 'var(--s2)' }}>
+              <div key={r.resident_id} className="picker-row" style={{ cursor: 'default' }}>
                 <Avatar url={r.photo_url} name={r.name} size={24} />
-                <span style={{ fontSize: 12, flex: 1 }}>{r.name}{r.company ? ` · ${r.company}` : ''}</span>
-                {r.completed_at && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{fmtDateTime(r.completed_at)}</span>}
+                <span style={{ flex: 1 }}>{r.name}{r.company ? <span style={{ color: 'var(--muted)' }}> · {r.company}</span> : ''}</span>
+                {r.completed_at && <span className="mono" style={{ color: 'var(--muted)' }}>{fmtDateTime(r.completed_at)}</span>}
               </div>
             ))}
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {byQuestion.map(({ q, count, summary }, idx) => (
-              <div key={q.id} className="card" style={{ padding: 16 }}>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', marginBottom: 10 }}>
-                  <span style={{ color: 'var(--muted)', fontSize: 12 }}>{idx + 1}.</span>
-                  <span style={{ fontWeight: 700, flex: 1 }}>{q.question}</span>
-                  <span className="stat-pill">{count} ответов</span>
+              <div key={q.id} className="card">
+                <div style={{ display: 'flex', gap: 12, alignItems: 'baseline', marginBottom: 16 }}>
+                  <span className="mono" style={{ color: 'var(--muted)' }}>{idx + 1}</span>
+                  <span style={{ fontWeight: 500, flex: 1 }}>{q.question}</span>
+                  <span className="hint"><span className="mono" style={{ color: 'var(--text-2)' }}>{count}</span> ответов</span>
                 </div>
                 {summary.kind === 'options' && <Bars rows={summary.rows} total={count} />}
                 {summary.kind === 'rating' && <>
-                  <div style={{ fontSize: 13, marginBottom: 8 }}>Средняя оценка: <b style={{ color: 'var(--gold)' }}>{summary.avg !== null ? summary.avg.toFixed(2) : '—'}</b> из {q.scale_max || 5}</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 12 }}>Средняя оценка <b className="mono" style={{ color: 'var(--text)', fontSize: 13 }}>{summary.avg !== null ? summary.avg.toFixed(2) : '—'}</b> из {q.scale_max || 5}</div>
                   <Bars rows={summary.rows} total={count} />
                 </>}
                 {summary.kind === 'nps' && <>
                   {summary.nps && (
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
-                      <span className="badge badge-gold" style={{ fontSize: 13 }}>NPS {summary.nps.score}</span>
-                      <span className="badge badge-green">Промоутеры (9–10): {summary.nps.promoters}</span>
-                      <span className="badge badge-gray">Нейтралы (7–8): {summary.nps.passives}</span>
-                      <span className="badge badge-red">Критики (0–6): {summary.nps.detractors}</span>
+                    <div className="meta-line" style={{ marginBottom: 12 }}>
+                      <span>NPS <b>{summary.nps.score}</b></span>
+                      <span>Промоутеры 9–10 <b style={{ color: 'var(--success)' }}>{summary.nps.promoters}</b></span>
+                      <span>Нейтралы 7–8 <b>{summary.nps.passives}</b></span>
+                      <span>Критики 0–6 <b style={{ color: 'var(--danger)' }}>{summary.nps.detractors}</b></span>
                     </div>
                   )}
                   <Bars rows={summary.rows} total={count} />
                 </>}
                 {summary.kind === 'text' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 240, overflowY: 'auto' }}>
-                    {summary.items.length === 0 && <div style={{ color: 'var(--muted)', fontSize: 13 }}>Ответов пока нет</div>}
+                  <div className="list" style={{ maxHeight: 240, overflowY: 'auto' }}>
+                    {summary.items.length === 0 && <div className="hint">Ответов пока нет</div>}
                     {summary.items.map((i, k) => (
-                      <div key={k} style={{ padding: '8px 10px', borderRadius: 8, background: 'var(--s2)', fontSize: 13 }}>
-                        <div>{i.text}</div>
-                        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>{survey.is_anonymous ? 'Анонимно' : i.name} · {fmtDateTime(i.at)}</div>
+                      <div key={k} className="list-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
+                        <div style={{ fontSize: 13 }}>{i.text}</div>
+                        <div className="hint">{survey.is_anonymous ? 'Анонимно' : i.name} · <span className="mono">{fmtDateTime(i.at)}</span></div>
                       </div>
                     ))}
                   </div>

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Avatar } from './ui';
+import { Trophy, Medal } from 'lucide-react';
+import { Avatar, Ico } from './ui';
 import { showToast } from './helpers';
 
 const RSVP_LABELS = { going: 'Идёт', with_family: 'С семьёй', maybe: 'Возможно', not_going: 'Не идёт' };
@@ -76,65 +77,60 @@ export const AttendancePanel = ({ event }) => {
   const noShowCount = Object.entries(marks).filter(([id, m]) => m.attended === false && isGoing(id)).length;
   const penaltiesActive = event.date && new Date(event.date) >= new Date('2026-10-27T00:00:00+05:00');
 
-  if (residents === null) return <div style={{ color: 'var(--muted)', fontSize: 13 }}>Загрузка…</div>;
+  if (residents === null) return <div className="hint">Загрузка…</div>;
 
   return (
-    <div>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
-        <span className="stat-pill">✅ Посетили: {attendedCount}</span>
-        <span className="stat-pill">🏆 Чемпионы: {championCount}</span>
-        <span className="stat-pill">🥈 Со-чемпионы: {coChampionCount}</span>
-        <span className="stat-pill">+{event.points ?? 0} за посещение · +{event.champion_points ?? 0} чемпион · +{event.co_champion_points ?? 150} со-чемпион</span>
-        {penaltiesActive
-          ? <span className="stat-pill">−{event.no_show_penalty ?? 400} неявка после подтверждения ({noShowCount}) · −{event.late_cancel_penalty ?? 200} поздняя отмена · −{event.late_penalty ?? 50} опоздание · −{event.left_early_penalty ?? 50} ранний уход</span>
-          : <span className="stat-pill">Антибаллы действуют для мероприятий с 27.10.2026</span>}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div className="meta-line">
+        <span>Посетили <b>{attendedCount}</b></span>
+        <span>Чемпионы <b>{championCount}</b></span>
+        <span>Со-чемпионы <b>{coChampionCount}</b></span>
       </div>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+      <div className="note">
+        +{event.points ?? 0} за посещение · +{event.champion_points ?? 0} чемпион · +{event.co_champion_points ?? 150} со-чемпион
+        <br />
+        {penaltiesActive
+          ? <>−{event.no_show_penalty ?? 400} неявка после подтверждения ({noShowCount}) · −{event.late_cancel_penalty ?? 200} поздняя отмена · −{event.late_penalty ?? 50} опоздание · −{event.left_early_penalty ?? 50} ранний уход</>
+          : 'Антибаллы действуют для мероприятий с 27.10.2026'}
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
         <input type="text" placeholder="Поиск резидента" value={query} onChange={e => setQuery(e.target.value)} />
-        <button type="button" className="btn btn-outline btn-sm" style={{ whiteSpace: 'nowrap' }} onClick={() => setOnlyRsvp(v => !v)}>
+        <button type="button" className="btn btn-outline" style={{ flexShrink: 0 }} onClick={() => setOnlyRsvp(v => !v)}>
           {onlyRsvp ? 'Показать всех' : 'Только записавшиеся'}
         </button>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 380, overflowY: 'auto' }}>
-        {list.length === 0 && <div style={{ color: 'var(--muted)', fontSize: 13 }}>Никого не найдено</div>}
+      <div className="list" style={{ maxHeight: 380, overflowY: 'auto' }}>
+        {list.length === 0 && <div className="hint">Никого не найдено</div>}
         {list.map(r => {
           const m = marks[r.id] || {};
           const busy = busyId === r.id;
           return (
-            <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, background: 'var(--s2)', border: '1px solid var(--border)', opacity: busy ? .6 : 1 }}>
-              <Avatar url={r.photo_url} name={r.name} size={26} />
-              <span style={{ fontSize: 12, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {r.name}{r.company ? ` · ${r.company}` : ''}
+            <div key={r.id} className="list-row" style={{ gap: 8, minHeight: 40, padding: '4px 8px', flexWrap: 'wrap', opacity: busy ? .6 : 1 }}>
+              <Avatar url={r.photo_url} name={r.name} size={24} />
+              <span style={{ fontSize: 13, flex: '1 1 160px', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {r.name}{r.company ? <span style={{ color: 'var(--muted)' }}> · {r.company}</span> : ''}
               </span>
-              {rsvps[r.id] && <span className="badge badge-gray">{RSVP_LABELS[rsvps[r.id]] || rsvps[r.id]}</span>}
+              {rsvps[r.id] && <span className="hint" style={{ whiteSpace: 'nowrap' }}>{RSVP_LABELS[rsvps[r.id]] || rsvps[r.id]}</span>}
               <button type="button" disabled={busy}
-                className={m.attended === true ? 'btn btn-gold btn-xs' : 'btn btn-outline btn-xs'}
+                className={`chip${m.attended === true ? ' on' : ''}`}
                 onClick={() => save(r.id, { attended: m.attended === true ? null : true })}>Посетил</button>
-              <button type="button" disabled={busy} className="btn btn-xs"
-                style={m.attended === false
-                  ? { background: 'rgba(255,80,80,.18)', border: '1px solid rgba(255,80,80,.5)', color: '#ff7b7b' }
-                  : { background: 'none', border: '1px solid var(--border)', color: 'var(--muted)' }}
+              <button type="button" disabled={busy}
+                className={`chip${m.attended === false ? ' on-bad' : ''}`}
                 onClick={() => save(r.id, { attended: m.attended === false ? null : false })}>Не посетил</button>
-              <button type="button" disabled={busy} title="Чемпион мероприятия"
-                className={m.is_champion ? 'btn btn-gold btn-xs' : 'btn btn-outline btn-xs'}
-                onClick={() => save(r.id, { is_champion: !m.is_champion })}>🏆</button>
-              <button type="button" disabled={busy} title="Со-чемпион мероприятия"
-                className={m.is_co_champion ? 'btn btn-gold btn-xs' : 'btn btn-outline btn-xs'}
-                onClick={() => save(r.id, { is_co_champion: !m.is_co_champion })}>🥈</button>
+              <button type="button" disabled={busy} title="Чемпион мероприятия" aria-label="Чемпион мероприятия"
+                className={`chip${m.is_champion ? ' on' : ''}`}
+                onClick={() => save(r.id, { is_champion: !m.is_champion })}><Ico i={Trophy} size={14} /></button>
+              <button type="button" disabled={busy} title="Со-чемпион мероприятия" aria-label="Со-чемпион мероприятия"
+                className={`chip${m.is_co_champion ? ' on' : ''}`}
+                onClick={() => save(r.id, { is_co_champion: !m.is_co_champion })}><Ico i={Medal} size={14} /></button>
               <button type="button" disabled={busy} title={`Опоздал: −${event.late_penalty ?? 50}`}
-                className="btn btn-xs"
-                style={m.is_late
-                  ? { background: 'rgba(255,170,60,.18)', border: '1px solid rgba(255,170,60,.5)', color: '#ffb35c' }
-                  : { background: 'none', border: '1px solid var(--border)', color: 'var(--muted)' }}
+                className={`chip${m.is_late ? ' on' : ''}`}
                 onClick={() => save(r.id, { is_late: !m.is_late })}>Опоздал</button>
               <button type="button" disabled={busy} title={`Ушёл раньше: −${event.left_early_penalty ?? 50}`}
-                className="btn btn-xs"
-                style={m.left_early
-                  ? { background: 'rgba(255,170,60,.18)', border: '1px solid rgba(255,170,60,.5)', color: '#ffb35c' }
-                  : { background: 'none', border: '1px solid var(--border)', color: 'var(--muted)' }}
+                className={`chip${m.left_early ? ' on' : ''}`}
                 onClick={() => save(r.id, { left_early: !m.left_early })}>Ушёл раньше</button>
               {m.attended === false && isGoing(r.id) && penaltiesActive && (
-                <span className="badge badge-red" title="Подтвердил участие, но не пришёл">−{event.no_show_penalty ?? 400}</span>
+                <span className="mono" style={{ color: 'var(--danger)' }} title="Подтвердил участие, но не пришёл">−{event.no_show_penalty ?? 400}</span>
               )}
             </div>
           );

@@ -1,7 +1,12 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Cropper from 'react-easy-crop';
 import { supabase, authRedirect } from '../lib/supabase';
-import { Toggle, Field, Modal, Empty, TagsInput } from './admin/ui';
+import {
+  UserRound, Users, CalendarDays, Newspaper, Handshake, ChartColumn, Trophy, Coins, ListChecks,
+  BookOpen, Lock, Crown, Vote, Compass, KeyRound, Plus, Bell, Crop, Pencil, Trash2, ArrowLeft,
+  ImagePlus, Camera, Building2, Pin, MessageSquare,
+} from 'lucide-react';
+import { Toggle, Field, Modal, Empty, TagsInput, Ico, PubState } from './admin/ui';
 import { showToast, probeColumns, pickCols, INDUSTRIES, CLUB_ROLES } from './admin/helpers';
 import { KnowledgeTab } from './admin/KnowledgeTab';
 import { InternalNotesTab } from './admin/InternalNotesTab';
@@ -30,22 +35,23 @@ async function adminApiHeaders() {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
+// section — подпись группы в боковом меню; порядок вкладок прежний.
 const TABS = [
-  { id: 'residents',       label: 'Резиденты',       icon: '👤' },
-  { id: 'events',          label: 'Мероприятия',     icon: '📅' },
-  { id: 'news',            label: 'Новости',         icon: '📰' },
-  { id: 'partners',        label: 'Партнёры',        icon: '🤝' },
-  { id: 'polls',           label: 'Опросы',          icon: '📊' },
-  { id: 'rating',          label: 'Рейтинг',         icon: '🏆' },
-  { id: 'points',          label: 'Баллы',           icon: '±' },
-  { id: 'points-rules',    label: 'Правила баллов',  icon: '📋' },
-  { id: 'groups',          label: 'Группы',          icon: '👥' },
-  { id: 'knowledge',       label: 'База знаний',     icon: '📚' },
-  { id: 'internal',        label: 'Закрытый раздел', icon: '🔒' },
-  { id: 'president',       label: 'Президент',       icon: '👑' },
-  { id: 'club-votes',      label: 'Голосования',     icon: '🗳️' },
-  { id: 'onboarding',      label: 'Онбординг',       icon: '🧭' },
-  { id: 'access-requests', label: 'Заявки на доступ', icon: '🔑' },
+  { id: 'residents',       label: 'Резиденты',        icon: UserRound,    section: 'Клуб' },
+  { id: 'events',          label: 'Мероприятия',      icon: CalendarDays },
+  { id: 'news',            label: 'Новости',          icon: Newspaper },
+  { id: 'partners',        label: 'Партнёры',         icon: Handshake },
+  { id: 'polls',           label: 'Опросы',           icon: ChartColumn,  section: 'Опросы и баллы' },
+  { id: 'rating',          label: 'Рейтинг',          icon: Trophy },
+  { id: 'points',          label: 'Баллы',            icon: Coins },
+  { id: 'points-rules',    label: 'Правила баллов',   icon: ListChecks },
+  { id: 'groups',          label: 'Группы',           icon: Users },
+  { id: 'knowledge',       label: 'База знаний',      icon: BookOpen,     section: 'Материалы' },
+  { id: 'internal',        label: 'Закрытый раздел',  icon: Lock },
+  { id: 'president',       label: 'Президент',        icon: Crown },
+  { id: 'club-votes',      label: 'Голосования',      icon: Vote,         section: 'Управление' },
+  { id: 'onboarding',      label: 'Онбординг',        icon: Compass },
+  { id: 'access-requests', label: 'Заявки на доступ', icon: KeyRound },
 ];
 
 const PARTNER_CATS = [
@@ -105,193 +111,398 @@ const toLocalInput = d => {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const css = `
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+  /* Клубный вечер: графит, латунь, плотная бумага. Поверхности — нейтральный
+     графит; латунь (#d4a853, цвет приложения) — единственный акцент:
+     основная кнопка, выбранный пункт меню, одна ключевая цифра и точка
+     «опубликовано / идёт сейчас». */
   :root {
-    --bg:       #09090f;
-    --s1:       #111118;
-    --s2:       #18181f;
-    --s3:       #22222c;
-    --border:   rgba(255,255,255,0.07);
-    --gold:     #d4a853;
-    --gold-dim: rgba(212,168,83,0.15);
-    --text:     #f0f0f0;
-    --muted:    #666;
-    --danger:   #e05252;
-    --success:  #52c07a;
-    --r:        14px;
+    --bg:        #141415;
+    --s0:        #0f0f10;
+    --s1:        #19191b;
+    --s2:        #232325;
+    --s3:        #2c2c2f;
+    --border:    rgba(237,237,237,0.08);
+    --border-2:  rgba(237,237,237,0.14);
+    --text:      #ededed;
+    --text-2:    #a1a1a6;
+    --muted:     #85858b;
+    --gold:      #d4a853;
+    --gold-dim:  rgba(212,168,83,0.12);
+    --on-gold:   #1b1508;
+    --danger:    #e5484d;
+    --danger-bg: rgba(229,72,77,0.10);
+    --success:   #4cc38a;
+    --r:         12px;
+    --ease:      cubic-bezier(0.22, 1, 0.36, 1);
+    --font:      'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --mono:      'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
   }
 
-  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; font-size: 14px; min-height: 100vh; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: var(--font); font-size: 14px; line-height: 20px;
+    font-variant-numeric: tabular-nums; min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  b, strong { font-weight: 500; }
+  code, .mono { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; }
+  code { color: var(--text-2); }
+  input[type=checkbox], input[type=radio] { accent-color: var(--text); width: 16px; height: 16px; flex-shrink: 0; }
+  :focus-visible { outline: 2px solid rgba(237,237,237,0.5); outline-offset: 2px; }
 
   /* ── Layout ── */
   .admin-app { display: flex; flex-direction: column; min-height: 100vh; }
 
   .topbar {
     position: sticky; top: 0; z-index: 50;
-    background: rgba(9,9,15,0.85); backdrop-filter: blur(20px);
-    border-bottom: 1px solid var(--border);
-    padding: 0 28px; height: 58px;
+    background: var(--s0); border-bottom: 1px solid var(--border);
+    padding: 0 24px 0 20px; height: 56px;
     display: flex; align-items: center; justify-content: space-between;
   }
-  .topbar-brand { font-size: 14px; font-weight: 700; color: var(--gold); letter-spacing: .4px; }
-  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .topbar-brand { display: flex; align-items: baseline; gap: 8px; font-size: 15px; font-weight: 600; color: var(--text); }
+  .topbar-brand span { font-size: 13px; font-weight: 400; color: var(--muted); }
+  .topbar-right { display: flex; align-items: center; gap: 16px; }
+  .topbar-user { font-size: 13px; color: var(--text-2); }
+  .topbar-link { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--muted); text-decoration: none; transition: color 150ms var(--ease); }
+  .topbar-link:hover { color: var(--text); }
 
   .sidebar {
-    position: fixed; left: 0; top: 58px; bottom: 0; width: 220px;
-    background: var(--s1); border-right: 1px solid var(--border);
-    padding: 20px 12px; display: flex; flex-direction: column; gap: 4px;
+    position: fixed; left: 0; top: 56px; bottom: 0; width: 240px;
+    background: var(--s0); border-right: 1px solid var(--border);
+    padding: 8px 12px 24px; display: flex; flex-direction: column; gap: 2px;
     overflow-y: auto;
   }
+  .sidebar-label { font-size: 12px; line-height: 16px; color: var(--muted); padding: 20px 8px 6px; }
+  .sidebar-label:first-child { padding-top: 12px; }
   .sidebar-btn {
     display: flex; align-items: center; gap: 10px;
-    padding: 10px 14px; border-radius: 10px;
-    border: none; background: none; color: var(--muted);
-    font-size: 13px; font-weight: 500; cursor: pointer;
-    text-align: left; transition: all .15s; width: 100%;
+    height: 32px; padding: 0 8px; border-radius: 8px; flex-shrink: 0;
+    border: none; background: none; color: var(--text-2);
+    font: inherit; font-size: 13px; cursor: pointer;
+    text-align: left; width: 100%;
+    transition: background-color 150ms var(--ease), color 150ms var(--ease);
   }
-  .sidebar-btn:hover { color: var(--text); background: var(--s2); }
-  .sidebar-btn.active { color: var(--gold); background: var(--gold-dim); }
-  .sidebar-btn .icon { font-size: 16px; width: 20px; text-align: center; }
-  .sidebar-label { font-size: 10px; color: var(--muted); padding: 12px 14px 4px; letter-spacing: .8px; text-transform: uppercase; }
+  .sidebar-btn svg { color: var(--muted); flex-shrink: 0; transition: color 150ms var(--ease); }
+  .sidebar-btn:hover { color: var(--text); background: rgba(237,237,237,0.04); }
+  .sidebar-btn.active { color: var(--text); background: var(--s2); box-shadow: inset 0 1px 0 rgba(255,255,255,0.06); }
+  .sidebar-btn.active svg { color: var(--gold); }
 
-  .main { margin-left: 220px; padding: 32px 32px; min-height: calc(100vh - 58px); }
+  .main { margin-left: 240px; padding: 32px; min-height: calc(100vh - 56px); }
+  .main-inner { max-width: 1400px; }
 
   /* ── Buttons ── */
-  .btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: 10px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity .15s, transform .1s; font-family: inherit; }
-  .btn:hover { opacity: .85; }
-  .btn:active { transform: scale(.97); }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    height: 36px; padding: 0 16px; border-radius: 8px; border: 1px solid transparent;
+    font-family: inherit; font-size: 13px; font-weight: 500; line-height: 1; white-space: nowrap;
+    cursor: pointer; color: var(--text); background: none;
+    text-transform: none; letter-spacing: 0;
+    transition: background-color 150ms var(--ease), border-color 150ms var(--ease), color 150ms var(--ease), opacity 150ms var(--ease), transform 120ms var(--ease);
+  }
+  /* Глобальный .btn лендинга (index.css) растягивает трекинг и масштабирует на hover — гасим в админке */
+  .btn:hover { letter-spacing: 0; transform: none; }
+  .btn:active { transform: scale(.98); }
   .btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
-  .btn-gold { background: var(--gold); color: #000; }
-  .btn-outline { background: none; border: 1px solid var(--border); color: var(--text); }
-  .btn-ghost { background: none; border: none; color: var(--muted); cursor: pointer; font-family: inherit; font-size: 12px; }
-  .btn-ghost:hover { color: var(--danger); }
-  .btn-danger { background: none; border: 1px solid rgba(224,82,82,.3); color: var(--danger); }
-  .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
-  .btn-xs { padding: 4px 10px; font-size: 11px; border-radius: 7px; }
+  .btn-gold { background: var(--gold); color: var(--on-gold); box-shadow: inset 0 1px 0 rgba(255,255,255,0.2); }
+  .btn-gold:hover:not(:disabled) { background: #ddb563; }
+  .btn-outline { border-color: var(--border-2); color: var(--text); }
+  .btn-outline:hover:not(:disabled) { background: var(--s2); }
+  .btn-danger { border-color: var(--border-2); color: var(--text-2); }
+  .btn-danger:hover:not(:disabled) { color: var(--danger); border-color: rgba(229,72,77,0.4); background: var(--danger-bg); }
+  .btn-ghost { display: inline-flex; align-items: center; gap: 4px; background: none; border: none; color: var(--muted); cursor: pointer; font-family: inherit; font-size: 13px; border-radius: 6px; transition: color 150ms var(--ease); }
+  .btn-ghost:hover { color: var(--text); }
+  .btn-sm { height: 28px; padding: 0 12px; font-size: 12px; border-radius: 6px; gap: 6px; }
+  .btn-xs { height: 24px; padding: 0 8px; font-size: 12px; border-radius: 6px; gap: 4px; }
+  .btn-wide { width: 100%; height: 40px; }
+  .btn-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 6px; border: none; background: none;
+    color: var(--muted); cursor: pointer; flex-shrink: 0;
+    transition: background-color 150ms var(--ease), color 150ms var(--ease);
+  }
+  .btn-icon:hover:not(:disabled) { background: var(--s2); color: var(--text); }
+  .btn-icon.danger:hover:not(:disabled) { color: var(--danger); background: var(--danger-bg); }
+  .btn-icon:disabled { opacity: .35; cursor: not-allowed; }
+  .btn-icon.sm { width: 24px; height: 24px; }
+
+  /* Сегменты: переключатели разделов и фильтров */
+  .seg { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 2px; border-radius: 8px; background: var(--s0); border: 1px solid var(--border); }
+  .seg-btn {
+    height: 28px; padding: 0 12px; border-radius: 6px; border: none; background: none;
+    font: inherit; font-size: 12px; color: var(--text-2); cursor: pointer; white-space: nowrap;
+    transition: background-color 150ms var(--ease), color 150ms var(--ease);
+  }
+  .seg-btn:hover { color: var(--text); }
+  .seg-btn.on { background: var(--s2); color: var(--text); box-shadow: inset 0 1px 0 rgba(255,255,255,0.06); }
+
+  /* Отметки-переключатели (явка): нейтральные, «on» — шаг поверхности */
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px;
+    border-radius: 6px; border: 1px solid var(--border); background: none;
+    font: inherit; font-size: 12px; color: var(--muted); cursor: pointer; white-space: nowrap;
+    transition: background-color 150ms var(--ease), color 150ms var(--ease), border-color 150ms var(--ease);
+  }
+  .chip:hover:not(:disabled) { color: var(--text); border-color: var(--border-2); }
+  .chip.on { background: var(--s3); border-color: var(--border-2); color: var(--text); }
+  .chip.on-bad { background: var(--danger-bg); border-color: rgba(229,72,77,0.4); color: var(--danger); }
+  .chip:disabled { opacity: .5; cursor: wait; }
 
   /* ── Section header ── */
-  .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
-  .section-title { font-size: 20px; font-weight: 800; }
-  .section-sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
+  .section-title { font-size: 24px; line-height: 32px; font-weight: 500; letter-spacing: 0; font-family: var(--font); }
+  .section-title.sm { font-size: 16px; line-height: 24px; margin-bottom: 12px; }
+  .section-sub { color: var(--text-2); font-size: 13px; margin-top: 4px; max-width: 680px; }
+  .section-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
+  .toolbar { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+  .toolbar .grow { flex: 1; }
+  .search { max-width: 320px; }
 
-  /* ── Cards grid ── */
+  /* ── Cards ── */
   .grid-2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
   .grid-3 { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+  .card { background: var(--s1); border: 1px solid var(--border); border-radius: var(--r); padding: 20px; transition: border-color 150ms var(--ease); }
+  .card.tight { padding: 12px; }
 
-  .card {
-    background: var(--s1); border: 1px solid var(--border);
-    border-radius: var(--r); padding: 18px; transition: border-color .15s;
+  /* ── Resident grid: тихие карточки, говорят лица ── */
+  .res-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); gap: 16px; }
+  .res-card { display: flex; flex-direction: column; background: var(--s1); border: 1px solid var(--border); border-radius: var(--r); padding: 4px; transition: border-color 150ms var(--ease); }
+  .res-card:hover { border-color: var(--border-2); }
+  .res-photo {
+    display: block; width: 100%; aspect-ratio: 0.86; border: none; padding: 0; cursor: pointer;
+    border-radius: 8px; overflow: hidden; background: var(--s2);
   }
-  .card:hover { border-color: rgba(255,255,255,.12); }
-  .card-gold { border-color: rgba(212,168,83,.4); }
-
-  /* ── Resident card ── */
-  .res-card { display: flex; gap: 14px; }
-  .res-avatar { width: 64px; height: 80px; border-radius: 10px; object-fit: cover; background: var(--s3); flex-shrink: 0; cursor: pointer; border: 1px solid var(--border); }
-  .res-avatar-placeholder { width: 64px; height: 80px; border-radius: 10px; background: var(--s3); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; border: 2px dashed var(--border); }
-  .res-info { flex: 1; min-width: 0; }
-  .res-name { font-weight: 700; font-size: 14px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .res-company { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
-  .res-actions { display: flex; gap: 8px; margin-top: 10px; }
+  .res-photo img { width: 100%; height: 100%; object-fit: cover; display: block; transition: opacity 150ms var(--ease); }
+  .res-card.is-hidden .res-photo img { opacity: .45; }
+  .res-photo-ph { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--muted); font-size: 12px; }
+  .res-body { padding: 12px 8px 8px; min-width: 0; }
+  .res-name { font-weight: 500; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .res-company { font-size: 13px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .res-meta { font-size: 12px; line-height: 16px; color: var(--muted); margin-top: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .res-foot { display: flex; align-items: center; gap: 8px; margin-top: auto; padding: 8px; border-top: 1px solid var(--border); }
+  .res-foot .grow { flex: 1; }
 
   /* ── Table ── */
-  .tbl-wrap { border-radius: var(--r); border: 1px solid var(--border); overflow: hidden; }
+  .tbl-wrap { border-radius: var(--r); border: 1px solid var(--border); background: var(--s1); overflow: hidden; }
+  .tbl-wrap.scroll { overflow-y: auto; }
+  .tbl-caption { padding: 12px 16px; font-size: 13px; font-weight: 500; color: var(--text); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .tbl-caption .hint { font-weight: 400; }
   table { width: 100%; border-collapse: collapse; }
-  th { background: var(--s2); color: var(--muted); font-size: 11px; font-weight: 600; text-align: left; padding: 10px 16px; border-bottom: 1px solid var(--border); letter-spacing: .4px; text-transform: uppercase; }
-  td { padding: 13px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  th { color: var(--muted); font-size: 12px; font-weight: 400; text-align: left; height: 36px; padding: 0 16px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
   tr:last-child td { border-bottom: none; }
-  tr:hover td { background: rgba(255,255,255,.02); }
-  .td-actions { display: flex; gap: 8px; }
+  tbody tr { transition: background-color 150ms var(--ease); }
+  tbody tr:hover td { background: rgba(237,237,237,0.02); }
+  .td-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: nowrap; }
+  @media (max-width: 1200px) { .td-actions { flex-wrap: wrap; } }
+  .td-date { font-family: var(--mono); font-size: 12px; color: var(--text-2); white-space: nowrap; }
+  .td-num { font-family: var(--mono); font-size: 13px; white-space: nowrap; }
+  .tbl-empty { text-align: center; padding: 32px 16px; color: var(--muted); font-size: 13px; }
+  .tr-test td:first-child { box-shadow: inset 2px 0 0 var(--danger); }
+  .tr-test td { opacity: .6; }
+  .cell-title { font-weight: 500; }
+  .cell-sub { font-size: 12px; line-height: 16px; color: var(--muted); margin-top: 2px; }
+  .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .thumb { width: 56px; height: 40px; object-fit: cover; border-radius: 6px; display: block; }
+  .thumb-ph { width: 56px; height: 40px; border-radius: 6px; background: var(--s2); display: flex; align-items: center; justify-content: center; color: var(--muted); }
 
-  /* ── Badges ── */
-  .badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-  .badge-green  { background: rgba(82,192,122,.12); color: var(--success); }
-  .badge-red    { background: rgba(224,82,82,.12);  color: var(--danger); }
-  .badge-gold   { background: var(--gold-dim);      color: var(--gold); }
-  .badge-gray   { background: rgba(255,255,255,.06); color: var(--muted); }
+  /* ── Badges: тихий текст на шаге поверхности ── */
+  .badge { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 6px; border-radius: 4px; font-size: 12px; font-weight: 400; white-space: nowrap; background: rgba(237,237,237,0.06); color: var(--text-2); }
+  .badge-gray, .badge-gold { background: rgba(237,237,237,0.06); color: var(--text-2); }
+  .badge-green { background: none; color: var(--success); padding: 0; }
+  .badge-red { background: var(--danger-bg); color: var(--danger); }
+  .badges { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+
+  /* ── Подпись продукта: латунная точка «опубликовано / идёт сейчас» ── */
+  .status { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-2); white-space: nowrap; }
+  .status .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); flex-shrink: 0; }
+  .status.off { color: var(--muted); }
+  .status.off .dot { background: none; box-shadow: inset 0 0 0 1px var(--muted); }
+  .pub-cell { display: flex; align-items: center; gap: 12px; }
+  .verdict { font-size: 12px; color: var(--text-2); white-space: nowrap; }
+  .verdict.ok { color: var(--success); }
+  .verdict.bad { color: var(--danger); }
 
   /* ── Toggle switch ── */
-  .toggle { position: relative; width: 36px; height: 20px; cursor: pointer; }
-  .toggle input { opacity: 0; width: 0; height: 0; }
-  .toggle-track { position: absolute; inset: 0; border-radius: 20px; background: var(--s3); transition: background .2s; }
-  .toggle input:checked + .toggle-track { background: var(--gold); }
-  .toggle-thumb { position: absolute; left: 3px; top: 3px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform .2s; }
-  .toggle input:checked ~ .toggle-thumb { transform: translateX(16px); }
+  .toggle { position: relative; display: inline-block; width: 32px; height: 20px; cursor: pointer; flex-shrink: 0; }
+  .toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .toggle-track { position: absolute; inset: 0; border-radius: 10px; background: var(--s3); box-shadow: inset 0 0 0 1px var(--border); transition: background-color 150ms var(--ease); }
+  .toggle input:checked + .toggle-track { background: var(--text); }
+  .toggle input:focus-visible + .toggle-track { outline: 2px solid rgba(237,237,237,0.5); outline-offset: 2px; }
+  .toggle-thumb { position: absolute; left: 3px; top: 3px; width: 14px; height: 14px; border-radius: 50%; background: var(--text-2); transition: transform 150ms var(--ease), background-color 150ms var(--ease); pointer-events: none; }
+  .toggle input:checked ~ .toggle-thumb { transform: translateX(12px); background: var(--bg); }
 
   /* ── Form ── */
-  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   .form-grid .full { grid-column: 1/-1; }
-  .field { display: flex; flex-direction: column; gap: 5px; }
-  .field label { font-size: 11px; color: var(--muted); font-weight: 600; letter-spacing: .3px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field > label { font-size: 12px; line-height: 16px; color: var(--text-2); }
+  .field-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   input[type=text], input[type=date], input[type=email], input[type=password],
   input[type=url], input[type=tel], input[type=datetime-local], input[type=time],
   input[type=number], select, textarea {
-    background: var(--s2); border: 1px solid var(--border); border-radius: 9px;
-    color: var(--text); padding: 9px 12px; font-size: 13px;
-    font-family: inherit; width: 100%; outline: none; transition: border-color .15s;
+    background: var(--s2); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); height: 36px; padding: 0 12px; font-size: 14px; line-height: 20px;
+    font-family: inherit; width: 100%; outline: none; color-scheme: dark;
+    transition: border-color 150ms var(--ease), box-shadow 150ms var(--ease);
   }
-  input:focus, select:focus, textarea:focus { border-color: rgba(212,168,83,.5); }
-  textarea { resize: vertical; min-height: 80px; }
+  input::placeholder, textarea::placeholder { color: var(--muted); }
+  input:focus, select:focus, textarea:focus { border-color: rgba(237,237,237,0.32); box-shadow: 0 0 0 3px rgba(237,237,237,0.06); }
+  input:disabled, select:disabled, textarea:disabled { opacity: .5; cursor: not-allowed; }
+  textarea { height: auto; padding: 8px 12px; resize: vertical; min-height: 80px; }
+  textarea.doc { min-height: 360px; line-height: 22px; }
+  select {
+    appearance: none; -webkit-appearance: none; padding-right: 32px; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2385858b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center;
+  }
   select option { background: var(--s2); }
+  input[type=range] { accent-color: var(--text); }
+  .check-label { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); cursor: pointer; }
+  .check-row { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; padding: 8px 0; }
+  .hint { font-size: 12px; line-height: 16px; color: var(--muted); }
+  .hint.err { color: var(--danger); }
+  .note { font-size: 12px; line-height: 18px; color: var(--muted); }
+  .divider { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); }
+  .sub-head { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 12px; display: block; }
+
+  /* Списки выбора внутри модалок */
+  .picker { overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 4px; background: var(--s0); }
+  .picker-row { display: flex; gap: 12px; align-items: center; min-height: 36px; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: background-color 150ms var(--ease); }
+  .picker-row:hover { background: rgba(237,237,237,0.04); }
+  .list { display: flex; flex-direction: column; gap: 4px; }
+  .list-row { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 8px 12px; border-radius: 8px; background: var(--s2); border: 1px solid var(--border); }
+  .list-row .idx { font-family: var(--mono); font-size: 12px; color: var(--muted); min-width: 20px; }
 
   /* ── Modal ── */
-  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
-  .modal { background: var(--s1); border: 1px solid var(--border); border-radius: 18px; padding: 28px; width: 100%; max-width: 540px; max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; gap: 18px; }
-  .modal-title { font-size: 17px; font-weight: 800; }
-  .modal-footer { display: flex; gap: 10px; justify-content: flex-end; padding-top: 4px; }
+  .overlay { position: fixed; inset: 0; background: rgba(8,8,9,0.72); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 24px; animation: fade-in 200ms var(--ease); }
+  .modal {
+    background: var(--s1); border: 1px solid var(--border); border-radius: 16px; padding: 24px;
+    width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 16px;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.45);
+    animation: rise-in 220ms var(--ease);
+  }
+  .modal.wide { max-width: 880px; }
+  .modal-title { font-size: 16px; line-height: 24px; font-weight: 500; }
+  .modal-footer { display: flex; gap: 8px; justify-content: flex-end; padding-top: 8px; }
+  @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes rise-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .crop-box { position: relative; width: 100%; height: 360px; background: #000; border-radius: 8px; overflow: hidden; }
 
   /* ── Upload area ── */
-  .upload-area { border: 2px dashed var(--border); border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; transition: border-color .15s; }
-  .upload-area:hover { border-color: var(--gold); }
-  .upload-area img { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; margin-bottom: 8px; }
+  .upload-area { border: 1px dashed var(--border-2); border-radius: var(--r); padding: 24px; text-align: center; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--muted); transition: border-color 150ms var(--ease), background-color 150ms var(--ease); }
+  .upload-area:hover { border-color: rgba(237,237,237,0.3); background: rgba(237,237,237,0.02); }
+  .upload-area img { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; }
+  .upload-area img.cover { width: 100%; height: 160px; }
   .upload-area p { font-size: 12px; color: var(--muted); }
 
   /* ── Options builder ── */
-  .option-row { display: flex; gap: 8px; margin-bottom: 6px; }
+  .option-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
   .option-row input { flex: 1; }
-  .add-option { background: none; border: 1px dashed rgba(212,168,83,.3); color: var(--gold); border-radius: 8px; padding: 7px; font-size: 12px; width: 100%; margin-top: 4px; cursor: pointer; transition: background .15s; font-family: inherit; }
-  .add-option:hover { background: var(--gold-dim); }
+  .add-option { display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: none; border: 1px dashed var(--border-2); color: var(--text-2); border-radius: 8px; height: 32px; padding: 0 12px; font-size: 12px; width: 100%; margin-top: 4px; cursor: pointer; transition: background-color 150ms var(--ease), color 150ms var(--ease); font-family: inherit; }
+  .add-option:hover { background: var(--s2); color: var(--text); }
 
   /* ── President ── */
   .president-wrap { display: flex; gap: 24px; align-items: flex-start; }
-  .president-photo { width: 120px; height: 150px; border-radius: 14px; object-fit: cover; background: var(--s3); cursor: pointer; border: 1px solid var(--border); flex-shrink: 0; }
-  .president-photo-ph { width: 120px; height: 150px; border-radius: 14px; background: var(--s3); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; border: 2px dashed var(--border); flex-shrink: 0; font-size: 28px; gap: 8px; }
-  .president-photo-ph span { font-size: 11px; color: var(--muted); }
+  .president-photo { width: 120px; height: 152px; border-radius: 8px; object-fit: cover; background: var(--s2); cursor: pointer; flex-shrink: 0; }
+  .president-photo-ph { width: 120px; height: 152px; border-radius: 8px; background: var(--s2); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; border: 1px dashed var(--border-2); flex-shrink: 0; gap: 8px; color: var(--muted); font-size: 12px; }
+
+  /* ── Banner / notices ── */
+  .banner { display: flex; gap: 12px; align-items: flex-start; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; line-height: 20px; border: 1px solid var(--border); background: var(--s2); color: var(--text-2); }
+  .banner svg { flex-shrink: 0; margin-top: 2px; color: var(--muted); }
+  .banner.red { border-color: rgba(229,72,77,0.3); background: var(--danger-bg); color: var(--text); }
+  .banner.red svg { color: var(--danger); }
+
+  /* ── Stats: подписи и цифры ── */
+  .stats { display: flex; gap: 32px; flex-wrap: wrap; }
+  .stat-value { font-size: 24px; line-height: 32px; font-weight: 500; font-family: var(--mono); letter-spacing: -0.01em; }
+  .stat-value.key { color: var(--gold); }
+  .stat-label { font-size: 12px; line-height: 16px; color: var(--muted); }
+  .stat-grid { display: grid; gap: 12px; }
+  .stat-grid .card { padding: 16px; }
+  .meta-line { display: flex; gap: 8px 16px; flex-wrap: wrap; font-size: 12px; color: var(--text-2); }
+  .meta-line b { font-family: var(--mono); font-weight: 500; color: var(--text); }
+
+  /* ── Явка и кворум (голосования) ── */
+  .turnout { display: flex; flex-direction: column; gap: 6px; min-width: 148px; }
+  .turnout-figure { font-family: var(--mono); font-size: 13px; }
+  .turnout-figure span { color: var(--muted); }
+  .turnout-bar { position: relative; height: 4px; border-radius: 2px; background: var(--s3); }
+  .turnout-bar.lg { height: 8px; border-radius: 4px; }
+  .turnout-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: inherit; background: var(--text-2); }
+  .turnout-fill.live { background: var(--gold); }
+  .turnout-quorum { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--text); }
+  .turnout-bar.lg .turnout-quorum { top: -6px; bottom: -6px; }
+  .turnout-note { font-size: 12px; line-height: 16px; color: var(--muted); }
+  .turnout-note .ok { color: var(--success); }
+  .quorum-scale { position: relative; height: 16px; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .quorum-scale span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+
+  /* Полосы распределения ответов */
+  .bars { display: flex; flex-direction: column; gap: 8px; }
+  .bar-row { display: grid; grid-template-columns: minmax(80px, 38%) 1fr 80px; gap: 12px; align-items: center; font-size: 12px; }
+  .bar-track { height: 6px; border-radius: 3px; background: var(--s3); overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: inherit; background: var(--text-2); }
+  .bar-num { font-family: var(--mono); color: var(--muted); text-align: right; }
+
+  .stat-pill { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px; font-size: 12px; border-radius: 6px; background: rgba(237,237,237,0.04); border: 1px solid var(--border); color: var(--text-2); white-space: nowrap; font-family: inherit; }
+  button.stat-pill { cursor: pointer; transition: background-color 150ms var(--ease), color 150ms var(--ease); }
+  button.stat-pill:hover { background: var(--s2); color: var(--text); }
+  .stat-pill b { font-family: var(--mono); font-weight: 500; color: var(--text); }
+
+  .checklist { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 16px; }
+  .check-item { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+  .check-item.ok { color: var(--text); }
+  .check-item.ok svg { color: var(--success); }
 
   /* ── Toast ── */
-  .toast { position: fixed; bottom: 24px; right: 24px; z-index: 999; padding: 12px 18px; border-radius: 12px; background: var(--s2); border: 1px solid var(--border); font-size: 13px; opacity: 0; transform: translateY(6px); transition: all .2s; pointer-events: none; max-width: 320px; }
+  .toast { position: fixed; bottom: 24px; right: 24px; z-index: 999; padding: 12px 16px; border-radius: 8px; background: var(--s2); border: 1px solid var(--border-2); color: var(--text); font-size: 13px; opacity: 0; transform: translateY(8px); transition: opacity 200ms var(--ease), transform 200ms var(--ease); pointer-events: none; max-width: 360px; box-shadow: 0 8px 24px rgba(0,0,0,0.35); }
   .toast.show { opacity: 1; transform: translateY(0); }
-  .toast.ok  { border-color: var(--success); color: var(--success); }
-  .toast.err { border-color: var(--danger);  color: var(--danger); }
+  .toast.err { border-color: rgba(229,72,77,0.45); color: var(--danger); }
 
   /* ── Empty / Loading ── */
-  .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
-  .empty-icon { font-size: 32px; margin-bottom: 12px; }
+  .empty { grid-column: 1/-1; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; padding: 64px 20px; color: var(--muted); font-size: 13px; }
+  .empty-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--s1); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: var(--muted); }
   .loading { text-align: center; padding: 40px; color: var(--muted); }
-  .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin .6s linear infinite; }
+  .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--border-2); border-top-color: var(--text-2); border-radius: 50%; animation: spin .7s linear infinite; vertical-align: -3px; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
   /* ── Login ── */
-  .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg); }
-  .login-card { width: 380px; background: var(--s1); border: 1px solid var(--border); border-radius: 20px; padding: 40px; display: flex; flex-direction: column; gap: 18px; }
-  .login-logo { font-size: 18px; font-weight: 800; color: var(--gold); letter-spacing: .3px; }
-  .login-sub { font-size: 13px; color: var(--muted); margin-top: -10px; }
-  .login-msg { font-size: 12px; text-align: center; line-height: 1.5; }
+  .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg); padding: 24px; }
+  .login-card { width: 360px; max-width: 100%; background: var(--s1); border: 1px solid var(--border); border-radius: 16px; padding: 32px; display: flex; flex-direction: column; gap: 24px; }
+  .login-head { display: flex; flex-direction: column; gap: 4px; }
+  .login-logo { font-size: 18px; line-height: 24px; font-weight: 600; color: var(--text); }
+  .login-sub { font-size: 13px; color: var(--text-2); }
+  .login-form { display: flex; flex-direction: column; gap: 16px; }
+  .login-msg { font-size: 13px; text-align: center; line-height: 20px; }
   .login-msg.err { color: var(--danger); }
-  .login-msg.ok { color: var(--gold); }
-  .topbar-user { font-size: 12px; color: var(--muted); }
-  .topbar-user b { color: var(--text, #fff); font-weight: 600; }
+  .login-msg.ok { color: var(--text-2); }
 
-  /* ── Poll stats ── */
-  .stat-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; padding: 3px 10px; border-radius: 20px; background: var(--s3); color: var(--muted); }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }
+  }
 
-  /* Mobile sidebar hidden */
+  /* Мобильный: меню — горизонтальная лента под шапкой */
   @media (max-width: 768px) {
-    .sidebar { display: none; }
+    .topbar { padding: 0 16px; }
+    .topbar-brand span, .topbar-user { display: none; }
+    .sidebar {
+      position: sticky; top: 56px; z-index: 40; width: 100%; height: auto;
+      flex-direction: row; overflow-x: auto; overflow-y: hidden; padding: 8px 12px;
+      border-right: none; border-bottom: 1px solid var(--border);
+    }
+    .sidebar-label { display: none; }
+    .sidebar-btn { width: auto; white-space: nowrap; }
     .main { margin-left: 0; padding: 20px 16px; }
+    .section-head { flex-direction: column; }
     .form-grid { grid-template-columns: 1fr; }
     .form-grid .full { grid-column: 1; }
+    .tbl-wrap { overflow-x: auto; }
+    .president-wrap { flex-direction: column; }
   }
 `;
 
@@ -366,9 +577,9 @@ const CropModal = ({ file, aspect = 3 / 4, onCancel, onDone }) => {
 
   return (
     <div className="overlay" style={{ zIndex: 300 }} onClick={e => e.target === e.currentTarget && onCancel()}>
-      <div className="modal" style={{ width: 420 }}>
+      <div className="modal" style={{ width: 440 }}>
         <div className="modal-title">Кадрировать фото</div>
-        <div style={{ position: 'relative', width: '100%', height: 360, background: '#000', borderRadius: 12, overflow: 'hidden' }}>
+        <div className="crop-box">
           <Cropper
             image={imageSrc}
             crop={crop}
@@ -379,15 +590,15 @@ const CropModal = ({ file, aspect = 3 / 4, onCancel, onDone }) => {
             onCropComplete={onCropComplete}
           />
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 16 }}>
-          <span style={{ fontSize: 12, color: 'var(--muted)' }}>Масштаб</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span className="hint">Масштаб</span>
           <input
             type="range" min={1} max={3} step={0.01} value={zoom}
             onChange={e => setZoom(Number(e.target.value))}
             style={{ flex: 1 }}
           />
         </div>
-        <div className="modal-footer" style={{ marginTop: 20 }}>
+        <div className="modal-footer">
           <button className="btn btn-outline" onClick={onCancel}>Отмена</button>
           <button className="btn btn-gold" onClick={confirm} disabled={busy}>{busy ? 'Обработка…' : 'Готово'}</button>
         </div>
@@ -517,38 +728,40 @@ const ResidentsTab = () => {
           <div className="section-title">Резиденты</div>
           <div className="section-sub">{rows.length} участников</div>
         </div>
-        <button className="btn btn-gold" onClick={openNew}>+ Добавить</button>
+        <button className="btn btn-gold" onClick={openNew}><Ico i={Plus} /> Добавить</button>
       </div>
 
-      <div className="grid-2">
-        {rows.map(r => (
-          <div key={r.id} className={`card ${r.is_president ? 'card-gold' : ''}`}>
-            <div className="res-card">
-              {r.photo_url
-                ? <img className="res-avatar" src={r.photo_url} alt={r.name} onClick={() => openEdit(r)} />
-                : <div className="res-avatar-placeholder" onClick={() => openEdit(r)}>👤</div>
-              }
-              <div className="res-info">
+      <div className="res-grid">
+        {rows.map(r => {
+          const meta = [
+            r.is_president && 'Президент',
+            r.club_role && !(r.is_president && r.club_role === 'Президент') && r.club_role,
+            r.industry_group,
+            r.niche,
+          ].filter(Boolean).join(' · ');
+          return (
+            <div key={r.id} className={`res-card${r.is_published ? '' : ' is-hidden'}`}>
+              <button type="button" className="res-photo" onClick={() => openEdit(r)} aria-label={`Редактировать: ${r.name}`}>
+                {r.photo_url
+                  ? <img src={r.photo_url} alt={r.name} loading="lazy" />
+                  : <span className="res-photo-ph"><Ico i={UserRound} />Нет фото</span>}
+              </button>
+              <div className="res-body">
                 <div className="res-name">{r.name}</div>
                 <div className="res-company">{r.company || '—'}</div>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {r.is_president && <span className="badge badge-gold">👑 Президент</span>}
-                  {r.club_role && !(r.is_president && r.club_role === 'Президент') && <span className="badge badge-gold">{r.club_role}</span>}
-                  {r.industry_group && <span className="badge badge-gray">{r.industry_group}</span>}
-                  {r.niche && <span className="badge badge-gray">{r.niche}</span>}
-                </div>
-                <div className="res-actions">
-                  <button className="btn btn-outline btn-sm" onClick={() => openEdit(r)}>Редактировать</button>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
-                    <Toggle checked={r.is_published} onChange={v => togglePub(r.id, v)} />
-                    <button className="btn-ghost" onClick={() => remove(r.id)}>✕</button>
-                  </div>
-                </div>
+                {meta && <div className="res-meta">{meta}</div>}
+              </div>
+              <div className="res-foot">
+                <Toggle checked={r.is_published} onChange={v => togglePub(r.id, v)} />
+                <PubState on={r.is_published} onLabel="Опубликован" offLabel="Скрыт" />
+                <span className="grow" />
+                <button className="btn-icon" title="Редактировать" aria-label="Редактировать" onClick={() => openEdit(r)}><Ico i={Pencil} /></button>
+                <button className="btn-icon danger" title="Удалить" aria-label="Удалить" onClick={() => remove(r.id)}><Ico i={Trash2} /></button>
               </div>
             </div>
-          </div>
-        ))}
-        {rows.length === 0 && <Empty icon="👤" text="Резиденты не добавлены" />}
+          );
+        })}
+        {rows.length === 0 && <Empty icon={UserRound} text="Резиденты не добавлены" />}
       </div>
 
       {cropSource && (
@@ -566,14 +779,14 @@ const ResidentsTab = () => {
         <Modal title={modal === 'new' ? 'Добавить резидента' : 'Редактировать'} onClose={close} onSave={save} saving={saving}>
           <input type="file" ref={fileRef} hidden accept="image/*" onChange={onFile} />
           <div className="upload-area" onClick={() => fileRef.current.click()}>
-            {imagePreview ? <img src={imagePreview} alt="" style={{ width: 80, height: 80, borderRadius: 8, objectFit: 'cover', marginBottom: 8 }} /> : <div style={{ fontSize: 32, marginBottom: 8 }}>📷</div>}
-            <p>{imageFile ? imageFile.name : 'Нажмите чтобы выбрать фото'}</p>
+            {imagePreview ? <img src={imagePreview} alt="" /> : <Ico i={Camera} />}
+            <p>{imageFile ? imageFile.name : 'Нажмите, чтобы выбрать фото'}</p>
           </div>
           {imagePreview && (
             <button
               type="button"
               className="btn btn-outline btn-sm"
-              style={{ marginTop: -8, marginBottom: 12 }}
+              style={{ alignSelf: 'flex-start' }}
               onClick={() => {
                 if (imageFile) { setCropSource(imageFile); return; }
                 fetch(imagePreview)
@@ -582,7 +795,7 @@ const ResidentsTab = () => {
                   .catch(() => showToast('Не удалось загрузить фото для кадрирования', 'err'));
               }}
             >
-              ✂️ Перекадрировать
+              <Ico i={Crop} /> Перекадрировать
             </button>
           )}
           <div className="form-grid">
@@ -601,8 +814,8 @@ const ResidentsTab = () => {
             <div className="field full"><label>Достижения</label><textarea value={form.achievements || ''} onChange={e => setForm(f => ({ ...f, achievements: e.target.value }))} rows={3} placeholder={'По одному в строке:\nForbes 30 under 30 (2023)\n3 успешных экзита'} /></div>
 
             {cols.size < RESIDENT_NEW_COLS.length && (
-              <div className="field full" style={{ fontSize: 12, color: 'var(--danger)' }}>
-                Поля «Роль в клубе», «Отрасль», «Увлечения», «Согласие на контакты» появятся после миграции 2026-11-09_modernization_stage1.sql.
+              <div className="field full hint err">
+                Поля «Роль в клубе», «Отрасль», «Увлечения», «Согласие на контакты» появятся после миграции 2026-11-09_modernization_stage1.sql
               </div>
             )}
             {cols.has('club_role') && (
@@ -625,18 +838,18 @@ const ResidentsTab = () => {
               </div>
             )}
             {cols.has('contacts_public') && (
-              <label className="full" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#aaa', cursor: 'pointer', gridColumn: '1/-1' }}>
+              <label className="full check-label">
                 <input type="checkbox" checked={!!form.contacts_public} onChange={e => setForm(f => ({ ...f, contacts_public: e.target.checked }))} />
                 Согласие показывать контакты резидентам
               </label>
             )}
 
             <Field label="Порядок сортировки"><input type="text" value={form.sort_order || ''} onChange={e => setForm(f => ({ ...f, sort_order: parseInt(e.target.value) || 0 }))} /></Field>
-            <div style={{ display: 'flex', gap: 20, alignItems: 'center', padding: '8px 0' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#aaa', cursor: 'pointer' }}>
+            <div className="check-row">
+              <label className="check-label">
                 <Toggle checked={!!form.is_president} onChange={v => setForm(f => ({ ...f, is_president: v }))} /> Президент
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#aaa', cursor: 'pointer' }}>
+              <label className="check-label">
                 <Toggle checked={form.is_published !== false} onChange={v => setForm(f => ({ ...f, is_published: v }))} /> Опубликован
               </label>
             </div>
@@ -819,37 +1032,37 @@ const EventsTab = () => {
           <div className="section-title">Мероприятия</div>
           <div className="section-sub">{rows.length} событий</div>
         </div>
-        <button className="btn btn-gold" onClick={openNew}>+ Добавить</button>
+        <button className="btn btn-gold" onClick={openNew}><Ico i={Plus} /> Добавить</button>
       </div>
 
       <div className="tbl-wrap">
         <table>
-          <thead><tr><th>Фото</th><th>Название</th><th>Дата</th><th>Баллы</th><th>Статус</th><th></th></tr></thead>
+          <thead><tr><th style={{ width: 88 }}>Фото</th><th>Название</th><th>Дата</th><th>Баллы</th><th>Статус</th><th></th></tr></thead>
           <tbody>
             {rows.map(r => (
               <tr key={r.id}>
                 <td>
                   {r.image_url
-                    ? <img src={r.image_url} alt="" style={{ width: 56, height: 40, objectFit: 'cover', borderRadius: 6 }} />
-                    : <div style={{ width: 56, height: 40, background: 'var(--s3)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>📅</div>
+                    ? <img className="thumb" src={r.image_url} alt="" />
+                    : <div className="thumb-ph"><Ico i={CalendarDays} /></div>
                   }
                 </td>
-                <td style={{ fontWeight: 600, maxWidth: 280 }}>
-                  <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 260 }}>{r.title}</div>
-                  {r.group_id && <span className="badge badge-gold" style={{ marginTop: 4 }}>👥 {groups.find(g => g.id === r.group_id)?.name || 'Группа'}</span>}
+                <td style={{ maxWidth: 300 }}>
+                  <div className="cell-title truncate" style={{ maxWidth: 280 }}>{r.title}</div>
+                  {r.group_id && <div className="badges"><span className="badge"><Ico i={Users} size={12} /> {groups.find(g => g.id === r.group_id)?.name || 'Группа'}</span></div>}
                 </td>
-                <td style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>{r.date ? new Date(r.date).toLocaleString('ru', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}</td>
-                <td>{r.points != null ? <span className="badge badge-gold" title={categoryLabel(r.category)}>{r.points}</span> : '—'}</td>
-                <td><Toggle checked={r.is_published} onChange={v => togglePub(r.id, v)} /></td>
+                <td className="td-date">{r.date ? new Date(r.date).toLocaleString('ru', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}</td>
+                <td className="td-num" title={r.points != null ? categoryLabel(r.category) : undefined}>{r.points != null ? r.points : '—'}</td>
+                <td><div className="pub-cell"><Toggle checked={r.is_published} onChange={v => togglePub(r.id, v)} /><PubState on={r.is_published} /></div></td>
                 <td>
                   <div className="td-actions">
                     <button
-                      className="btn btn-gold btn-sm"
+                      className="btn btn-outline btn-sm"
                       disabled={!canSendReminder(r) || sendingReminderId === r.id}
                       title={canSendReminder(r) ? 'Отправить push всем резидентам' : 'Доступно для опубликованных предстоящих событий'}
                       onClick={() => openReminder(r)}
                     >
-                      {sendingReminderId === r.id ? 'Отправка…' : '🔔 Напомнить'}
+                      {sendingReminderId === r.id ? 'Отправка…' : <><Ico i={Bell} /> Напомнить</>}
                     </button>
                     <button className="btn btn-outline btn-sm" onClick={() => openEdit(r)}>Редактировать</button>
                     <button className="btn btn-danger btn-sm" onClick={() => remove(r.id)}>Удалить</button>
@@ -859,7 +1072,7 @@ const EventsTab = () => {
             ))}
           </tbody>
         </table>
-        {rows.length === 0 && <div className="loading" style={{ color: 'var(--muted)' }}>Мероприятия не добавлены</div>}
+        {rows.length === 0 && <div className="tbl-empty">Мероприятия не добавлены</div>}
       </div>
 
       {modal !== null && (
@@ -867,10 +1080,10 @@ const EventsTab = () => {
           <input type="file" ref={fileRef} hidden accept="image/*" onChange={onFile} />
           <div className="upload-area" onClick={() => fileRef.current.click()}>
             {imagePreview
-              ? <img src={imagePreview} alt="" style={{ width: '100%', height: 160, objectFit: 'cover', borderRadius: 8, marginBottom: 8 }} />
-              : <div style={{ fontSize: 32, marginBottom: 8 }}>🖼</div>
+              ? <img className="cover" src={imagePreview} alt="" />
+              : <Ico i={ImagePlus} />
             }
-            <p>{imageFile ? imageFile.name : 'Нажмите чтобы выбрать обложку'}</p>
+            <p>{imageFile ? imageFile.name : 'Нажмите, чтобы выбрать обложку'}</p>
           </div>
           <div className="form-grid">
             <div className="field full"><label>Название *</label><input type="text" value={form.title || ''} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} /></div>
@@ -888,10 +1101,10 @@ const EventsTab = () => {
                     <option value="">Для всех резидентов</option>
                     {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
                   </select>
-                  <div style={{ fontSize: 12, color: 'var(--muted)' }}>Событие форум-группы видят только её участники.</div>
+                  <div className="hint">Событие форум-группы видят только её участники</div>
                 </>
               ) : (
-                <div style={{ fontSize: 12, color: 'var(--danger)' }}>Выбор группы появится после миграции 2026-11-09_modernization_stage1.sql.</div>
+                <div className="hint err">Выбор группы появится после миграции 2026-11-09_modernization_stage1.sql</div>
               )}
             </div>
             <div className="field full"><label>Категория (для рейтинга)</label>
@@ -913,11 +1126,11 @@ const EventsTab = () => {
           </div>
 
           {modal !== 'new' && (
-            <div style={{ marginTop: 18, paddingTop: 18, borderTop: '1px solid var(--border)' }}>
-              <label style={{ display: 'block', marginBottom: 10 }}>Посещение и баллы</label>
+            <div className="divider">
+              <span className="sub-head">Посещение и баллы</span>
               <AttendancePanel event={modal} />
               {rsvps && rsvps.length > 0 && (
-                <div style={{ marginTop: 8, fontSize: 12, color: 'var(--muted)' }}>
+                <div className="hint" style={{ marginTop: 8 }}>
                   Записались в приложении: {rsvps.filter(r => r.status === 'going' || r.status === 'with_family').length} идут · {rsvps.filter(r => r.status === 'maybe').length} возможно · {rsvps.filter(r => r.status === 'not_going').length} не идут
                 </div>
               )}
@@ -925,8 +1138,8 @@ const EventsTab = () => {
           )}
 
           {modal !== 'new' && (
-            <div style={{ marginTop: 18, paddingTop: 18, borderTop: '1px solid var(--border)' }}>
-              <label style={{ display: 'block', marginBottom: 10 }}>Архив мероприятия</label>
+            <div className="divider">
+              <span className="sub-head">Архив мероприятия</span>
               <EventArchiveEditor event={modal} />
             </div>
           )}
@@ -941,29 +1154,29 @@ const EventsTab = () => {
           saving={sendingReminderId === reminderEvent.id}
           saveLabel="Отправить push"
         >
-          <div style={{ display: 'grid', gap: 10 }}>
+          <div style={{ display: 'grid', gap: 4 }}>
             {[
               ['going', 'Тем, кто идёт на мероприятие'],
               ['not_going', 'Тем, кто не идёт'],
               ['selected', 'Выборочно'],
               ['all', 'Всем резидентам'],
             ].map(([value, label]) => (
-              <label key={value} style={{ display: 'flex', gap: 10, alignItems: 'center', cursor: 'pointer' }}>
+              <label key={value} className="picker-row">
                 <input type="radio" name="recipientMode" value={value} checked={recipientMode === value} onChange={() => setRecipientMode(value)} />
                 <span>{label}</span>
               </label>
             ))}
           </div>
           {recipientMode === 'selected' && (
-            <div style={{ marginTop: 16, maxHeight: 260, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 10, padding: 10 }}>
+            <div className="picker" style={{ maxHeight: 260 }}>
               {reminderResidents.map(resident => (
-                <label key={resident.id} style={{ display: 'flex', gap: 10, padding: '7px 4px', cursor: 'pointer' }}>
+                <label key={resident.id} className="picker-row">
                   <input
                     type="checkbox"
                     checked={selectedResidentIds.includes(resident.id)}
                     onChange={e => setSelectedResidentIds(ids => e.target.checked ? [...ids, resident.id] : ids.filter(id => id !== resident.id))}
                   />
-                  <span>{resident.name}{resident.company ? ` - ${resident.company}` : ''}</span>
+                  <span>{resident.name}{resident.company ? <span style={{ color: 'var(--muted)' }}> · {resident.company}</span> : ''}</span>
                 </label>
               ))}
             </div>
@@ -1072,24 +1285,29 @@ const NewsTab = () => {
           <div className="section-title">Новости</div>
           <div className="section-sub">{rows.length} новостей</div>
         </div>
-        <button className="btn btn-gold" onClick={openNew}>+ Добавить</button>
+        <button className="btn btn-gold" onClick={openNew}><Ico i={Plus} /> Добавить</button>
       </div>
 
       <div className="tbl-wrap">
         <table>
-          <thead><tr><th>Фото</th><th>Название</th><th>Категория</th><th>Статус</th><th></th></tr></thead>
+          <thead><tr><th style={{ width: 88 }}>Фото</th><th>Название</th><th>Категория</th><th>Статус</th><th></th></tr></thead>
           <tbody>
             {rows.map(r => (
               <tr key={r.id}>
                 <td>
                   {r.image_url
-                    ? <img src={r.image_url} alt="" style={{ width: 56, height: 40, objectFit: 'cover', borderRadius: 6 }} />
-                    : <div style={{ width: 56, height: 40, background: 'var(--s3)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>📰</div>
+                    ? <img className="thumb" src={r.image_url} alt="" />
+                    : <div className="thumb-ph"><Ico i={Newspaper} /></div>
                   }
                 </td>
-                <td style={{ fontWeight: 600, maxWidth: 280 }}><div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 260 }}>{r.is_pinned ? '📌 ' : ''}{r.title}</div></td>
-                <td style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>{r.category || '—'}</td>
-                <td><Toggle checked={r.is_published} onChange={v => togglePub(r.id, v)} /></td>
+                <td style={{ maxWidth: 320 }}>
+                  <div className="cell-title" style={{ maxWidth: 300, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {r.is_pinned && <span title="Закреплена" style={{ color: 'var(--muted)', display: 'inline-flex', flexShrink: 0 }}><Ico i={Pin} size={14} /></span>}
+                    <span className="truncate">{r.title}</span>
+                  </div>
+                </td>
+                <td style={{ color: 'var(--text-2)', whiteSpace: 'nowrap' }}>{r.category || '—'}</td>
+                <td><div className="pub-cell"><Toggle checked={r.is_published} onChange={v => togglePub(r.id, v)} /><PubState on={r.is_published} /></div></td>
                 <td>
                   <div className="td-actions">
                     <button className="btn btn-outline btn-sm" onClick={() => openEdit(r)}>Редактировать</button>
@@ -1100,7 +1318,7 @@ const NewsTab = () => {
             ))}
           </tbody>
         </table>
-        {rows.length === 0 && <div className="loading" style={{ color: 'var(--muted)' }}>Новости не добавлены</div>}
+        {rows.length === 0 && <div className="tbl-empty">Новости не добавлены</div>}
       </div>
 
       {modal !== null && (
@@ -1108,10 +1326,10 @@ const NewsTab = () => {
           <input type="file" ref={fileRef} hidden accept="image/*" onChange={onFile} />
           <div className="upload-area" onClick={() => fileRef.current.click()}>
             {imagePreview
-              ? <img src={imagePreview} alt="" style={{ width: '100%', height: 160, objectFit: 'cover', borderRadius: 8, marginBottom: 8 }} />
-              : <div style={{ fontSize: 32, marginBottom: 8 }}>🖼</div>
+              ? <img className="cover" src={imagePreview} alt="" />
+              : <Ico i={ImagePlus} />
             }
-            <p>{imageFile ? imageFile.name : 'Нажмите чтобы выбрать обложку'}</p>
+            <p>{imageFile ? imageFile.name : 'Нажмите, чтобы выбрать обложку'}</p>
           </div>
           <div className="form-grid">
             <div className="field full"><label>Название *</label><input type="text" value={form.title || ''} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} /></div>
@@ -1199,46 +1417,46 @@ const PartnersTab = () => {
     <>
       <div className="section-head">
         <div><div className="section-title">Партнёры</div><div className="section-sub">{rows.length} партнёров</div></div>
-        <button className="btn btn-gold" onClick={openNew}>+ Добавить</button>
+        <button className="btn btn-gold" onClick={openNew}><Ico i={Plus} /> Добавить</button>
       </div>
 
       <div className="grid-2">
         {rows.map(r => (
-          <div key={r.id} className={`card ${r.is_exclusive ? 'card-gold' : ''}`}>
-            <div style={{ display: 'flex', gap: 14, marginBottom: 12, alignItems: 'flex-start' }}>
+          <div key={r.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
               {r.logo_url
-                ? <img src={r.logo_url} alt="" style={{ width: 48, height: 48, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
-                : <div style={{ width: 48, height: 48, borderRadius: 10, background: 'var(--s3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>🏢</div>
+                ? <img src={r.logo_url} alt="" style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover', flexShrink: 0, background: 'var(--s2)' }} />
+                : <div style={{ width: 48, height: 48, borderRadius: 8, background: 'var(--s2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', flexShrink: 0 }}><Ico i={Building2} /></div>
               }
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, marginBottom: 2 }}>{r.name}</div>
-                <div style={{ fontSize: 11, color: 'var(--muted)' }}>{PARTNER_CATS.find(c => c.value === r.category)?.label}</div>
-                {r.discount && <div style={{ fontSize: 12, color: 'var(--gold)', marginTop: 4 }}>{r.discount}</div>}
+                <div className="cell-title truncate">{r.name}</div>
+                <div className="hint">{PARTNER_CATS.find(c => c.value === r.category)?.label}{r.is_exclusive ? ' · эксклюзив' : ''}</div>
+                {r.discount && <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 4 }}>{r.discount}</div>}
                 {r.valid_until && (
-                  <div style={{ fontSize: 11, marginTop: 4, color: new Date(r.valid_until + 'T23:59:59') < new Date() ? 'var(--danger)' : 'var(--muted)' }}>
+                  <div className="mono" style={{ marginTop: 4, color: new Date(r.valid_until + 'T23:59:59') < new Date() ? 'var(--danger)' : 'var(--muted)' }}>
                     {new Date(r.valid_until + 'T23:59:59') < new Date() ? 'Истекло ' : 'До '}{new Date(r.valid_until).toLocaleDateString('ru')}
                   </div>
                 )}
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 'auto', paddingTop: 12, borderTop: '1px solid var(--border)' }}>
               <Toggle checked={r.is_published} onChange={v => toggleField(r.id, 'is_published', v)} />
-              <span style={{ fontSize: 11, color: 'var(--muted)' }}>{r.is_published ? 'Опубликован' : 'Скрыт'}</span>
-              <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-                <button className="btn btn-outline btn-sm" onClick={() => openEdit(r)}>Изменить</button>
-                <button className="btn-ghost" onClick={() => remove(r.id)}>✕</button>
+              <PubState on={r.is_published} onLabel="Опубликован" offLabel="Скрыт" />
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+                <button className="btn-icon" title="Изменить" aria-label="Изменить" onClick={() => openEdit(r)}><Ico i={Pencil} /></button>
+                <button className="btn-icon danger" title="Удалить" aria-label="Удалить" onClick={() => remove(r.id)}><Ico i={Trash2} /></button>
               </div>
             </div>
           </div>
         ))}
-        {rows.length === 0 && <Empty icon="🤝" text="Партнёры не добавлены" />}
+        {rows.length === 0 && <Empty icon={Handshake} text="Партнёры не добавлены" />}
       </div>
 
       {modal !== null && (
         <Modal title={modal === 'new' ? 'Добавить партнёра' : 'Редактировать партнёра'} onClose={close} onSave={save} saving={saving}>
           <input type="file" ref={fileRef} hidden accept="image/*" onChange={onFile} />
           <div className="upload-area" onClick={() => fileRef.current.click()}>
-            {imagePreview ? <img src={imagePreview} alt="" style={{ width: 64, height: 64, borderRadius: 10, objectFit: 'cover', marginBottom: 8 }} /> : <div style={{ fontSize: 28, marginBottom: 8 }}>🏢</div>}
+            {imagePreview ? <img src={imagePreview} alt="" style={{ width: 64, height: 64 }} /> : <Ico i={Building2} />}
             <p>{imageFile ? imageFile.name : 'Логотип партнёра'}</p>
           </div>
           <div className="form-grid">
@@ -1258,11 +1476,11 @@ const PartnersTab = () => {
               <div className="field full"><label>Как получить привилегию</label><textarea value={form.how_to_get || ''} onChange={e => setForm(f => ({ ...f, how_to_get: e.target.value }))} rows={3} placeholder="Покажите карту резидента в приложении на кассе" /></div>
             )}
             {cols.size < PARTNER_NEW_COLS.length && (
-              <div className="field full" style={{ fontSize: 12, color: 'var(--danger)' }}>Поля «Действует до» и «Как получить привилегию» появятся после миграции 2026-11-09_modernization_stage1.sql.</div>
+              <div className="field full hint err">Поля «Действует до» и «Как получить привилегию» появятся после миграции 2026-11-09_modernization_stage1.sql</div>
             )}
-            <div style={{ display: 'flex', gap: 20, padding: '4px 0' }}>
-              <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#aaa', cursor: 'pointer' }}><Toggle checked={form.is_published !== false} onChange={v => setForm(f => ({ ...f, is_published: v }))} /> Опубликован</label>
-              <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#aaa', cursor: 'pointer' }}><Toggle checked={!!form.is_exclusive} onChange={v => setForm(f => ({ ...f, is_exclusive: v }))} /> Эксклюзив</label>
+            <div className="check-row">
+              <label className="check-label"><Toggle checked={form.is_published !== false} onChange={v => setForm(f => ({ ...f, is_published: v }))} /> Опубликован</label>
+              <label className="check-label"><Toggle checked={!!form.is_exclusive} onChange={v => setForm(f => ({ ...f, is_exclusive: v }))} /> Эксклюзив</label>
             </div>
           </div>
         </Modal>
@@ -1273,8 +1491,7 @@ const PartnersTab = () => {
 
 // ─── POLLS TAB ────────────────────────────────────────────────────────────────
 
-// Тестовые опросы — приглушены и с полосой слева, чтобы не путать с боевыми.
-const TEST_ROW_STYLE = { opacity: 0.6, boxShadow: 'inset 3px 0 0 var(--danger)' };
+// Тестовые опросы — приглушены и с полосой слева (класс .tr-test), чтобы не путать с боевыми.
 
 const PollsTab = () => {
   const [surveys, setSurveys] = useState([]);   // общие опросы (анкеты)
@@ -1560,36 +1777,34 @@ const PollsTab = () => {
           <div className="section-title">Опросы</div>
           <div className="section-sub">{surveys.length} анкет{rows.length ? ` · ${rows.length} одиночных (старый формат)` : ''}</div>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-gold" onClick={openSurveyNew}>+ Опрос / анкета</button>
-        </div>
+        <button className="btn btn-gold" onClick={openSurveyNew}><Ico i={Plus} /> Опрос или анкета</button>
       </div>
 
-      <div className="tbl-wrap" style={{ marginBottom: 22 }}>
-        <div style={{ padding: '10px 14px', fontSize: 12, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--muted)' }}>Опросы и анкеты</div>
+      <div className="tbl-wrap" style={{ marginBottom: 24 }}>
+        <div className="tbl-caption">Опросы и анкеты</div>
         <table>
           <thead><tr><th>Название</th><th>Аудитория</th><th>Вопросов</th><th>Период</th><th>Активен</th><th></th></tr></thead>
           <tbody>
             {surveys.map(s => (
-              <tr key={s.id} style={s.is_test ? TEST_ROW_STYLE : undefined}>
-                <td style={{ maxWidth: 320 }}>
-                  <div style={{ fontWeight: 600 }}>{s.title}</div>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
-                    {s.is_test && <span className="badge badge-red" title="Не показывается в приложении">🧪 Тестовый</span>}
-                    <span className="badge badge-gray">{SURVEY_KINDS.find(k => k.value === (s.kind || 'poll'))?.label}</span>
-                    {s.is_mandatory && <span className="badge badge-red">Обязательный</span>}
-                    {s.is_anonymous && <span className="badge badge-gold">Анонимный</span>}
+              <tr key={s.id} className={s.is_test ? 'tr-test' : undefined}>
+                <td style={{ maxWidth: 340 }}>
+                  <div className="cell-title">{s.title}</div>
+                  <div className="badges">
+                    {s.is_test && <span className="badge badge-red" title="Не показывается в приложении">Тестовый</span>}
+                    <span className="badge">{SURVEY_KINDS.find(k => k.value === (s.kind || 'poll'))?.label}</span>
+                    {s.is_mandatory && <span className="badge">Обязательный</span>}
+                    {s.is_anonymous && <span className="badge">Анонимный</span>}
                   </div>
                 </td>
-                <td style={{ color: 'var(--muted)', fontSize: 12 }}>{AUDIENCES.find(a => a.value === (s.audience || 'all'))?.label}</td>
-                <td><span className="badge badge-gray">{s.polls?.[0]?.count ?? 0}</span></td>
-                <td style={{ color: 'var(--muted)', whiteSpace: 'nowrap', fontSize: 12 }}>
+                <td style={{ color: 'var(--text-2)', fontSize: 13 }}>{AUDIENCES.find(a => a.value === (s.audience || 'all'))?.label}</td>
+                <td className="td-num">{s.polls?.[0]?.count ?? 0}</td>
+                <td className="td-date">
                   {s.starts_at ? new Date(s.starts_at).toLocaleDateString('ru') : 'сразу'} → {s.ends_at ? new Date(s.ends_at).toLocaleDateString('ru') : '∞'}
                 </td>
                 <td><Toggle checked={s.is_active} onChange={v => toggleSurveyActive(s.id, v)} /></td>
                 <td>
                   <div className="td-actions">
-                    <button className="btn btn-gold btn-sm" onClick={() => setAnalyticsSurvey(s)}>📊 Аналитика</button>
+                    <button className="btn btn-outline btn-sm" onClick={() => setAnalyticsSurvey(s)}><Ico i={ChartColumn} /> Аналитика</button>
                     <button className="btn btn-outline btn-sm" onClick={() => openSurveyEdit(s)}>Изменить</button>
                     <button className="btn btn-danger btn-sm" onClick={() => removeSurvey(s.id)}>Удалить</button>
                   </div>
@@ -1598,29 +1813,27 @@ const PollsTab = () => {
             ))}
           </tbody>
         </table>
-        {surveys.length === 0 && <div className="loading" style={{ color: 'var(--muted)' }}>Общие опросы не созданы</div>}
+        {surveys.length === 0 && <div className="tbl-empty">Общие опросы не созданы</div>}
       </div>
 
       <div className="tbl-wrap">
-        <div style={{ padding: '10px 14px', fontSize: 12, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--muted)' }}>Одиночные опросы (старый формат)</div>
+        <div className="tbl-caption">Одиночные опросы <span className="hint">старый формат</span></div>
         <table>
           <thead><tr><th>Вопрос</th><th>Тип</th><th>Ответов</th><th>Срок</th><th>Активен</th><th></th></tr></thead>
           <tbody>
             {rows.map(r => (
-              <tr key={r.id} style={r.is_test ? TEST_ROW_STYLE : undefined}>
-                <td style={{ maxWidth: 300 }}>
-                  <div style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 280 }}>{r.question}</div>
-                  {r.is_test && <span className="badge badge-red" style={{ marginTop: 4 }} title="Не показывается в приложении">🧪 Тестовый</span>}
+              <tr key={r.id} className={r.is_test ? 'tr-test' : undefined}>
+                <td style={{ maxWidth: 320 }}>
+                  <div className="cell-title truncate" style={{ maxWidth: 300 }}>{r.question}</div>
+                  {r.is_test && <div className="badges"><span className="badge badge-red" title="Не показывается в приложении">Тестовый</span></div>}
                 </td>
-                <td><span className="badge badge-gray">{POLL_TYPES.find(t => t.value === r.type)?.label}</span></td>
+                <td><span className="badge">{POLL_TYPES.find(t => t.value === r.type)?.label}</span></td>
                 <td>
-                  <button type="button" className="stat-pill" title="Показать ответы"
-                    style={{ cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--s2)', color: 'var(--text)', font: 'inherit' }}
-                    onClick={() => openAnswers(r)}>
-                    💬 {r.poll_answers?.[0]?.count ?? 0}
+                  <button type="button" className="stat-pill" title="Показать ответы" onClick={() => openAnswers(r)}>
+                    <Ico i={MessageSquare} size={14} /> <b>{r.poll_answers?.[0]?.count ?? 0}</b>
                   </button>
                 </td>
-                <td style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>{r.ends_at ? new Date(r.ends_at).toLocaleDateString('ru') : '∞'}</td>
+                <td className="td-date">{r.ends_at ? new Date(r.ends_at).toLocaleDateString('ru') : '∞'}</td>
                 <td><Toggle checked={r.is_active} onChange={v => toggleActive(r.id, v)} /></td>
                 <td>
                   <div className="td-actions">
@@ -1632,7 +1845,7 @@ const PollsTab = () => {
             ))}
           </tbody>
         </table>
-        {rows.length === 0 && <div className="loading" style={{ color: 'var(--muted)' }}>Одиночные опросы не созданы</div>}
+        {rows.length === 0 && <div className="tbl-empty">Одиночные опросы не созданы</div>}
       </div>
 
       {surveyModal !== null && (
@@ -1649,7 +1862,7 @@ const PollsTab = () => {
                   <option value="">— выберите —</option>
                   {audienceData.events.map(ev => <option key={ev.id} value={ev.id}>{ev.date ? new Date(ev.date).toLocaleDateString('ru') + ' · ' : ''}{ev.title.slice(0, 80)}</option>)}
                 </select>
-                <div style={{ fontSize: 12, color: 'var(--muted)' }}>В анкету добавится вопрос «Подтверждаете участие? — Иду / Не иду / Возможно». Ответ сразу записывает резидента на мероприятие.</div>
+                <div className="hint">В анкету добавится вопрос «Подтверждаете участие? — Иду / Не иду / Возможно». Ответ сразу записывает резидента на мероприятие.</div>
               </div>
             )}
             <Field label="Аудитория"><select value={surveyForm.audience || 'all'} onChange={e => setSurveyForm(f => ({ ...f, audience: e.target.value }))}>{AUDIENCES.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}</select></Field>
@@ -1667,17 +1880,17 @@ const PollsTab = () => {
                   <option value="">— выберите —</option>
                   {audienceData.groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
                 </select>
-                {audienceData.groups.length === 0 && <div style={{ fontSize: 12, color: 'var(--muted)' }}>Групп нет — создайте их в разделе «Группы»</div>}
+                {audienceData.groups.length === 0 && <div className="hint">Групп нет — создайте их в разделе «Группы»</div>}
               </div>
             )}
             {surveyForm.audience === 'selected' && (
               <div className="field full"><label>Получатели ({surveyTargets.length})</label>
                 <input type="text" placeholder="Поиск" value={targetQuery} onChange={e => setTargetQuery(e.target.value)} />
-                <div style={{ maxHeight: 200, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 10, padding: 8, marginTop: 6 }}>
+                <div className="picker" style={{ maxHeight: 200 }}>
                   {audienceData.residents
                     .filter(r => !targetQuery.trim() || `${r.name} ${r.company || ''}`.toLowerCase().includes(targetQuery.trim().toLowerCase()))
                     .map(r => (
-                      <label key={r.id} style={{ display: 'flex', gap: 10, padding: '5px 4px', cursor: 'pointer', fontSize: 13 }}>
+                      <label key={r.id} className="picker-row">
                         <input type="checkbox" checked={surveyTargets.includes(r.id)}
                           onChange={e => setSurveyTargets(ids => e.target.checked ? [...ids, r.id] : ids.filter(x => x !== r.id))} />
                         <span>{r.name}{r.company ? ` · ${r.company}` : ''}</span>
@@ -1688,52 +1901,50 @@ const PollsTab = () => {
             )}
             <Field label="Дата начала"><input type="datetime-local" value={surveyForm.starts_at || ''} onChange={e => setSurveyForm(f => ({ ...f, starts_at: e.target.value }))} /></Field>
             <Field label="Дедлайн"><input type="datetime-local" value={surveyForm.ends_at || ''} onChange={e => setSurveyForm(f => ({ ...f, ends_at: e.target.value }))} /></Field>
-            <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#aaa', cursor: 'pointer' }}><Toggle checked={!!surveyForm.is_mandatory} onChange={v => setSurveyForm(f => ({ ...f, is_mandatory: v }))} /> Обязательный</label>
-            <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#aaa', cursor: 'pointer' }} title="Ответы сохраняются без привязки к резиденту. Видно только, кто прошёл опрос."><Toggle checked={!!surveyForm.is_anonymous} onChange={v => setSurveyForm(f => ({ ...f, is_anonymous: v }))} /> Анонимный</label>
-            <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#aaa', cursor: 'pointer' }}><Toggle checked={!!surveyForm.is_active} onChange={v => setSurveyForm(f => ({ ...f, is_active: v }))} /> Активен</label>
+            <label className="check-label"><Toggle checked={!!surveyForm.is_mandatory} onChange={v => setSurveyForm(f => ({ ...f, is_mandatory: v }))} /> Обязательный</label>
+            <label className="check-label" title="Ответы сохраняются без привязки к резиденту. Видно только, кто прошёл опрос."><Toggle checked={!!surveyForm.is_anonymous} onChange={v => setSurveyForm(f => ({ ...f, is_anonymous: v }))} /> Анонимный</label>
+            <label className="check-label"><Toggle checked={!!surveyForm.is_active} onChange={v => setSurveyForm(f => ({ ...f, is_active: v }))} /> Активен</label>
             {testCols.surveys && (
-              <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#aaa', cursor: 'pointer' }}>
+              <label className="check-label">
                 <input type="checkbox" checked={!!surveyForm.is_test} onChange={e => setSurveyForm(f => ({ ...f, is_test: e.target.checked }))} />
                 Тестовый (не показывать в приложении)
               </label>
             )}
           </div>
           {!isDraftSurvey && surveyForm.notified_at && surveyForm.is_anonymous !== surveyModal.is_anonymous && (
-            <div style={{ fontSize: 12, color: 'var(--danger)' }}>Анонимность меняется только для новых ответов — уже полученные ответы не изменятся.</div>
+            <div className="hint err">Анонимность меняется только для новых ответов — уже полученные ответы не изменятся</div>
           )}
 
-          <div className="field" style={{ marginTop: 14 }}>
+          <div className="field" style={{ marginTop: 8 }}>
             <label>Вопросы ({isDraftSurvey ? draftQuestions.length : surveyQuestions.length})</label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div className="list">
               {isDraftSurvey
                 ? draftQuestions.map((q, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 10, background: 'var(--s2)', border: '1px solid var(--border)' }}>
-                      <span style={{ color: 'var(--muted)', fontSize: 12, minWidth: 18 }}>{i + 1}.</span>
-                      <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{q.question}{q.is_required !== false && <span style={{ color: 'var(--danger)' }}> *</span>}</span>
-                      <span className="badge badge-gray">{POLL_TYPES.find(t => t.value === q.type)?.label}</span>
+                    <div key={i} className="list-row">
+                      <span className="idx">{i + 1}</span>
+                      <span style={{ flex: 1, fontSize: 13 }}>{q.question}{q.is_required !== false && <span style={{ color: 'var(--muted)' }}> *</span>}</span>
+                      <span className="badge">{POLL_TYPES.find(t => t.value === q.type)?.label}</span>
                       <button className="btn btn-outline btn-sm" onClick={() => openEditDraft(q, i)}>Изменить</button>
-                      <button className="btn btn-danger btn-sm" onClick={() => setDraftQuestions(l => l.filter((_, j) => j !== i))}>×</button>
+                      <button className="btn-icon danger" aria-label="Удалить вопрос" title="Удалить" onClick={() => setDraftQuestions(l => l.filter((_, j) => j !== i))}><Ico i={Trash2} /></button>
                     </div>
                   ))
                 : surveyQuestions.map((q, i) => (
-                    <div key={q.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 10, background: 'var(--s2)', border: '1px solid var(--border)' }}>
-                      <span style={{ color: 'var(--muted)', fontSize: 12, minWidth: 18 }}>{i + 1}.</span>
-                      <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{q.question}{q.is_required !== false && <span style={{ color: 'var(--danger)' }}> *</span>}</span>
-                      <span className="badge badge-gray">{POLL_TYPES.find(t => t.value === q.type)?.label}</span>
-                      <button type="button" className="stat-pill" title="Ответы"
-                        style={{ cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--s1)', color: 'var(--text)', font: 'inherit' }}
-                        onClick={() => openAnswers(q)}>💬 {q.poll_answers?.[0]?.count ?? 0}</button>
+                    <div key={q.id} className="list-row">
+                      <span className="idx">{i + 1}</span>
+                      <span style={{ flex: 1, fontSize: 13 }}>{q.question}{q.is_required !== false && <span style={{ color: 'var(--muted)' }}> *</span>}</span>
+                      <span className="badge">{POLL_TYPES.find(t => t.value === q.type)?.label}</span>
+                      <button type="button" className="stat-pill" title="Ответы" onClick={() => openAnswers(q)}><Ico i={MessageSquare} size={14} /> <b>{q.poll_answers?.[0]?.count ?? 0}</b></button>
                       <button className="btn btn-outline btn-sm" onClick={() => openEdit(q)}>Изменить</button>
-                      <button className="btn btn-danger btn-sm" onClick={() => remove(q.id, surveyForm.id)}>×</button>
+                      <button className="btn-icon danger" aria-label="Удалить вопрос" title="Удалить" onClick={() => remove(q.id, surveyForm.id)}><Ico i={Trash2} /></button>
                     </div>
                   ))}
               {(isDraftSurvey ? draftQuestions : surveyQuestions).length === 0 &&
-                <div style={{ fontSize: 13, color: 'var(--muted)' }}>Вопросов пока нет</div>}
+                <div className="hint">Вопросов пока нет</div>}
             </div>
-            <button className="add-option" onClick={openNewQuestion}>+ Добавить вопрос</button>
+            <button className="add-option" onClick={openNewQuestion}><Ico i={Plus} size={14} /> Добавить вопрос</button>
             {isDraftSurvey && (
-              <div style={{ marginTop: 8, fontSize: 12, color: 'var(--muted)' }}>
-                Вопросы сохранятся вместе с опросником — резиденты получат одно уведомление.
+              <div className="hint">
+                Вопросы сохранятся вместе с опросником — резиденты получат одно уведомление
               </div>
             )}
           </div>
@@ -1747,16 +1958,16 @@ const PollsTab = () => {
           <div className="modal">
             <div className="modal-title">Ответы — {answersPoll.question}</div>
             {answers === null ? (
-              <div style={{ color: 'var(--muted)', fontSize: 13 }}>Загрузка…</div>
+              <div className="hint">Загрузка…</div>
             ) : answers.length === 0 ? (
-              <div style={{ color: 'var(--muted)', fontSize: 13 }}>Ответов пока нет</div>
+              <div className="hint">Ответов пока нет</div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: '55vh', overflowY: 'auto' }}>
+              <div className="list" style={{ maxHeight: '55vh', overflowY: 'auto' }}>
                 {answers.map(a => (
-                  <div key={a.id} style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '9px 12px', borderRadius: 10, background: 'var(--s2)', border: '1px solid var(--border)' }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>{a.name}{a.company ? ` · ${a.company}` : ''}</span>
-                    <span style={{ fontSize: 13, color: 'var(--gold)', flex: 1 }}>{renderAnswer(answersPoll, a)}</span>
-                    <span style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{new Date(a.created_at).toLocaleString('ru', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+                  <div key={a.id} className="list-row" style={{ alignItems: 'baseline' }}>
+                    <span style={{ fontSize: 13, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>{a.name}{a.company ? ` · ${a.company}` : ''}</span>
+                    <span style={{ fontSize: 13, flex: 1 }}>{renderAnswer(answersPoll, a)}</span>
+                    <span className="mono" style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>{new Date(a.created_at).toLocaleString('ru', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
                 ))}
               </div>
@@ -1787,11 +1998,11 @@ const PollsTab = () => {
               </select></Field>
             )}
             {isSurveyQuestion && (
-              <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#aaa', cursor: 'pointer' }}><Toggle checked={form.is_required !== false} onChange={v => setForm(f => ({ ...f, is_required: v }))} /> Обязательный вопрос</label>
+              <label className="check-label"><Toggle checked={form.is_required !== false} onChange={v => setForm(f => ({ ...f, is_required: v }))} /> Обязательный вопрос</label>
             )}
-            <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#aaa', cursor: 'pointer' }}><Toggle checked={!!form.is_active} onChange={v => setForm(f => ({ ...f, is_active: v }))} /> Активен</label>
+            <label className="check-label"><Toggle checked={!!form.is_active} onChange={v => setForm(f => ({ ...f, is_active: v }))} /> Активен</label>
             {testCols.polls && !isSurveyQuestion && (
-              <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#aaa', cursor: 'pointer' }}>
+              <label className="check-label">
                 <input type="checkbox" checked={!!form.is_test} onChange={e => setForm(f => ({ ...f, is_test: e.target.checked }))} />
                 Тестовый (не показывать в приложении)
               </label>
@@ -1803,10 +2014,10 @@ const PollsTab = () => {
               {options.map((o, i) => (
                 <div key={i} className="option-row">
                   <input type="text" value={o} onChange={e => setOptions(opts => opts.map((x, j) => j === i ? e.target.value : x))} placeholder={`Вариант ${i + 1}`} />
-                  {options.length > 2 && <button className="btn-ghost" style={{ fontSize: 18, padding: '0 8px' }} onClick={() => setOptions(o => o.filter((_, j) => j !== i))}>×</button>}
+                  {options.length > 2 && <button type="button" className="btn-icon danger" aria-label="Удалить вариант" title="Удалить" onClick={() => setOptions(o => o.filter((_, j) => j !== i))}><Ico i={Trash2} /></button>}
                 </div>
               ))}
-              <button className="add-option" onClick={() => setOptions(o => [...o, ''])}>+ Добавить вариант</button>
+              <button className="add-option" onClick={() => setOptions(o => [...o, ''])}><Ico i={Plus} size={14} /> Добавить вариант</button>
             </div>
           )}
         </Modal>
@@ -1853,21 +2064,21 @@ const PresidentTab = () => {
       <div className="section-head">
         <div><div className="section-title">Президент клуба</div><div className="section-sub">Информация на главной странице сайта</div></div>
         <button className="btn btn-gold" onClick={save} disabled={saving}>
-          {saving ? <><span className="spinner" /> Сохранение…</> : '💾 Сохранить'}
+          {saving ? <><span className="spinner" /> Сохранение…</> : 'Сохранить'}
         </button>
       </div>
 
-      <div className="card" style={{ maxWidth: 600 }}>
+      <div className="card" style={{ maxWidth: 640 }}>
         <input type="file" ref={fileRef} hidden accept="image/*" onChange={onFile} />
         <div className="president-wrap">
           {imagePreview
             ? <img className="president-photo" src={imagePreview} alt="" onClick={() => fileRef.current.click()} />
-            : <div className="president-photo-ph" onClick={() => fileRef.current.click()}>📷<span>Загрузить фото</span></div>
+            : <div className="president-photo-ph" onClick={() => fileRef.current.click()}><Ico i={Camera} /><span>Загрузить фото</span></div>
           }
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16, width: '100%' }}>
             <Field label="Имя"><input type="text" value={data.name || ''} onChange={e => setData(d => ({ ...d, name: e.target.value }))} placeholder="Тимур Нуртаев" /></Field>
             <Field label="Биография"><textarea value={data.bio || ''} onChange={e => setData(d => ({ ...d, bio: e.target.value }))} rows={5} placeholder="Расскажите о президенте клуба…" /></Field>
-            {imageFile && <div style={{ fontSize: 12, color: 'var(--muted)' }}>Выбрано: {imageFile.name}</div>}
+            {imageFile && <div className="hint">Выбрано: {imageFile.name}</div>}
           </div>
         </div>
       </div>
@@ -1926,7 +2137,7 @@ const AccessRequestsTab = () => {
         </div>
       </div>
 
-      <div className="table-wrap">
+      <div className="tbl-wrap">
         <table>
           <thead>
             <tr><th>Резидент</th><th>Номер телефона</th><th>Подана</th><th>Статус</th><th></th></tr>
@@ -1937,18 +2148,21 @@ const AccessRequestsTab = () => {
               const created = new Date(r.created_at).toLocaleString('ru');
               return (
                 <tr key={r.id}>
-                  <td><strong>{resident.name || '—'}</strong><br /><span className="badge badge-gray">{resident.company || ''}</span></td>
-                  <td>{r.phone}</td>
-                  <td>{created}</td>
                   <td>
-                    {r.status === 'pending' && <span className="badge badge-gray">Ожидает</span>}
-                    {r.status === 'approved' && <span className="badge badge-gold">Одобрена</span>}
-                    {r.status === 'rejected' && <span className="badge">Отклонена</span>}
+                    <div className="cell-title">{resident.name || '—'}</div>
+                    {resident.company && <div className="cell-sub">{resident.company}</div>}
+                  </td>
+                  <td className="td-num">{r.phone}</td>
+                  <td className="td-date">{created}</td>
+                  <td>
+                    {r.status === 'pending' && <span className="verdict" style={{ color: 'var(--text)' }}>Ожидает</span>}
+                    {r.status === 'approved' && <span className="verdict ok">Одобрена</span>}
+                    {r.status === 'rejected' && <span className="verdict" style={{ color: 'var(--muted)' }}>Отклонена</span>}
                   </td>
                   <td>
                     {r.status === 'pending' && (
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button className="btn btn-gold btn-sm" onClick={() => approve(r)}>Одобрить</button>
+                      <div className="td-actions">
+                        <button className="btn btn-outline btn-sm" onClick={() => approve(r)}>Одобрить</button>
                         <button className="btn btn-outline btn-sm" onClick={() => reject(r.id)}>Отклонить</button>
                       </div>
                     )}
@@ -1956,7 +2170,7 @@ const AccessRequestsTab = () => {
                 </tr>
               );
             })}
-            {rows.length === 0 && <tr><td colSpan={5}><Empty icon="🔑" text="Заявок нет" /></td></tr>}
+            {rows.length === 0 && <tr><td colSpan={5}><Empty icon={KeyRound} text="Заявок нет" /></td></tr>}
           </tbody>
         </table>
       </div>
@@ -1978,8 +2192,6 @@ const authErrorText = error => {
   return msg || 'Ошибка входа';
 };
 
-const wideBtn = { width: '100%', justifyContent: 'center', padding: 14 };
-const formCol = { display: 'flex', flexDirection: 'column', gap: 12 };
 
 const Login = ({ initialError = '', recovery = false, onRecovered }) => {
   const [mode, setMode] = useState(recovery ? 'recovery' : 'login'); // login | forgot | recovery
@@ -2011,7 +2223,7 @@ const Login = ({ initialError = '', recovery = false, onRecovered }) => {
     });
     setLoading(false);
     if (err) setError(authErrorText(err));
-    else setInfo('Если такой администратор есть, на почту придёт ссылка для смены пароля.');
+    else setInfo('Если такой администратор есть, на почту придёт ссылка для смены пароля');
   };
 
   const setNewPassword = async e => {
@@ -2029,45 +2241,47 @@ const Login = ({ initialError = '', recovery = false, onRecovered }) => {
   return (
     <div className="login-wrap">
       <div className="login-card">
-        <div className="login-logo">26 Business Club</div>
-        <div className="login-sub">Панель администратора</div>
+        <div className="login-head">
+          <div className="login-logo">26 Business Club</div>
+          <div className="login-sub">Панель администратора</div>
+        </div>
 
         {mode === 'login' && (
-          <form onSubmit={signIn} style={formCol}>
+          <form onSubmit={signIn} className="login-form">
             <Field label="Email">
               <input type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} placeholder="admin@example.com" autoFocus />
             </Field>
             <Field label="Пароль">
               <input type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} />
             </Field>
-            <button className="btn btn-gold" type="submit" style={wideBtn} disabled={loading}>
+            <button className="btn btn-gold btn-wide" type="submit" disabled={loading}>
               {loading ? <span className="spinner" /> : 'Войти'}
             </button>
-            <button type="button" className="btn-ghost" style={{ textAlign: 'center' }} onClick={() => go('forgot')}>Забыли пароль?</button>
+            <button type="button" className="btn-ghost" style={{ alignSelf: 'center' }} onClick={() => go('forgot')}>Забыли пароль?</button>
           </form>
         )}
 
         {mode === 'forgot' && (
-          <form onSubmit={sendReset} style={formCol}>
+          <form onSubmit={sendReset} className="login-form">
             <Field label="Email администратора">
               <input type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} placeholder="admin@example.com" autoFocus />
             </Field>
-            <button className="btn btn-gold" type="submit" style={wideBtn} disabled={loading}>
+            <button className="btn btn-gold btn-wide" type="submit" disabled={loading}>
               {loading ? <span className="spinner" /> : 'Отправить ссылку'}
             </button>
-            <button type="button" className="btn-ghost" style={{ textAlign: 'center' }} onClick={() => go('login')}>← Ко входу</button>
+            <button type="button" className="btn-ghost" style={{ alignSelf: 'center' }} onClick={() => go('login')}><Ico i={ArrowLeft} /> Ко входу</button>
           </form>
         )}
 
         {mode === 'recovery' && (
-          <form onSubmit={setNewPassword} style={formCol}>
+          <form onSubmit={setNewPassword} className="login-form">
             <Field label="Новый пароль">
               <input type="password" autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)} autoFocus />
             </Field>
             <Field label="Повторите пароль">
               <input type="password" autoComplete="new-password" value={password2} onChange={e => setPassword2(e.target.value)} />
             </Field>
-            <button className="btn btn-gold" type="submit" style={wideBtn} disabled={loading}>
+            <button className="btn btn-gold btn-wide" type="submit" disabled={loading}>
               {loading ? <span className="spinner" /> : 'Сохранить пароль'}
             </button>
           </form>
@@ -2188,27 +2402,29 @@ const Admin = () => {
       <style>{css}</style>
       <div className="admin-app">
         <div className="topbar">
-          <div className="topbar-brand">26 Business Club — Admin</div>
+          <div className="topbar-brand">26 Business Club <span>Админка</span></div>
           <div className="topbar-right">
-            <span className="topbar-user" title={admin.email}><b>{admin.name}</b></span>
-            <a href="/" style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none' }}>← На сайт</a>
+            <span className="topbar-user" title={admin.email}>{admin.name}</span>
+            <a href="/" className="topbar-link"><Ico i={ArrowLeft} /> На сайт</a>
             <button className="btn btn-outline btn-sm" onClick={logout}>Выйти</button>
           </div>
         </div>
 
-        <div className="sidebar">
-          <div className="sidebar-label">Управление</div>
+        <nav className="sidebar">
           {TABS.map(t => (
-            <button key={t.id} className={`sidebar-btn ${tab === t.id ? 'active' : ''}`} onClick={() => setTab(t.id)}>
-              <span className="icon">{t.icon}</span>
-              {t.label}
-            </button>
+            <React.Fragment key={t.id}>
+              {t.section && <div className="sidebar-label">{t.section}</div>}
+              <button className={`sidebar-btn ${tab === t.id ? 'active' : ''}`} aria-current={tab === t.id ? 'page' : undefined} onClick={() => setTab(t.id)}>
+                <Ico i={t.icon} />
+                {t.label}
+              </button>
+            </React.Fragment>
           ))}
-        </div>
+        </nav>
 
-        <div className="main">
-          {tabContent[tab]}
-        </div>
+        <main className="main">
+          <div className="main-inner">{tabContent[tab]}</div>
+        </main>
       </div>
       <div id="__toast" className="toast" />
     </>

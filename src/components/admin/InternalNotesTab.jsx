@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Modal, Field, Banner, MigrationNotice } from './ui';
+import { Plus, Lock } from 'lucide-react';
+import { Modal, Field, Banner, MigrationNotice, Ico } from './ui';
 import { showToast, fmtDate, fmtDateTime, isMissingTable } from './helpers';
 
 // «Закрытый раздел»: внутренние заметки администраторов (регламенты,
@@ -53,7 +54,7 @@ export const InternalNotesTab = () => {
   useEffect(() => { load(); }, [load]);
 
   const banner = (
-    <Banner tone="red">🔒 Только для администраторов. Не попадает в приложение и в «Каспер».</Banner>
+    <Banner icon={Lock}>Только для администраторов. Не попадает в приложение и в «Каспер».</Banner>
   );
 
   if (missing) return <>{banner}<MigrationNotice file={MIGRATION} what="Закрытый раздел" /></>;
@@ -110,15 +111,17 @@ export const InternalNotesTab = () => {
           <div className="section-title">Закрытый раздел</div>
           <div className="section-sub">{rows.length} заметок · регламенты, Совет директоров, оргвопросы</div>
         </div>
-        <button className="btn btn-gold" onClick={() => open('new')}>+ Заметка</button>
+        <button className="btn btn-gold" onClick={() => open('new')}><Ico i={Plus} /> Заметка</button>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-        {['', ...CATEGORIES].map(c => (
-          <button key={c || 'all'} className={`btn btn-sm ${filter === c ? 'btn-gold' : 'btn-outline'}`} onClick={() => setFilter(c)}>
-            {c ? catLabel(c) : 'Все'}
-          </button>
-        ))}
+      <div className="toolbar">
+        <div className="seg">
+          {['', ...CATEGORIES].map(c => (
+            <button key={c || 'all'} className={`seg-btn${filter === c ? ' on' : ''}`} onClick={() => setFilter(c)}>
+              {c ? catLabel(c) : 'Все'}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="tbl-wrap">
@@ -127,15 +130,15 @@ export const InternalNotesTab = () => {
           <tbody>
             {visible.map(r => (
               <tr key={r.id}>
-                <td style={{ maxWidth: 340 }}>
-                  <div style={{ fontWeight: 600 }}>{r.title}</div>
-                  <div style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 320 }}>{(r.body || '').slice(0, 140)}</div>
+                <td style={{ maxWidth: 360 }}>
+                  <div className="cell-title">{r.title}</div>
+                  <div className="cell-sub truncate" style={{ maxWidth: 340 }}>{(r.body || '').slice(0, 140)}</div>
                 </td>
-                <td><span className="badge badge-gray">{r.category ? catLabel(r.category) : '—'}</span></td>
-                <td style={{ fontSize: 12, color: 'var(--muted)', maxWidth: 200 }}>{eventTitle(r.related_event_id) || '—'}</td>
-                <td style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap' }}>
+                <td><span className="badge">{r.category ? catLabel(r.category) : '—'}</span></td>
+                <td style={{ fontSize: 13, color: 'var(--text-2)', maxWidth: 220 }}>{eventTitle(r.related_event_id) || '—'}</td>
+                <td style={{ fontSize: 13, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>
                   {r.created_by || '—'}
-                  {(r.updated_at || r.created_at) && <div>{fmtDateTime(r.updated_at || r.created_at)}</div>}
+                  {(r.updated_at || r.created_at) && <div className="td-date" style={{ color: 'var(--muted)' }}>{fmtDateTime(r.updated_at || r.created_at)}</div>}
                 </td>
                 <td>
                   <div className="td-actions">
@@ -147,7 +150,7 @@ export const InternalNotesTab = () => {
             ))}
           </tbody>
         </table>
-        {visible.length === 0 && <div className="loading" style={{ color: 'var(--muted)' }}>Заметок нет</div>}
+        {visible.length === 0 && <div className="tbl-empty">Заметок нет</div>}
       </div>
 
       {modal !== null && (
@@ -171,7 +174,7 @@ export const InternalNotesTab = () => {
               </select>
             </div>
             <div className="field full"><label>Текст</label>
-              <textarea value={form.body || ''} onChange={e => setForm(f => ({ ...f, body: e.target.value }))} rows={14} style={{ minHeight: 280, lineHeight: 1.5 }} />
+              <textarea className="doc" value={form.body || ''} onChange={e => setForm(f => ({ ...f, body: e.target.value }))} rows={14} style={{ minHeight: 280 }} />
             </div>
           </div>
         </Modal>

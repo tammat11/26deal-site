@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Modal, Field, Avatar, Empty, MigrationNotice, Banner } from './ui';
+import { Compass, Settings, ArrowUp, ArrowDown, Trash2, Plus } from 'lucide-react';
+import { Modal, Field, Avatar, Empty, MigrationNotice, Banner, Ico } from './ui';
 import { showToast, fmtDate, isMissingTable } from './helpers';
 
 /**
@@ -68,10 +69,11 @@ export const OnboardingTab = () => {
   };
 
   const statusOf = o => {
-    if (!o) return { label: 'Не назначен', badge: 'badge-gray' };
-    if (o.completed_at) return { label: 'Пройден', badge: 'badge-green' };
+    // tone — цвет тихой подписи статуса
+    if (!o) return { label: 'Не назначен', tone: 'var(--muted)' };
+    if (o.completed_at) return { label: 'Пройден', tone: 'var(--success)' };
     const { done } = progressOf(o);
-    return done > 0 ? { label: 'В процессе', badge: 'badge-gold' } : { label: 'Не начат', badge: 'badge-gray' };
+    return done > 0 ? { label: 'В процессе', tone: 'var(--text)' } : { label: 'Не начат', tone: 'var(--text-2)' };
   };
 
   // ── Действия ───────────────────────────────────────────────────────
@@ -223,22 +225,25 @@ export const OnboardingTab = () => {
             В процессе: {counts.active} · без Buddy: {counts.noBuddy} · пройден: {counts.done}
           </div>
         </div>
-        <button className="btn btn-outline" onClick={openSettings}>⚙ Настройки онбординга</button>
+        <button className="btn btn-outline" onClick={openSettings}><Ico i={Settings} /> Настройки онбординга</button>
       </div>
 
       {!settings.founder_video_url && (
         <Banner>Ссылка на видеопослание основателя не задана — новички видят «Видео скоро появится». Укажите её в настройках.</Banner>
       )}
 
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14, alignItems: 'center' }}>
-        {[['active', 'В процессе'], ['done', 'Пройден'], ['none', 'Без онбординга'], ['all', 'Все']].map(([k, l]) => (
-          <button key={k} className={`btn btn-sm ${filter === k ? 'btn-gold' : 'btn-outline'}`} onClick={() => setFilter(k)}>{l}</button>
-        ))}
-        <input type="text" placeholder="Поиск резидента" value={query} onChange={e => setQuery(e.target.value)} style={{ maxWidth: 260, marginLeft: 'auto' }} />
+      <div className="toolbar">
+        <div className="seg">
+          {[['active', 'В процессе'], ['done', 'Пройден'], ['none', 'Без онбординга'], ['all', 'Все']].map(([k, l]) => (
+            <button key={k} className={`seg-btn${filter === k ? ' on' : ''}`} onClick={() => setFilter(k)}>{l}</button>
+          ))}
+        </div>
+        <span className="grow" />
+        <input type="text" className="search" placeholder="Поиск резидента" value={query} onChange={e => setQuery(e.target.value)} />
       </div>
 
       {list.length === 0 ? (
-        <Empty icon="🧭" text={filter === 'active' ? 'Сейчас никто не проходит онбординг' : 'Никого не найдено'} />
+        <Empty icon={Compass} text={filter === 'active' ? 'Сейчас никто не проходит онбординг' : 'Никого не найдено'} />
       ) : (
         <div className="tbl-wrap">
           <table>
@@ -253,11 +258,11 @@ export const OnboardingTab = () => {
                 return (
                   <tr key={r.id}>
                     <td>
-                      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                         <Avatar url={r.photo_url} name={r.name} />
                         <div>
-                          <div style={{ fontWeight: 600 }}>{r.name}</div>
-                          <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+                          <div className="cell-title">{r.name}</div>
+                          <div className="cell-sub">
                             {r.company || '—'}{o ? ` · с ${fmtDate(o.created_at)}` : ''}
                           </div>
                         </div>
@@ -274,8 +279,8 @@ export const OnboardingTab = () => {
                     <td>
                       {o?.buddy_until ? (
                         <>
-                          <div>{fmtDate(o.buddy_until)}</div>
-                          <div style={{ fontSize: 12, color: left < 0 ? 'var(--danger)' : 'var(--muted)' }}>
+                          <div className="td-date" style={{ color: 'var(--text)' }}>{fmtDate(o.buddy_until)}</div>
+                          <div className="cell-sub" style={{ color: left < 0 ? 'var(--danger)' : 'var(--muted)' }}>
                             {left < 0 ? 'истёк' : `осталось ${left} дн.`}
                           </div>
                         </>
@@ -284,21 +289,21 @@ export const OnboardingTab = () => {
                     <td style={{ minWidth: 140 }}>
                       {p ? (
                         <>
-                          <div style={{ height: 6, borderRadius: 3, background: 'var(--s3)', overflow: 'hidden' }}>
-                            <div style={{ width: `${p.total ? (p.done / p.total) * 100 : 0}%`, height: '100%', background: 'var(--gold)' }} />
+                          <div className="bar-track" style={{ height: 4 }}>
+                            <div className="bar-fill" style={{ width: `${p.total ? (p.done / p.total) * 100 : 0}%` }} />
                           </div>
-                          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>
-                            {p.done} из {p.total}{o.video_watched_at ? ' · видео ✓' : ''}
+                          <div className="cell-sub" style={{ marginTop: 6 }}>
+                            <span className="mono">{p.done} из {p.total}</span>{o.video_watched_at ? ' · видео просмотрено' : ''}
                           </div>
                         </>
                       ) : '—'}
                     </td>
-                    <td><span className={`badge ${st.badge}`}>{st.label}</span></td>
+                    <td><span className="verdict" style={{ color: st.tone }}>{st.label}</span></td>
                     <td>
                       <div className="td-actions">
                         {o ? (
                           <>
-                            <button className="btn btn-gold btn-sm" onClick={() => openAssign(r)}>{buddy ? 'Buddy / срок' : 'Назначить Buddy'}</button>
+                            <button className="btn btn-outline btn-sm" onClick={() => openAssign(r)}>{buddy ? 'Buddy и срок' : 'Назначить Buddy'}</button>
                             <button className="btn btn-danger btn-sm" onClick={() => removeOnboarding(r)}>Убрать</button>
                           </>
                         ) : (
@@ -332,26 +337,26 @@ export const OnboardingTab = () => {
           <Field label="Buddy (опытный резидент)">
             <input type="text" placeholder="Поиск" value={assign.search} onChange={e => setAssign(a => ({ ...a, search: e.target.value }))} />
           </Field>
-          <div style={{ maxHeight: 280, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 10, padding: 8 }}>
+          <div className="picker" style={{ maxHeight: 280 }}>
             {buddyCandidates.map(r => {
               const n = menteesOf(r.id);
               return (
-                <label key={r.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '6px 4px', cursor: 'pointer' }}>
+                <label key={r.id} className="picker-row">
                   <input type="radio" name="buddy" checked={assign.buddyId === r.id}
                     onChange={() => setAssign(a => ({ ...a, buddyId: r.id }))} />
                   <Avatar url={r.photo_url} name={r.name} size={24} />
-                  <span style={{ flex: 1 }}>{r.name}{r.company ? ` · ${r.company}` : ''}</span>
-                  {n > 0 && <span className="badge badge-gray">ведёт {n}</span>}
+                  <span style={{ flex: 1 }}>{r.name}{r.company ? <span style={{ color: 'var(--muted)' }}> · {r.company}</span> : ''}</span>
+                  {n > 0 && <span className="hint">ведёт {n}</span>}
                 </label>
               );
             })}
-            {buddyCandidates.length === 0 && <div style={{ color: 'var(--muted)', padding: 8 }}>Никого не найдено</div>}
+            {buddyCandidates.length === 0 && <div className="hint" style={{ padding: 8 }}>Никого не найдено</div>}
           </div>
-          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 10, lineHeight: 1.5 }}>
-            При назначении или смене Buddy оба резидента получат пуш и уведомление в приложении.
+          <div className="note">
+            При назначении или смене Buddy оба резидента получат пуш и уведомление в приложении
           </div>
           {assign.originalBuddy && (
-            <button className="btn btn-danger btn-sm" style={{ marginTop: 10 }} onClick={unassign} disabled={saving}>Снять Buddy</button>
+            <button className="btn btn-danger btn-sm" style={{ alignSelf: 'flex-start' }} onClick={unassign} disabled={saving}>Снять Buddy</button>
           )}
         </Modal>
       )}
@@ -370,31 +375,31 @@ export const OnboardingTab = () => {
             </Field>
           </div>
 
-          <div style={{ fontWeight: 700, margin: '14px 0 8px' }}>Чек-лист до первого мероприятия</div>
-          <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10, lineHeight: 1.5 }}>
+          <div className="sub-head" style={{ marginTop: 8, marginBottom: 0 }}>Чек-лист до первого мероприятия</div>
+          <div className="note">
             Пункты с id <code>video</code>, <code>constitution</code>, <code>faq</code>, <code>buddy_meet</code>, <code>profile</code>, <code>first_event</code> связаны
             с шагами в приложении (profile и first_event отмечаются автоматически). Новые пункты резидент отмечает сам.
           </div>
           {draft.onboarding_checklist.map((it, idx) => (
-            <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, padding: 10, border: '1px solid var(--border)', borderRadius: 10, marginBottom: 8 }}>
-              <div style={{ display: 'grid', gap: 6 }}>
+            <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, padding: 12, border: '1px solid var(--border)', borderRadius: 12, background: 'var(--s0)' }}>
+              <div style={{ display: 'grid', gap: 8 }}>
                 <input type="text" placeholder="Название пункта" value={it.title} onChange={e => setItem(idx, { title: e.target.value })} />
                 <input type="text" placeholder="Пояснение (необязательно)" value={it.description || ''} onChange={e => setItem(idx, { description: e.target.value })} />
-                <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                  id: {it._new
-                    ? <input type="text" value={it.id} placeholder="авто из названия" style={{ width: 180, padding: '2px 6px', fontSize: 11 }}
+                <div className="hint" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  id {it._new
+                    ? <input type="text" value={it.id} placeholder="авто из названия" style={{ width: 180, height: 28, padding: '0 8px', fontSize: 12, fontFamily: 'var(--mono)' }}
                         onChange={e => setItem(idx, { id: e.target.value.replace(/[^a-z0-9_]/gi, '').toLowerCase() })} />
                     : <code>{it.id}</code>}
                 </div>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <button className="btn btn-outline btn-sm" onClick={() => moveItem(idx, -1)} disabled={idx === 0} aria-label="Выше">↑</button>
-                <button className="btn btn-outline btn-sm" onClick={() => moveItem(idx, 1)} disabled={idx === draft.onboarding_checklist.length - 1} aria-label="Ниже">↓</button>
-                <button className="btn btn-danger btn-sm" onClick={() => removeItem(idx)} aria-label="Удалить">×</button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <button className="btn-icon" onClick={() => moveItem(idx, -1)} disabled={idx === 0} aria-label="Выше" title="Выше"><Ico i={ArrowUp} /></button>
+                <button className="btn-icon" onClick={() => moveItem(idx, 1)} disabled={idx === draft.onboarding_checklist.length - 1} aria-label="Ниже" title="Ниже"><Ico i={ArrowDown} /></button>
+                <button className="btn-icon danger" onClick={() => removeItem(idx)} aria-label="Удалить" title="Удалить"><Ico i={Trash2} /></button>
               </div>
             </div>
           ))}
-          <button className="btn btn-outline btn-sm" onClick={addItem}>+ Пункт</button>
+          <button className="add-option" onClick={addItem}><Ico i={Plus} size={14} /> Пункт</button>
         </Modal>
       )}
     </>

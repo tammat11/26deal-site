@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Modal, Field, Toggle, Empty, MigrationNotice, Banner } from './ui';
+import { Plus, Vote, ArrowUp, Trash2, Check, RefreshCw, Download } from 'lucide-react';
+import { Modal, Field, Toggle, Empty, MigrationNotice, Banner, Ico } from './ui';
 import { showToast, fmtDateTime, isMissingTable } from './helpers';
 
 // Голосования клуба (план 5.16, 6.1; решение 3.4) — отдельно от опросов.
@@ -12,10 +13,32 @@ import { showToast, fmtDateTime, isMissingTable } from './helpers';
 const MIGRATION = '2026-11-09_club_votes.sql';
 
 const STATUS = {
-  draft:     { label: 'Черновик',  badge: 'badge-gray' },
-  open:      { label: 'Открыто',   badge: 'badge-green' },
-  closed:    { label: 'Завершено', badge: 'badge-gold' },
-  cancelled: { label: 'Отменено',  badge: 'badge-red' },
+  draft:     { label: 'Черновик' },
+  open:      { label: 'Открыто' },
+  closed:    { label: 'Завершено' },
+  cancelled: { label: 'Отменено' },
+};
+
+/** Статус: латунная точка — голосование идёт сейчас; остальные — тихий текст. */
+const StatusMark = ({ status }) => (
+  <span className={`status${status === 'open' ? '' : ' off'}`}><span className="dot" />{STATUS[status]?.label || status}</span>
+);
+
+/** Полоса явки с отметкой кворума. live — голосование открыто (латунь). */
+const TurnoutBar = ({ t, live, large }) => {
+  const clamp = v => Math.min(100, Math.max(0, Number(v) || 0));
+  const pct = clamp(t.turnout_percent);
+  const q = clamp(t.quorum_percent);
+  const shift = q > 85 ? '-100%' : q < 15 ? '0' : '-50%';
+  return (
+    <div>
+      {large && <div className="quorum-scale"><span style={{ left: `${q}%`, transform: `translateX(${shift})` }}>кворум {t.quorum_percent}%</span></div>}
+      <div className={`turnout-bar${large ? ' lg' : ''}`} role="img" aria-label={`Явка ${t.turnout_percent}%, кворум ${t.quorum_percent}%`}>
+        <div className={`turnout-fill${live ? ' live' : ''}`} style={{ width: `${pct}%` }} />
+        <div className="turnout-quorum" style={{ left: `${q}%` }} />
+      </div>
+    </div>
+  );
 };
 
 const PASS_RULES = [
@@ -77,13 +100,14 @@ const rulesLine = v => [
   v.results_visibility === 'live' ? 'итоги онлайн' : 'итоги после закрытия',
 ].join(' · ');
 
+// tone — класс подписи итога: ok (зелёный), bad (красный), '' (нейтральный).
 const verdict = r => {
   if (!r) return null;
-  if (!r.quorum_reached) return { text: 'Кворум не набран', badge: 'badge-red' };
-  if (r.passed === true) return { text: 'Решение принято', badge: 'badge-green' };
-  if (r.passed === false) return { text: 'Решение не принято', badge: 'badge-red' };
+  if (!r.quorum_reached) return { text: 'Кворум не набран', tone: 'bad' };
+  if (r.passed === true) return { text: 'Решение принято', tone: 'ok' };
+  if (r.passed === false) return { text: 'Решение не принято', tone: 'bad' };
   const w = (r.options || []).find(o => o.id === r.winner_option_id);
-  return w ? { text: `Выбран: «${w.label}»`, badge: 'badge-green' } : { text: 'Победитель не определён', badge: 'badge-gray' };
+  return w ? { text: `Выбран: «${w.label}»`, tone: 'ok' } : { text: 'Победитель не определён', tone: '' };
 };
 
 function downloadCsv(fileName, rows) {
@@ -295,11 +319,11 @@ export const ClubVotesTab = () => {
           <div className="section-title">Голосования клуба</div>
           <div className="section-sub">Официальные решения клуба: кворум, правило большинства, тайность. Опросы — в разделе «Опросы».</div>
         </div>
-        <button className="btn btn-gold" onClick={() => openEditor('new')}>+ Голосование</button>
+        <button className="btn btn-gold" onClick={() => openEditor('new')}><Ico i={Plus} /> Голосование</button>
       </div>
 
       {votes.length === 0 ? (
-        <Empty icon="🗳️" text="Голосований пока нет" />
+        <Empty icon={Vote} text="Голосований пока нет" />
       ) : (
         <div className="tbl-wrap">
           <table>
@@ -311,34 +335,35 @@ export const ClubVotesTab = () => {
                 return (
                   <tr key={v.id}>
                     <td style={{ maxWidth: 380 }}>
-                      <div style={{ fontWeight: 600 }}>{v.title}</div>
-                      <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
+                      <div className="cell-title">{v.title}</div>
+                      <div className="cell-sub">
                         {rulesLine(v)}{v.audience === 'group' ? ` · группа «${groupName[v.group_id] || '—'}»` : ''}
                       </div>
                     </td>
                     <td>
-                      <span className={`badge ${STATUS[v.status]?.badge}`}>{STATUS[v.status]?.label}</span>
-                      {vd && <div style={{ marginTop: 4 }}><span className={`badge ${vd.badge}`}>{vd.text}</span></div>}
+                      <StatusMark status={v.status} />
+                      {vd && <div className={`verdict ${vd.tone}`} style={{ marginTop: 4 }}>{vd.text}</div>}
                     </td>
-                    <td style={{ fontSize: 12, whiteSpace: 'nowrap' }}>
+                    <td className="td-date">
                       {v.opens_at && <div>с {fmtDateTime(v.opens_at)}</div>}
                       <div>{v.closes_at ? `до ${fmtDateTime(v.closes_at)}` : 'без срока'}</div>
                     </td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
+                    <td>
                       {t ? (
-                        <>
-                          <div style={{ fontWeight: 600 }}>{t.turnout} / {t.eligible} <span style={{ color: 'var(--muted)', fontWeight: 400 }}>({t.turnout_percent}%)</span></div>
-                          <div style={{ fontSize: 11, color: t.quorum_reached ? 'var(--success)' : 'var(--muted)' }}>
-                            кворум {t.quorum_percent}% {t.quorum_reached ? '✓' : ''}
+                        <div className="turnout">
+                          <div className="turnout-figure">{t.turnout} / {t.eligible} <span>· {t.turnout_percent}%</span></div>
+                          <TurnoutBar t={t} live={v.status === 'open'} />
+                          <div className="turnout-note">
+                            кворум {t.quorum_percent}%{t.quorum_reached && <> · <span className="ok">набран</span></>}
                           </div>
-                        </>
+                        </div>
                       ) : <span style={{ color: 'var(--muted)' }}>—</span>}
                     </td>
                     <td>
                       <div className="td-actions">
                         {(v.status === 'draft' || v.status === 'open') && <button className="btn btn-outline btn-sm" onClick={() => openEditor(v)}>Изменить</button>}
-                        {v.status === 'draft' && <button className="btn btn-gold btn-sm" onClick={() => setStatus(v, 'open')}>Открыть</button>}
-                        {v.status === 'open' && <button className="btn btn-gold btn-sm" onClick={() => setStatus(v, 'closed')}>Закрыть</button>}
+                        {v.status === 'draft' && <button className="btn btn-outline btn-sm" onClick={() => setStatus(v, 'open')}>Открыть</button>}
+                        {v.status === 'open' && <button className="btn btn-outline btn-sm" onClick={() => setStatus(v, 'closed')}>Закрыть</button>}
                         {v.status !== 'draft' && <button className="btn btn-outline btn-sm" onClick={() => openDetails(v)}>Итоги и журнал</button>}
                         {(v.status === 'draft' || v.status === 'open') && <button className="btn btn-danger btn-sm" onClick={() => setStatus(v, 'cancelled')}>Отменить</button>}
                         {v.status === 'draft' && <button className="btn btn-danger btn-sm" onClick={() => remove(v)}>Удалить</button>}
@@ -407,13 +432,13 @@ export const ClubVotesTab = () => {
                 <option value="live">В реальном времени</option>
               </select>
             </Field>
-            <div className="field" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div className="field" style={{ justifyContent: 'flex-end', gap: 12 }}>
+              <label className="check-label">
                 <Toggle checked={!!form.is_secret} onChange={val => !isLocked && setForm(f => ({ ...f, is_secret: val }))} />
                 Тайное голосование
               </label>
               {isDraft && (
-                <label style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <label className="check-label">
                   <Toggle checked={!!form.open_now} onChange={val => setForm(f => ({ ...f, open_now: val }))} />
                   Открыть сразу после сохранения
                 </label>
@@ -421,7 +446,7 @@ export const ClubVotesTab = () => {
             </div>
           </div>
 
-          <div style={{ fontSize: 12, color: 'var(--muted)', margin: '4px 0 14px', lineHeight: 1.5 }}>
+          <div className="note">
             Воздержавшиеся учитываются в явке и кворуме, но не в большинстве (база = «За» + «Против»).
             Черновик с датой открытия откроется автоматически (проверка каждые 5 минут).
           </div>
@@ -432,23 +457,23 @@ export const ClubVotesTab = () => {
                 <div key={i} className="option-row">
                   <input type="text" value={o.label} disabled={isLocked} placeholder={`Вариант ${i + 1}`}
                     onChange={e => setOptions(list => list.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))} />
-                  <select value={o.meaning || ''} disabled={isLocked} style={{ maxWidth: 170 }}
+                  <select value={o.meaning || ''} disabled={isLocked} style={{ maxWidth: 180 }}
                     onChange={e => setOptions(list => list.map((x, j) => (j === i ? { ...x, meaning: e.target.value } : x)))}>
                     {MEANINGS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
                   </select>
                   {!isLocked && (
                     <>
-                      <button type="button" className="btn btn-outline btn-xs" disabled={i === 0} aria-label="Выше"
-                        onClick={() => setOptions(list => { const c = [...list]; [c[i - 1], c[i]] = [c[i], c[i - 1]]; return c; })}>↑</button>
-                      <button type="button" className="btn btn-danger btn-xs" aria-label="Удалить вариант"
-                        onClick={() => setOptions(list => list.filter((_, j) => j !== i))}>×</button>
+                      <button type="button" className="btn-icon" disabled={i === 0} aria-label="Выше" title="Выше"
+                        onClick={() => setOptions(list => { const c = [...list]; [c[i - 1], c[i]] = [c[i], c[i - 1]]; return c; })}><Ico i={ArrowUp} /></button>
+                      <button type="button" className="btn-icon danger" aria-label="Удалить вариант" title="Удалить"
+                        onClick={() => setOptions(list => list.filter((_, j) => j !== i))}><Ico i={Trash2} /></button>
                     </>
                   )}
                 </div>
               ))}
               {!isLocked && (
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button type="button" className="add-option" onClick={() => setOptions(list => [...list, { label: '', meaning: '' }])}>+ Добавить вариант</button>
+                  <button type="button" className="add-option" onClick={() => setOptions(list => [...list, { label: '', meaning: '' }])}><Ico i={Plus} size={14} /> Добавить вариант</button>
                   <button type="button" className="add-option" onClick={() => setOptions(DEFAULT_OPTIONS)}>За / Против / Воздержался</button>
                 </div>
               )}
@@ -502,79 +527,84 @@ const ResultsModal = ({ vote, tally, log, residents, onClose, onRefresh, onExpor
 
   return (
     <Modal title={vote.title} onClose={onClose} wide>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 14 }}>
-        <span className={`badge ${STATUS[vote.status]?.badge}`}>{STATUS[vote.status]?.label}</span>
-        {vd && <span className={`badge ${vd.badge}`}>{vd.text}</span>}
-        <span style={{ fontSize: 12, color: 'var(--muted)' }}>{rulesLine(vote)}</span>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <StatusMark status={vote.status} />
+        {vd && <span className={`verdict ${vd.tone}`}>· {vd.text}</span>}
+        <span className="hint">· {rulesLine(vote)}</span>
         <div style={{ flex: 1 }} />
-        <button className="btn btn-outline btn-sm" onClick={onRefresh}>Обновить</button>
-        {vote.status === 'open' && <button className="btn btn-gold btn-sm" onClick={onClose2}>Закрыть сейчас</button>}
-        {r && <button className="btn btn-outline btn-sm" onClick={onExport}>Экспорт CSV</button>}
+        <button className="btn btn-outline btn-sm" onClick={onRefresh}><Ico i={RefreshCw} /> Обновить</button>
+        {vote.status === 'open' && <button className="btn btn-outline btn-sm" onClick={onClose2}>Закрыть сейчас</button>}
+        {r && <button className="btn btn-outline btn-sm" onClick={onExport}><Ico i={Download} /> Экспорт CSV</button>}
       </div>
 
       {vote.status === 'cancelled' ? (
-        <Banner tone="red">Голосование отменено — итоги не подводятся.</Banner>
+        <Banner tone="red">Голосование отменено — итоги не подводятся</Banner>
       ) : !r ? (
         <div className="loading"><span className="spinner" /></div>
       ) : (
-        <div className="card" style={{ marginBottom: 16 }}>
-          <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap', marginBottom: 16 }}>
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          <div className="stats">
+            <Stat label="Явка" value={`${r.turnout_percent}%`} keyFigure />
             <Stat label="Проголосовали" value={`${r.turnout} / ${r.eligible}`} />
-            <Stat label="Явка" value={`${r.turnout_percent}%`} />
-            <Stat label={`Кворум ${r.quorum_percent}%`} value={r.quorum_reached ? 'набран' : 'нет'} tone={r.quorum_reached ? 'var(--success)' : 'var(--muted)'} />
-            {r.votes_for + r.votes_against > 0 && <Stat label="За / Против" value={`${r.votes_for} / ${r.votes_against}`} />}
+            <Stat label={`Кворум ${r.quorum_percent}%`} value={r.quorum_reached ? 'набран' : 'не набран'} tone={r.quorum_reached ? 'var(--success)' : 'var(--text-2)'} word />
+            {r.votes_for + r.votes_against > 0 && <Stat label="За / против" value={`${r.votes_for} / ${r.votes_against}`} />}
           </div>
-          {(r.options || []).map(o => (
-            <div key={o.id} style={{ marginBottom: 10 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
-                <span style={{ fontWeight: r.winner_option_id === o.id ? 700 : 500 }}>{r.winner_option_id === o.id && r.is_final ? '✓ ' : ''}{o.label}</span>
-                <span style={{ color: 'var(--muted)' }}>{o.count} · {o.percent}%</span>
-              </div>
-              <div style={{ height: 8, borderRadius: 6, background: 'var(--s3)', overflow: 'hidden' }}>
-                <div style={{
-                  width: `${o.percent}%`, height: '100%',
-                  background: o.meaning === 'for' ? 'var(--success)' : o.meaning === 'against' ? 'var(--danger)' : 'var(--gold)',
-                }} />
-              </div>
-            </div>
-          ))}
-          {!r.is_final && (
-            <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>
-              Промежуточные данные.{vote.results_visibility === 'after_close' ? ' Резиденты видят только явку до закрытия.' : ' Резиденты видят результаты в реальном времени.'}
-            </div>
-          )}
-          {vote.is_secret && (
-            <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 6 }}>
-              Тайное голосование: бюллетени не выдаются ни приложению, ни админке — только агрегаты.
+          <TurnoutBar t={r} live={vote.status === 'open'} large />
+          <div className="bars" style={{ gap: 12 }}>
+            {(r.options || []).map(o => {
+              const win = r.winner_option_id === o.id && r.is_final;
+              return (
+                <div key={o.id} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: win ? 'var(--text)' : 'var(--text-2)', fontWeight: win ? 500 : 400 }}>
+                      {win && <Ico i={Check} />}{o.label}
+                    </span>
+                    <span className="bar-num">{o.count} · {o.percent}%</span>
+                  </div>
+                  <div className="bar-track">
+                    <div className="bar-fill" style={{
+                      width: `${o.percent}%`,
+                      background: o.meaning === 'for' ? 'var(--success)' : o.meaning === 'against' ? 'var(--danger)' : 'var(--text-2)',
+                    }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {(!r.is_final || vote.is_secret) && (
+            <div className="note">
+              {!r.is_final && <div>Промежуточные данные.{vote.results_visibility === 'after_close' ? ' Резиденты видят только явку до закрытия.' : ' Резиденты видят результаты в реальном времени.'}</div>}
+              {vote.is_secret && <div>Тайное голосование: бюллетени не выдаются ни приложению, ни админке — только агрегаты</div>}
             </div>
           )}
         </div>
       )}
 
-      <div style={{ fontWeight: 700, margin: '6px 0 8px' }}>Журнал</div>
-      <div className="tbl-wrap" style={{ maxHeight: 320, overflowY: 'auto' }}>
+      <div className="tbl-wrap scroll" style={{ maxHeight: 320 }}>
+        <div className="tbl-caption">Журнал</div>
         <table>
           <thead><tr><th>Время</th><th>Событие</th><th>Кто</th><th>Детали</th></tr></thead>
           <tbody>
             {log.map(e => (
               <tr key={e.id}>
-                <td style={{ whiteSpace: 'nowrap', fontSize: 12 }}>{fmtDateTime(e.at)}</td>
+                <td className="td-date">{fmtDateTime(e.at)}</td>
                 <td>{ACTIONS[e.action] || e.action}</td>
-                <td style={{ fontSize: 12 }}>{actorName(e.actor)}</td>
+                <td style={{ fontSize: 13, color: 'var(--text-2)' }}>{actorName(e.actor)}</td>
                 <td style={{ fontSize: 12, color: 'var(--muted)' }}>{detailText(e)}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        {log.length === 0 && <div className="loading" style={{ color: 'var(--muted)' }}>Записей нет</div>}
+        {log.length === 0 && <div className="tbl-empty">Записей нет</div>}
       </div>
     </Modal>
   );
 };
 
-const Stat = ({ label, value, tone }) => (
+/** keyFigure — единственная латунная цифра окна; word — значение словом, не моно. */
+const Stat = ({ label, value, tone, keyFigure, word }) => (
   <div>
-    <div style={{ fontSize: 20, fontWeight: 700, color: tone || 'var(--text)' }}>{value}</div>
-    <div style={{ fontSize: 12, color: 'var(--muted)' }}>{label}</div>
+    <div className={`stat-value${keyFigure ? ' key' : ''}`} style={{ ...(tone ? { color: tone } : {}), ...(word ? { fontFamily: 'var(--font)', fontSize: 20 } : {}) }}>{value}</div>
+    <div className="stat-label">{label}</div>
   </div>
 );

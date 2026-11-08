@@ -129,26 +129,30 @@ export const PointsTab = () => {
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'flex-start' }}>
         {/* ── Резиденты ── */}
-        <div className="card" style={{ padding: 12, flex: '1 1 280px', maxWidth: 380 }}>
+        <div className="card tight" style={{ flex: '1 1 280px', maxWidth: 380, padding: 8 }}>
           <input type="text" placeholder="Поиск резидента" value={query} onChange={e => setQuery(e.target.value)} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 10, maxHeight: 560, overflowY: 'auto' }}>
-            {filtered.map(r => (
-              <button key={r.resident_id} type="button" onClick={() => setSelectedId(r.resident_id)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 10, cursor: 'pointer',
-                  textAlign: 'left', font: 'inherit', color: 'var(--text)',
-                  background: r.resident_id === selectedId ? 'var(--gold-dim)' : 'transparent',
-                  border: `1px solid ${r.resident_id === selectedId ? 'rgba(212,168,83,.4)' : 'transparent'}`,
-                }}>
-                <Avatar url={r.photo_url} name={r.name} size={30} />
-                <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: 'block', fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</span>
-                  {r.company && <span style={{ display: 'block', fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.company}</span>}
-                </span>
-                <span className="badge badge-gold" title="Баланс за всё время">{r.all}</span>
-              </button>
-            ))}
-            {filtered.length === 0 && <div style={{ color: 'var(--muted)', fontSize: 13, padding: 8 }}>Никого не найдено</div>}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 8, maxHeight: 560, overflowY: 'auto' }}>
+            {filtered.map(r => {
+              const on = r.resident_id === selectedId;
+              return (
+                <button key={r.resident_id} type="button" onClick={() => setSelectedId(r.resident_id)} aria-pressed={on}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 12, minHeight: 44, padding: '4px 8px', borderRadius: 8, cursor: 'pointer',
+                    textAlign: 'left', font: 'inherit', color: 'var(--text)', border: 'none',
+                    background: on ? 'var(--s2)' : 'transparent',
+                    boxShadow: on ? 'inset 0 1px 0 rgba(255,255,255,0.06)' : 'none',
+                    transition: 'background-color 150ms var(--ease)',
+                  }}>
+                  <Avatar url={r.photo_url} name={r.name} size={28} />
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span className="truncate" style={{ display: 'block', fontSize: 13 }}>{r.name}</span>
+                    {r.company && <span className="truncate" style={{ display: 'block', fontSize: 12, lineHeight: '16px', color: 'var(--muted)' }}>{r.company}</span>}
+                  </span>
+                  <span className="mono" style={{ color: on ? 'var(--text)' : 'var(--text-2)' }} title="Баланс за всё время">{r.all}</span>
+                </button>
+              );
+            })}
+            {filtered.length === 0 && <div className="hint" style={{ padding: 8 }}>Никого не найдено</div>}
           </div>
         </div>
 
@@ -159,22 +163,22 @@ export const PointsTab = () => {
           ) : (
             <>
               <div className="card">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
                   <Avatar url={selected.photo_url} name={selected.name} size={44} />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 800, fontSize: 16 }}>{selected.name}</div>
-                    {selected.company && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{selected.company}</div>}
+                    <div style={{ fontWeight: 500, fontSize: 16, lineHeight: '24px' }}>{selected.name}</div>
+                    {selected.company && <div className="hint">{selected.company}</div>}
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--gold)' }}>{selected.all}</div>
-                    <div style={{ fontSize: 11, color: 'var(--muted)' }}>всего · {selected.year} за {THIS_YEAR}</div>
+                    <div className="stat-value key">{selected.all}</div>
+                    <div className="stat-label">всего · <span className="mono">{selected.year}</span> за {THIS_YEAR}</div>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+                <div className="seg" style={{ marginBottom: 16 }}>
                   {[['adjustment', 'Корректировка'], ...MANUAL_AWARDS.map(a => [a.kind, `${a.label} (+${rules[a.kind]})`])].map(([v, l]) => (
                     <button key={v} type="button"
-                      className={form.kind === v ? 'btn btn-gold btn-sm' : 'btn btn-outline btn-sm'}
+                      className={`seg-btn${form.kind === v ? ' on' : ''}`}
                       onClick={() => setForm(f => ({ ...f, kind: v, points: v === 'adjustment' ? f.points : String(rules[v]) }))}>
                       {l}
                     </button>
@@ -187,10 +191,10 @@ export const PointsTab = () => {
                       onChange={e => setForm(f => ({ ...f, points: e.target.value }))} />
                   </Field>
                   <Field label="Дата"><input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} /></Field>
-                  <div className="field full" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                  <div className="field full" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: -8 }}>
                     {QUICK.map(q => (
-                      <button key={q} type="button" className="btn btn-outline btn-xs"
-                        style={{ color: q < 0 ? 'var(--danger)' : 'var(--success)' }}
+                      <button key={q} type="button" className="chip mono"
+                        style={{ color: q < 0 ? 'var(--danger)' : 'var(--text-2)' }}
                         onClick={() => setForm(f => ({ ...f, points: String(q) }))}>{pointsText(q)}</button>
                     ))}
                   </div>
@@ -205,7 +209,7 @@ export const PointsTab = () => {
                       onChange={e => setForm(f => ({ ...f, comment: e.target.value }))} />
                   </div>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 14 }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
                   <button className="btn btn-gold" onClick={save} disabled={saving}>
                     {saving ? <><span className="spinner" /> Сохранение…</> : (parseInt(form.points, 10) < 0 ? 'Списать баллы' : 'Начислить баллы')}
                   </button>
@@ -213,53 +217,55 @@ export const PointsTab = () => {
               </div>
 
               <div className="tbl-wrap">
-                <div style={{ padding: '10px 14px', fontSize: 12, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--muted)' }}>История резидента</div>
+                <div className="tbl-caption">История резидента</div>
                 <table>
                   <thead><tr><th>Дата</th><th>Мероприятие / действие</th><th>Баллы</th><th></th></tr></thead>
                   <tbody>
                     {history.map(i => (
                       <tr key={i.id}>
-                        <td style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>{fmtDate(i.occurred_at)}</td>
+                        <td className="td-date">{fmtDate(i.occurred_at)}</td>
                         <td>
-                          <div style={{ fontWeight: 600 }}>{i.title}</div>
-                          <div style={{ fontSize: 12, color: 'var(--muted)' }}>{LEDGER_KINDS[i.kind]}{i.comment ? ` · ${i.comment}` : ''}</div>
+                          <div className="cell-title">{i.title}</div>
+                          <div className="cell-sub">{LEDGER_KINDS[i.kind]}{i.comment ? ` · ${i.comment}` : ''}</div>
                         </td>
-                        <td style={{ fontWeight: 700, color: i.points >= 0 ? 'var(--success)' : 'var(--danger)' }}>{pointsText(i.points)}</td>
+                        <td className="td-num" style={{ fontWeight: 500, color: i.points >= 0 ? 'var(--success)' : 'var(--danger)' }}>{pointsText(i.points)}</td>
                         <td>
-                          {canReverse(i) && <button className="btn btn-danger btn-xs" onClick={() => reverse(i)}>Отменить</button>}
-                          {(i.kind === 'attendance' || i.kind === 'champion') && (
-                            <span title="Меняется отметкой в карточке мероприятия" style={{ fontSize: 11, color: 'var(--muted)' }}>авто</span>
-                          )}
+                          <div className="td-actions">
+                            {canReverse(i) && <button className="btn btn-danger btn-xs" onClick={() => reverse(i)}>Отменить</button>}
+                            {(i.kind === 'attendance' || i.kind === 'champion') && (
+                              <span title="Меняется отметкой в карточке мероприятия" className="hint">авто</span>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                {history.length === 0 && <div className="loading" style={{ color: 'var(--muted)' }}>Начислений пока нет</div>}
+                {history.length === 0 && <div className="tbl-empty">Начислений пока нет</div>}
               </div>
             </>
           )}
 
           <div className="tbl-wrap">
-            <div style={{ padding: '10px 14px', fontSize: 12, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--muted)' }}>Последние ручные изменения</div>
+            <div className="tbl-caption">Последние ручные изменения</div>
             <table>
               <thead><tr><th>Когда</th><th>Резидент</th><th>Что</th><th>Баллы</th><th></th></tr></thead>
               <tbody>
                 {recent.map(i => (
                   <tr key={i.id}>
-                    <td style={{ color: 'var(--muted)', whiteSpace: 'nowrap', fontSize: 12 }}>{fmtDateTime(i.created_at)}</td>
-                    <td style={{ fontWeight: 600, cursor: 'pointer' }} onClick={() => setSelectedId(i.resident_id)}>{i.residents?.name || '—'}</td>
+                    <td className="td-date">{fmtDateTime(i.created_at)}</td>
+                    <td className="cell-title" style={{ cursor: 'pointer' }} onClick={() => setSelectedId(i.resident_id)}>{i.residents?.name || '—'}</td>
                     <td>
                       <div>{i.title}</div>
-                      {i.comment && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{i.comment}</div>}
+                      {i.comment && <div className="cell-sub">{i.comment}</div>}
                     </td>
-                    <td style={{ fontWeight: 700, color: i.points >= 0 ? 'var(--success)' : 'var(--danger)' }}>{pointsText(i.points)}</td>
-                    <td>{canReverse(i) && <button className="btn btn-danger btn-xs" onClick={() => reverse(i)}>Отменить</button>}</td>
+                    <td className="td-num" style={{ fontWeight: 500, color: i.points >= 0 ? 'var(--success)' : 'var(--danger)' }}>{pointsText(i.points)}</td>
+                    <td><div className="td-actions">{canReverse(i) && <button className="btn btn-danger btn-xs" onClick={() => reverse(i)}>Отменить</button>}</div></td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            {recent.length === 0 && <div className="loading" style={{ color: 'var(--muted)' }}>Ручных изменений пока не было</div>}
+            {recent.length === 0 && <div className="tbl-empty">Ручных изменений пока не было</div>}
           </div>
         </div>
       </div>

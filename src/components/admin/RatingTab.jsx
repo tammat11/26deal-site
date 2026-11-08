@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Modal, Field, Avatar } from './ui';
+import { Download, Plus } from 'lucide-react';
+import { Modal, Field, Avatar, Ico } from './ui';
 import { showToast, fmtDate, exportXlsx } from './helpers';
 import { LEDGER_KINDS, loadPointsSettings } from './points';
 
@@ -47,44 +48,44 @@ export const RatingTab = () => {
           <div className="section-title">Рейтинг резидентов</div>
           <div className="section-sub">Баллы за посещение начисляются автоматически после отметки «Посетил» в мероприятии</div>
         </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          <select value={period} onChange={e => setPeriod(e.target.value)} style={{ width: 150 }}>
+        <div className="section-actions">
+          <select value={period} onChange={e => setPeriod(e.target.value)} style={{ width: 160 }}>
             <option value={String(THIS_YEAR)}>{THIS_YEAR} год</option>
             <option value={String(THIS_YEAR - 1)}>{THIS_YEAR - 1} год</option>
             <option value="all">За всё время</option>
           </select>
-          <button className="btn btn-outline" onClick={exportAll} disabled={!rows?.length}>⬇ Excel</button>
-          <button className="btn btn-outline" onClick={() => setAddMode('adjustment')}>± Корректировка</button>
-          <button className="btn btn-gold" onClick={() => setAddMode('referral')}>+ Рекомендация</button>
+          <button className="btn btn-outline" onClick={exportAll} disabled={!rows?.length}><Ico i={Download} /> Excel</button>
+          <button className="btn btn-outline" onClick={() => setAddMode('adjustment')}>Корректировка</button>
+          <button className="btn btn-gold" onClick={() => setAddMode('referral')}><Ico i={Plus} /> Рекомендация</button>
         </div>
       </div>
 
-      {error && <div className="card" style={{ color: 'var(--danger)', marginBottom: 16 }}>Не удалось загрузить рейтинг: {error}. Примените миграцию 2026-09-28_points_and_surveys_v2.sql.</div>}
+      {error && <div className="banner red">Не удалось загрузить рейтинг: {error}. Примените миграцию 2026-09-28_points_and_surveys_v2.sql.</div>}
 
       <div className="tbl-wrap">
         <table>
-          <thead><tr><th style={{ width: 60 }}>Место</th><th>Резидент</th><th style={{ width: 120 }}>Баллы</th><th style={{ width: 120 }}></th></tr></thead>
+          <thead><tr><th style={{ width: 72 }}>Место</th><th>Резидент</th><th style={{ width: 120, textAlign: 'right' }}>Баллы</th><th style={{ width: 120 }}></th></tr></thead>
           <tbody>
             {(rows || []).map(r => (
               <tr key={r.resident_id}>
-                <td style={{ fontWeight: 800, color: r.place <= 3 && r.points > 0 ? 'var(--gold)' : 'var(--muted)' }}>{r.place}</td>
+                <td className="td-num" style={{ color: r.place <= 3 && r.points > 0 ? 'var(--text)' : 'var(--muted)' }}>{r.place}</td>
                 <td>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <Avatar url={r.photo_url} name={r.name} />
                     <div>
-                      <div style={{ fontWeight: 600 }}>{r.name}</div>
-                      {r.company && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{r.company}</div>}
+                      <div className="cell-title">{r.name}</div>
+                      {r.company && <div className="cell-sub">{r.company}</div>}
                     </div>
                   </div>
                 </td>
-                <td><span className="badge badge-gold" style={{ fontSize: 13 }}>{r.points}</span></td>
-                <td><button className="btn btn-outline btn-sm" onClick={() => setHistoryFor(r)}>История</button></td>
+                <td className="td-num" style={{ fontWeight: 500, textAlign: 'right', color: r.place === 1 && r.points > 0 ? 'var(--gold)' : 'var(--text)' }}>{r.points}</td>
+                <td><div className="td-actions"><button className="btn btn-outline btn-sm" onClick={() => setHistoryFor(r)}>История</button></div></td>
               </tr>
             ))}
           </tbody>
         </table>
         {rows === null && <div className="loading"><span className="spinner" /></div>}
-        {rows?.length === 0 && !error && <div className="loading" style={{ color: 'var(--muted)' }}>Резидентов нет</div>}
+        {rows?.length === 0 && !error && <div className="tbl-empty">Резидентов нет</div>}
       </div>
 
       {historyFor && <HistoryModal resident={historyFor} onClose={() => setHistoryFor(null)} onChanged={load} />}
@@ -121,9 +122,12 @@ const HistoryModal = ({ resident, onClose, onChanged }) => {
 
   return (
     <Modal title={`История баллов — ${resident.name}`} onClose={onClose} wide>
-      <div className="stat-pill" style={{ alignSelf: 'flex-start' }}>Баланс за всё время: {total}</div>
+      <div>
+        <div className="stat-value key">{total}</div>
+        <div className="stat-label">Баланс за всё время</div>
+      </div>
       {items === null ? <div className="loading"><span className="spinner" /></div> : items.length === 0 ? (
-        <div style={{ color: 'var(--muted)', fontSize: 13 }}>Начислений пока нет</div>
+        <div className="hint">Начислений пока нет</div>
       ) : (
         <div className="tbl-wrap">
           <table>
@@ -131,19 +135,21 @@ const HistoryModal = ({ resident, onClose, onChanged }) => {
             <tbody>
               {items.map(i => (
                 <tr key={i.id}>
-                  <td style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>{fmtDate(i.occurred_at)}</td>
+                  <td className="td-date">{fmtDate(i.occurred_at)}</td>
                   <td>
-                    <div style={{ fontWeight: 600 }}>{i.title}</div>
-                    <div style={{ fontSize: 12, color: 'var(--muted)' }}>{LEDGER_KINDS[i.kind]}{i.comment ? ` · ${i.comment}` : ''}</div>
+                    <div className="cell-title">{i.title}</div>
+                    <div className="cell-sub">{LEDGER_KINDS[i.kind]}{i.comment ? ` · ${i.comment}` : ''}</div>
                   </td>
-                  <td style={{ fontWeight: 700, color: i.points >= 0 ? 'var(--success)' : 'var(--danger)' }}>{pointsText(i.points)}</td>
+                  <td className="td-num" style={{ fontWeight: 500, color: i.points >= 0 ? 'var(--success)' : 'var(--danger)' }}>{pointsText(i.points)}</td>
                   <td>
-                    {(i.kind === 'referral' || i.kind === 'adjustment') && !i.reverses && !reversedIds.has(i.id) && (
-                      <button className="btn btn-danger btn-xs" onClick={() => reverse(i)}>Отменить</button>
-                    )}
-                    {(i.kind === 'attendance' || i.kind === 'champion') && (
-                      <span title="Чтобы исправить, измените отметку в карточке мероприятия" style={{ fontSize: 11, color: 'var(--muted)' }}>авто</span>
-                    )}
+                    <div className="td-actions">
+                      {(i.kind === 'referral' || i.kind === 'adjustment') && !i.reverses && !reversedIds.has(i.id) && (
+                        <button className="btn btn-danger btn-xs" onClick={() => reverse(i)}>Отменить</button>
+                      )}
+                      {(i.kind === 'attendance' || i.kind === 'champion') && (
+                        <span title="Чтобы исправить, измените отметку в карточке мероприятия" className="hint">авто</span>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

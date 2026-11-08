@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Modal, Field, TagsInput, StatusBadge, StatusActions, MigrationNotice } from './ui';
+import { Plus } from 'lucide-react';
+import { Modal, Field, TagsInput, StatusBadge, StatusActions, MigrationNotice, Ico } from './ui';
 import { showToast, fmtDate, isMissingTable, probeColumns, pickCols, PUB_STATUSES } from './helpers';
 
 // «База знаний»: документы клуба (Конституция, Послание президента, FAQ),
@@ -137,11 +138,11 @@ const DocsSection = ({ docs }) => {
           <div className="section-title">Документы клуба</div>
           <div className="section-sub">Конституция, Послание президента, FAQ. В приложении видны только опубликованные.</div>
         </div>
-        <button className="btn btn-gold" onClick={() => open('new')}>+ Документ</button>
+        <button className="btn btn-gold" onClick={() => open('new')}><Ico i={Plus} /> Документ</button>
       </div>
       {!hasReview && cols.has('is_published') && (
-        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>
-          Шаг «На проверке» появится, когда в club_documents добавят колонку status (миграция {KB_MIGRATION}).
+        <div className="hint" style={{ marginBottom: 12 }}>
+          Шаг «На проверке» появится, когда в club_documents добавят колонку status (миграция {KB_MIGRATION})
         </div>
       )}
       <div className="tbl-wrap">
@@ -152,12 +153,12 @@ const DocsSection = ({ docs }) => {
               const st = rowStatus(r, cols);
               return (
                 <tr key={r.id}>
-                  <td style={{ maxWidth: 320 }}>
-                    <div style={{ fontWeight: 600 }}>{r.title}</div>
-                    <div style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 300 }}>{(r.body || '').slice(0, 120)}</div>
+                  <td style={{ maxWidth: 340 }}>
+                    <div className="cell-title">{r.title}</div>
+                    <div className="cell-sub truncate" style={{ maxWidth: 320 }}>{(r.body || '').slice(0, 120)}</div>
                   </td>
-                  <td><span className="badge badge-gray">{kindLabel(r.kind)}</span></td>
-                  <td style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>{fmtDate(r.version_date)}</td>
+                  <td><span className="badge">{kindLabel(r.kind)}</span></td>
+                  <td className="td-date">{fmtDate(r.version_date)}</td>
                   <td><StatusBadge status={st} /></td>
                   <td>
                     <div className="td-actions">
@@ -171,7 +172,7 @@ const DocsSection = ({ docs }) => {
             })}
           </tbody>
         </table>
-        {rows.length === 0 && <div className="loading" style={{ color: 'var(--muted)' }}>Документов пока нет</div>}
+        {rows.length === 0 && <div className="tbl-empty">Документов пока нет</div>}
       </div>
 
       {modal !== null && (
@@ -187,7 +188,7 @@ const DocsSection = ({ docs }) => {
             <Field label="Дата редакции"><input type="date" value={form.version_date || ''} onChange={e => setForm(f => ({ ...f, version_date: e.target.value }))} /></Field>
             <Field label="Порядок"><input type="number" value={form.sort_order ?? 0} onChange={e => setForm(f => ({ ...f, sort_order: e.target.value }))} /></Field>
             <div className="field full"><label>Текст</label>
-              <textarea value={form.body || ''} onChange={e => setForm(f => ({ ...f, body: e.target.value }))} rows={18} style={{ minHeight: 360, fontFamily: 'inherit', lineHeight: 1.5 }} placeholder="Полный текст документа" />
+              <textarea className="doc" value={form.body || ''} onChange={e => setForm(f => ({ ...f, body: e.target.value }))} rows={18} placeholder="Полный текст документа" />
             </div>
           </div>
         </Modal>
@@ -267,26 +268,28 @@ const KbSection = ({ docs, areas }) => {
           <div className="section-title">Ответы для «Каспера»</div>
           <div className="section-sub">Ассистент в приложении отвечает только опубликованными ответами</div>
         </div>
-        <button className="btn btn-gold" onClick={() => open('new')}>+ Ответ</button>
+        <button className="btn btn-gold" onClick={() => open('new')}><Ico i={Plus} /> Ответ</button>
       </div>
-      <input type="text" placeholder="Поиск по вопросу, ответу, тегам" value={query} onChange={e => setQuery(e.target.value)} style={{ marginBottom: 14, maxWidth: 420 }} />
+      <div className="toolbar">
+        <input type="text" className="search" placeholder="Поиск по вопросу, ответу, тегам" value={query} onChange={e => setQuery(e.target.value)} style={{ maxWidth: 420 }} />
+      </div>
       <div className="tbl-wrap">
         <table>
           <thead><tr><th>Вопрос</th><th>Источник</th><th>Направление</th><th>Статус</th><th></th></tr></thead>
           <tbody>
             {visible.map(r => (
               <tr key={r.id}>
-                <td style={{ maxWidth: 340 }}>
-                  <div style={{ fontWeight: 600 }}>{r.question}</div>
-                  <div style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 320 }}>{r.answer}</div>
+                <td style={{ maxWidth: 360 }}>
+                  <div className="cell-title">{r.question}</div>
+                  <div className="cell-sub truncate" style={{ maxWidth: 340 }}>{r.answer}</div>
                   {(r.tags || []).length > 0 && (
-                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
-                      {r.tags.map(t => <span key={t} className="badge badge-gray">{t}</span>)}
+                    <div className="badges">
+                      {r.tags.map(t => <span key={t} className="badge">{t}</span>)}
                     </div>
                   )}
                 </td>
-                <td style={{ fontSize: 12, color: 'var(--muted)' }}>{r.source_title || docList.find(d => d.id === r.source_document_id)?.title || '—'}</td>
-                <td style={{ fontSize: 12, color: 'var(--muted)' }}>{areaList.find(a => a.id === r.officer_area_id)?.area || '—'}</td>
+                <td style={{ fontSize: 13, color: 'var(--text-2)' }}>{r.source_title || docList.find(d => d.id === r.source_document_id)?.title || '—'}</td>
+                <td style={{ fontSize: 13, color: 'var(--text-2)' }}>{areaList.find(a => a.id === r.officer_area_id)?.area || '—'}</td>
                 <td><StatusBadge status={PUB_STATUSES[r.status] ? r.status : 'draft'} /></td>
                 <td>
                   <div className="td-actions">
@@ -299,7 +302,7 @@ const KbSection = ({ docs, areas }) => {
             ))}
           </tbody>
         </table>
-        {visible.length === 0 && <div className="loading" style={{ color: 'var(--muted)' }}>{rows.length ? 'Ничего не найдено' : 'Ответов пока нет'}</div>}
+        {visible.length === 0 && <div className="tbl-empty">{rows.length ? 'Ничего не найдено' : 'Ответов пока нет'}</div>}
       </div>
 
       {modal !== null && (
@@ -396,20 +399,20 @@ const OfficersSection = ({ areas }) => {
           <div className="section-title">Офицеры по направлениям</div>
           <div className="section-sub">«Каспер» направляет резидента к офицеру, если вопрос совпал по ключевым словам</div>
         </div>
-        <button className="btn btn-gold" onClick={() => open('new')}>+ Направление</button>
+        <button className="btn btn-gold" onClick={() => open('new')}><Ico i={Plus} /> Направление</button>
       </div>
       <div className="tbl-wrap">
         <table>
-          <thead><tr><th>#</th><th>Направление</th><th>Офицер</th><th>Ключевые слова</th><th></th></tr></thead>
+          <thead><tr><th style={{ width: 56 }}>№</th><th>Направление</th><th>Офицер</th><th>Ключевые слова</th><th></th></tr></thead>
           <tbody>
             {rows.map(r => (
               <tr key={r.id}>
-                <td style={{ color: 'var(--muted)' }}>{r.sort_order}</td>
-                <td style={{ fontWeight: 600 }}>{r.area}</td>
-                <td style={{ fontSize: 13 }}>{resName(r.resident_id)}</td>
+                <td className="td-date">{r.sort_order}</td>
+                <td className="cell-title">{r.area}</td>
+                <td style={{ fontSize: 13, color: 'var(--text-2)' }}>{resName(r.resident_id)}</td>
                 <td>
-                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', maxWidth: 320 }}>
-                    {(r.keywords || []).map(k => <span key={k} className="badge badge-gray">{k}</span>)}
+                  <div className="badges" style={{ maxWidth: 320, marginTop: 0 }}>
+                    {(r.keywords || []).map(k => <span key={k} className="badge">{k}</span>)}
                   </div>
                 </td>
                 <td>
@@ -422,7 +425,7 @@ const OfficersSection = ({ areas }) => {
             ))}
           </tbody>
         </table>
-        {rows.length === 0 && <div className="loading" style={{ color: 'var(--muted)' }}>Направлений пока нет</div>}
+        {rows.length === 0 && <div className="tbl-empty">Направлений пока нет</div>}
       </div>
 
       {modal !== null && (
@@ -454,9 +457,9 @@ export const KnowledgeTab = () => {
 
   return (
     <>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 22, flexWrap: 'wrap' }}>
+      <div className="seg" role="tablist" style={{ marginBottom: 24 }}>
         {SECTIONS.map(s => (
-          <button key={s.id} className={`btn btn-sm ${section === s.id ? 'btn-gold' : 'btn-outline'}`} onClick={() => setSection(s.id)}>
+          <button key={s.id} role="tab" aria-selected={section === s.id} className={`seg-btn${section === s.id ? ' on' : ''}`} onClick={() => setSection(s.id)}>
             {s.label}
           </button>
         ))}

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Field, Toggle, MigrationNotice, Banner } from './ui';
+import { Check, Circle, Play, ArrowUp, ArrowDown, Trash2, Upload } from 'lucide-react';
+import { Field, Toggle, MigrationNotice, Banner, Ico, PubState } from './ui';
 import { showToast, fmtDate, probeColumns } from './helpers';
 
 // Архив мероприятия (план 5.19): итоги, фото/видео в bucket event-media,
@@ -135,7 +136,7 @@ export function EventArchiveEditor({ event }) {
 
   if (!event?.id) return null;
   if (state === 'missing') return <MigrationNotice file={MIGRATION} what="Архив мероприятия" />;
-  if (state === 'loading') return <div style={{ color: 'var(--muted)', fontSize: 13 }}><span className="spinner" /> Загрузка архива…</div>;
+  if (state === 'loading') return <div className="hint"><span className="spinner" /> Загрузка архива…</div>;
 
   // Чек-лист: архив — не позже 3 дней после мероприятия.
   const eventDate = event.date ? new Date(event.date) : null;
@@ -152,7 +153,7 @@ export function EventArchiveEditor({ event }) {
   ];
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <Banner tone={overdue ? 'red' : 'gold'}>
         Архив — не позже {DEADLINE_DAYS} дней после мероприятия
         {deadline && <> · срок: <b>{fmtDate(deadline)}</b></>}
@@ -160,10 +161,10 @@ export function EventArchiveEditor({ event }) {
         {!isPast && eventDate && ' · мероприятие ещё не прошло'}
       </Banner>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+      <div className="checklist" style={{ marginBottom: 0 }}>
         {checklist.map(c => (
-          <span key={c.label} className={`badge ${c.ok ? 'badge-green' : 'badge-gray'}`}>
-            {c.ok ? '✓' : '○'} {c.label}
+          <span key={c.label} className={`check-item${c.ok ? ' ok' : ''}`}>
+            <Ico i={c.ok ? Check : Circle} size={14} /> {c.label}
           </span>
         ))}
       </div>
@@ -174,33 +175,33 @@ export function EventArchiveEditor({ event }) {
       </Field>
 
       <Field label={`Фото и видео (${gallery.length})`}>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="field-row">
           <input ref={fileRef} type="file" multiple accept="image/*,video/mp4,video/quicktime"
             style={{ display: 'none' }} onChange={e => upload(e.target.files)} />
           <button type="button" className="btn btn-outline btn-sm" disabled={uploading > 0} onClick={() => fileRef.current?.click()}>
-            {uploading > 0 ? <><span className="spinner" /> Загрузка ({uploading})…</> : '+ Загрузить файлы'}
+            {uploading > 0 ? <><span className="spinner" /> Загрузка ({uploading})…</> : <><Ico i={Upload} /> Загрузить файлы</>}
           </button>
-          <span style={{ fontSize: 12, color: 'var(--muted)' }}>JPG/PNG/WebP/HEIC, MP4/MOV · до 50 МБ · порядок = порядок в приложении</span>
+          <span className="hint">JPG/PNG/WebP/HEIC, MP4/MOV · до 50 МБ · порядок = порядок в приложении</span>
         </div>
       </Field>
 
       {gallery.length > 0 && (
-        <div style={{ display: 'grid', gap: 8, marginBottom: 16 }}>
+        <div className="list">
           {gallery.map((m, i) => (
-            <div key={m.url} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: 8, border: '1px solid var(--border)', borderRadius: 10, background: 'var(--s2)' }}>
-              <span style={{ width: 22, textAlign: 'center', color: 'var(--muted)', fontSize: 12 }}>{i + 1}</span>
+            <div key={m.url} className="list-row" style={{ padding: 4, paddingLeft: 8 }}>
+              <span className="idx" style={{ textAlign: 'center' }}>{i + 1}</span>
               {m.type === 'video'
-                ? <div style={{ width: 64, height: 64, borderRadius: 8, background: 'var(--s3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }} title="Видео">▶</div>
+                ? <div style={{ width: 56, height: 56, borderRadius: 4, background: 'var(--s3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-2)', flexShrink: 0 }} title="Видео"><Ico i={Play} /></div>
                 : <a href={m.url} target="_blank" rel="noreferrer" style={{ flexShrink: 0 }}>
-                    <img src={m.url} alt="" loading="lazy" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8, display: 'block' }} />
+                    <img src={m.url} alt="" loading="lazy" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 4, display: 'block' }} />
                   </a>}
               <input type="text" value={m.caption} placeholder={m.type === 'video' ? 'Подпись к видео' : 'Подпись к фото'}
                 style={{ flex: 1, minWidth: 0 }} onChange={e => setCaption(i, e.target.value)} />
-              <div style={{ display: 'flex', gap: 4 }}>
-                <button type="button" className="btn btn-xs" aria-label="Выше" disabled={i === 0} onClick={() => move(i, -1)}>↑</button>
-                <button type="button" className="btn btn-xs" aria-label="Ниже" disabled={i === gallery.length - 1} onClick={() => move(i, 1)}>↓</button>
-                <button type="button" className="btn btn-xs" aria-label="Удалить" style={{ color: 'var(--danger)' }}
-                  onClick={() => { if (window.confirm('Удалить файл из архива? Файл будет удалён из хранилища после сохранения.')) remove(i); }}>✕</button>
+              <div style={{ display: 'flex', gap: 2 }}>
+                <button type="button" className="btn-icon" aria-label="Выше" title="Выше" disabled={i === 0} onClick={() => move(i, -1)}><Ico i={ArrowUp} /></button>
+                <button type="button" className="btn-icon" aria-label="Ниже" title="Ниже" disabled={i === gallery.length - 1} onClick={() => move(i, 1)}><Ico i={ArrowDown} /></button>
+                <button type="button" className="btn-icon danger" aria-label="Удалить" title="Удалить"
+                  onClick={() => { if (window.confirm('Удалить файл из архива? Файл будет удалён из хранилища после сохранения.')) remove(i); }}><Ico i={Trash2} /></button>
               </div>
             </div>
           ))}
@@ -216,12 +217,13 @@ export function EventArchiveEditor({ event }) {
           onChange={e => touch(setConsent)(e.target.value)} />
       </Field>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 6 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <label className="check-label">
           <Toggle checked={published} onChange={touch(setPublished)} />
           <span>Опубликовать в архиве</span>
-        </div>
-        <button type="button" className="btn btn-gold btn-sm" disabled={saving || uploading > 0 || !dirty} onClick={save}>
+          <PubState on={published} onLabel="в приложении" offLabel="черновик" />
+        </label>
+        <button type="button" className="btn btn-outline btn-sm" disabled={saving || uploading > 0 || !dirty} onClick={save}>
           {saving ? <><span className="spinner" /> Сохранение…</> : dirty ? 'Сохранить архив' : 'Сохранено'}
         </button>
       </div>

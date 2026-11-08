@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Modal, Field, Avatar } from './ui';
+import { Plus } from 'lucide-react';
+import { Modal, Field, Avatar, Ico } from './ui';
 import { showToast } from './helpers';
 
 /** Группы резидентов (Форум-группы, СД и т.п.) — для адресных опросов. */
@@ -76,7 +77,7 @@ export const GroupsTab = () => {
           <div className="section-title">Группы и Форумы</div>
           <div className="section-sub">Используются как аудитория опросов</div>
         </div>
-        <button className="btn btn-gold" onClick={() => open('new')}>+ Группа</button>
+        <button className="btn btn-gold" onClick={() => open('new')}><Ico i={Plus} /> Группа</button>
       </div>
 
       <div className="tbl-wrap">
@@ -86,10 +87,10 @@ export const GroupsTab = () => {
             {groups.map(g => (
               <tr key={g.id}>
                 <td>
-                  <div style={{ fontWeight: 600 }}>{g.name}</div>
-                  {g.description && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{g.description}</div>}
+                  <div className="cell-title">{g.name}</div>
+                  {g.description && <div className="cell-sub">{g.description}</div>}
                 </td>
-                <td><span className="badge badge-gray">{g.resident_group_members?.length ?? 0}</span></td>
+                <td className="td-num">{g.resident_group_members?.length ?? 0}</td>
                 <td>
                   <div className="td-actions">
                     <button className="btn btn-outline btn-sm" onClick={() => open(g)}>Изменить</button>
@@ -100,7 +101,7 @@ export const GroupsTab = () => {
             ))}
           </tbody>
         </table>
-        {groups.length === 0 && <div className="loading" style={{ color: 'var(--muted)' }}>Групп пока нет</div>}
+        {groups.length === 0 && <div className="tbl-empty">Групп пока нет</div>}
       </div>
 
       {modal !== null && (
@@ -112,13 +113,13 @@ export const GroupsTab = () => {
           <Field label={`Участники (${members.length})`}>
             <input type="text" placeholder="Поиск" value={query} onChange={e => setQuery(e.target.value)} />
           </Field>
-          <div style={{ maxHeight: 300, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 10, padding: 8 }}>
+          <div className="picker" style={{ maxHeight: 300 }}>
             {visible.map(r => (
-              <label key={r.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '6px 4px', cursor: 'pointer' }}>
+              <label key={r.id} className="picker-row">
                 <input type="checkbox" checked={members.includes(r.id)}
                   onChange={e => setMembers(ids => e.target.checked ? [...ids, r.id] : ids.filter(x => x !== r.id))} />
                 <Avatar url={r.photo_url} name={r.name} size={24} />
-                <span>{r.name}{r.company ? ` · ${r.company}` : ''}</span>
+                <span>{r.name}{r.company ? <span style={{ color: 'var(--muted)' }}> · {r.company}</span> : ''}</span>
               </label>
             ))}
           </div>
