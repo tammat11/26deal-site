@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { Check, Circle, Play, ArrowUp, ArrowDown, Trash2, Upload } from 'lucide-react';
 import { Field, Toggle, MigrationNotice, Banner, Ico, PubState } from './ui';
 import { showToast, fmtDate, probeColumns } from './helpers';
+import { warmImage } from '../../lib/warmImage';
 
 // Архив мероприятия (план 5.19): итоги, фото/видео в bucket event-media,
 // ссылка на видео, примечание о согласии на съёмку, публикация в приложении.
@@ -78,6 +79,7 @@ export function EventArchiveEditor({ event }) {
         });
         if (error) throw error;
         const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
+        if (!(file.type || '').startsWith('video/')) warmImage(data.publicUrl);
         added.push({ url: data.publicUrl, caption: '', type: (file.type || '').startsWith('video/') ? 'video' : 'photo' });
       } catch (e) {
         showToast(`${file.name}: ${e.message || 'ошибка загрузки'}`, 'err');

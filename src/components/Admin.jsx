@@ -21,6 +21,7 @@ import { EventArchiveEditor } from './admin/EventArchiveEditor';
 import { SurveyAnalytics } from './admin/SurveyAnalytics';
 import { answerText } from './admin/answers';
 import { EVENT_CATEGORIES, PENALTIES, FALLBACK_RULES, loadPointsSettings, defaultPointsFor, categoryLabel } from './admin/points';
+import { warmImage } from '../lib/warmImage';
 
 // Заголовки для /api/* админки: serverless-функции проверяют access token
 // сессии Supabase Auth и is_admin().
@@ -514,6 +515,7 @@ async function uploadImage(file, folder = 'misc') {
   const { error } = await supabase.storage.from('media').upload(path, file, { upsert: true });
   if (error) throw error;
   const { data } = supabase.storage.from('media').getPublicUrl(path);
+  warmImage(data.publicUrl);
   return data.publicUrl;
 }
 
