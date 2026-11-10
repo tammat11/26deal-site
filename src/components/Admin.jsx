@@ -546,7 +546,7 @@ async function getCroppedBlob(imageSrc, cropPixels, mimeType = 'image/jpeg') {
 }
 
 /** Crop/zoom modal — takes a raw File, resolves a cropped File via onDone. */
-const CropModal = ({ file, aspect = 3 / 4, onCancel, onDone }) => {
+const CropModal = ({ file, src, aspect = 3 / 4, title = 'Кадрировать фото', hint, onCancel, onDone }) => {
   const [imageSrc, setImageSrc] = useState(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -554,10 +554,12 @@ const CropModal = ({ file, aspect = 3 / 4, onCancel, onDone }) => {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    // src — уже загруженная картинка (например, афиша из Storage), file — новый файл.
+    if (src) { setImageSrc(src); return undefined; }
     const url = URL.createObjectURL(file);
     setImageSrc(url);
     return () => URL.revokeObjectURL(url);
-  }, [file]);
+  }, [file, src]);
 
   const onCropComplete = useCallback((_area, areaPixels) => {
     setCroppedAreaPixels(areaPixels);
@@ -568,7 +570,8 @@ const CropModal = ({ file, aspect = 3 / 4, onCancel, onDone }) => {
     setBusy(true);
     try {
       const blob = await getCroppedBlob(imageSrc, croppedAreaPixels);
-      const croppedFile = new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' });
+      const base = file ? file.name.replace(/\.[^.]+$/, '') : 'cover';
+      const croppedFile = new File([blob], base + '.jpg', { type: 'image/jpeg' });
       onDone(croppedFile);
     } finally {
       setBusy(false);
@@ -580,7 +583,8 @@ const CropModal = ({ file, aspect = 3 / 4, onCancel, onDone }) => {
   return (
     <div className="overlay" style={{ zIndex: 300 }} onClick={e => e.target === e.currentTarget && onCancel()}>
       <div className="modal" style={{ width: 440 }}>
-        <div className="modal-title">Кадрировать фото</div>
+        <div className="modal-title">{title}</div>
+        {hint && <div className="hint" style={{ marginBottom: 8 }}>{hint}</div>}
         <div className="crop-box">
           <Cropper
             image={imageSrc}
@@ -873,6 +877,11 @@ const EventsTab = () => {
   const [saving, setSaving] = useState(false);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  // Обложка для приложения: чистое фото 4:5 без текста (events.cover_url).
+  const [coverFile, setCoverFile] = useState(null);
+  const [coverPreview, setCoverPreview] = useState(null);
+  const [coverCrop, setCoverCrop] = useState(null); // { file } | { src } — ждёт кадрирования
+  const coverRef = useRef();
   const [rsvps, setRsvps] = useState(null); // null = not loaded, [] = loaded empty
   const [sendingReminderId, setSendingReminderId] = useState(null);
   const [reminderEvent, setReminderEvent] = useState(null);
@@ -902,9 +911,10 @@ const EventsTab = () => {
   useEffect(() => { load(); }, [load]);
 
   const blank = () => ({ title: '', description: '', date: '', time: '', location: '', speaker_name: '', speaker_role: '', capacity: '', tags: '', is_published: true, category: 'business', points: rules.business, champion_points: rules.champion, co_champion_points: rules.co_champion, no_show_penalty: rules.no_show, late_cancel_penalty: rules.late_cancel, late_penalty: rules.late, left_early_penalty: rules.left_early });
-  const openNew = () => { setForm(blank()); setImageFile(null); setImagePreview(null); setRsvps(null); setModal('new'); };
+  const openNew = () => { setForm(blank()); setImageFile(null); setImagePreview(null); setCoverFile(null); setCoverPreview(null); setRsvps(null); setModal('new'); };
   const openEdit = r => {
     const d = r.date ? new Date(r.date) : null;
+    setCoverFile(null); setCoverPreview(r.cover_url || null);
     setForm({
       ...r,
       date: d ? d.toISOString().slice(0, 10) : '',
@@ -924,16 +934,34 @@ const EventsTab = () => {
     setImagePreview(URL.createObjectURL(f));
   };
 
+  const onCoverFile = e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    setCoverCrop({ file: f });
+    e.target.value = '';
+  };
+  const onCoverCropped = f => {
+    setCoverFile(f);
+    setCoverPreview(URL.createObjectURL(f));
+    setCoverCrop(null);
+  };
+  const removeCover = () => {
+    setCoverFile(null); setCoverPreview(null);
+    setForm(f => ({ ...f, cover_url: null }));
+  };
+
   const save = async () => {
     if (!form.title?.trim()) return showToast('Введите название', 'err');
     setSaving(true);
     try {
       let image_url = form.image_url || null;
       if (imageFile) image_url = await uploadImage(imageFile, 'events');
+      let cover_url = form.cover_url || null;
+      if (coverFile) cover_url = await uploadImage(coverFile, 'events/covers');
       const dateTime = form.date ? `${form.date}T${form.time || '00:00'}:00` : null;
       const tags = (form.tags || '').split(',').map(s => s.trim()).filter(Boolean);
       const payload = {
-        title: form.title, description: form.description || null, date: dateTime, image_url,
+        title: form.title, description: form.description || null, date: dateTime, image_url, cover_url,
         location: form.location || null,
         speaker_name: form.speaker_name || null, speaker_role: form.speaker_role || null,
         capacity: form.capacity ? parseInt(form.capacity) : null,
@@ -1085,8 +1113,37 @@ const EventsTab = () => {
               ? <img className="cover" src={imagePreview} alt="" />
               : <Ico i={ImagePlus} />
             }
-            <p>{imageFile ? imageFile.name : 'Нажмите, чтобы выбрать обложку'}</p>
+            <p>{imageFile ? imageFile.name : 'Афиша — нажмите, чтобы выбрать'}</p>
           </div>
+          <input type="file" ref={coverRef} hidden accept="image/*" onChange={onCoverFile} />
+          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', margin: '12px 0 16px' }}>
+            <div style={{ width: 120, aspectRatio: '4 / 5', borderRadius: 10, overflow: 'hidden', flexShrink: 0, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {coverPreview
+                ? <img src={coverPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : <Ico i={ImagePlus} />}
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', marginBottom: 4 }}>Обложка в приложении</label>
+              <div className="hint" style={{ marginBottom: 10 }}>Фото без текста, кадр 4:5 — верх экрана мероприятия. Без обложки приложение покажет фирменную заглушку, а афишу — ниже, целиком.</div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button type="button" className="btn btn-outline" onClick={() => coverRef.current.click()}>Загрузить фото</button>
+                {imagePreview && <button type="button" className="btn btn-outline" onClick={() => setCoverCrop({ src: imagePreview })}>Вырезать из афиши</button>}
+                {coverPreview && <button type="button" className="btn btn-outline" onClick={() => setCoverCrop({ src: coverPreview })}>Перекадрировать</button>}
+                {coverPreview && <button type="button" className="btn btn-outline" onClick={removeCover}>Убрать</button>}
+              </div>
+            </div>
+          </div>
+          {coverCrop && (
+            <CropModal
+              file={coverCrop.file}
+              src={coverCrop.src}
+              aspect={4 / 5}
+              title="Обложка в приложении"
+              hint="Выберите часть фото без надписей. Верх кадра — под кнопками, низ уходит в затемнение под названием."
+              onCancel={() => setCoverCrop(null)}
+              onDone={onCoverCropped}
+            />
+          )}
           <div className="form-grid">
             <div className="field full"><label>Название *</label><input type="text" value={form.title || ''} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} /></div>
             <Field label="Дата"><input type="date" value={form.date || ''} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} /></Field>
